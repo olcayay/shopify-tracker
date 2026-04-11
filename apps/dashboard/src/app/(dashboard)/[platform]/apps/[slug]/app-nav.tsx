@@ -19,7 +19,6 @@ export function AppNav({
   const { platform } = useParams();
   const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const hasAppSimilarity = hasFeature("app-similarity");
   const pathname = usePathname();
   const router = useRouter();
   const version = useLayoutVersion();
@@ -60,7 +59,7 @@ export function AppNav({
     { href: `${base}/rankings`, label: "Rankings" },
     ...(caps.hasReviews ? [{ href: `${base}/reviews`, label: "Reviews" }] : []),
     { href: `${base}/changes`, label: "Changes" },
-    ...(caps.hasSimilarApps && hasAppSimilarity ? [{ href: `${base}/similar`, label: "Similar" }] : []),
+    ...(caps.hasSimilarApps ? [{ href: `${base}/similar`, label: "Similar" }] : []),
     ...(caps.hasFeaturedSections ? [{ href: `${base}/featured`, label: "Featured" }] : []),
     ...(shouldShowAdsClient(caps, hasFeature) ? [{ href: `${base}/ads`, label: "Ads" }] : []),
   ];

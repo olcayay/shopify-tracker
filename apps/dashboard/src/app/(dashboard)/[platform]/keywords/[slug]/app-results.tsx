@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { TablePagination } from "@/components/pagination";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
-import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 interface App {
   position: number;
@@ -72,7 +71,6 @@ export function KeywordAppResults({
 }) {
   const { platform } = useParams();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const hasAppSimilarity = useFeatureFlag("app-similarity");
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("position");
@@ -85,13 +83,6 @@ export function KeywordAppResults({
     () => new Set(competitorSlugs),
     [competitorSlugs]
   );
-
-  useEffect(() => {
-    if (!hasAppSimilarity && sortKey === "reverse_similar") {
-      setSortKey("position");
-      setSortDir("asc");
-    }
-  }, [hasAppSimilarity, sortKey]);
 
   const filtered = useMemo(() => {
     let result = apps;
@@ -276,7 +267,7 @@ export function KeywordAppResults({
                   Min. Paid <SortIcon col="min_paid" />
                 </TableHead>
               )}
-              {caps.hasSimilarApps && hasAppSimilarity && (
+              {caps.hasSimilarApps && (
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => toggleSort("reverse_similar")}
@@ -385,7 +376,7 @@ export function KeywordAppResults({
                         ) : "\u2014"}
                       </TableCell>
                     )}
-                    {caps.hasSimilarApps && hasAppSimilarity && (
+                    {caps.hasSimilarApps && (
                       <TableCell className="text-sm">
                         {reverseSimilarCounts?.[app.app_slug] ? (
                           <Link href={`/${platform}/apps/${app.app_slug}/similar`} className="text-primary hover:underline">

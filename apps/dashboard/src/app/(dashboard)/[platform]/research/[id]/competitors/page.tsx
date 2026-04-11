@@ -34,7 +34,6 @@ import {
 } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
-import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 interface Competitor {
   slug: string; name: string; iconUrl: string | null;
@@ -61,7 +60,6 @@ export default function ResearchCompetitorsPage() {
   const id = params.id as string;
   const platform = params.platform as PlatformId;
   const caps = isPlatformId(platform) ? PLATFORMS[platform] : PLATFORMS.shopify;
-  const hasAppSimilarity = useFeatureFlag("app-similarity");
   const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const [data, setData] = useState<ResearchData | null>(null);
@@ -188,13 +186,6 @@ export default function ResearchCompetitorsPage() {
   type CompSortKey = "name" | "rating" | "reviews" | "pricing" | "power" | "rankings" | "featured" | "similar" | "launched";
   const [sortKey, setSortKey] = useState<CompSortKey>(caps.hasReviews ? "reviews" : "name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">(caps.hasReviews ? "desc" : "asc");
-
-  useEffect(() => {
-    if (!hasAppSimilarity && sortKey === "similar") {
-      setSortKey(caps.hasReviews ? "reviews" : "name");
-      setSortDir(caps.hasReviews ? "desc" : "asc");
-    }
-  }, [caps.hasReviews, hasAppSimilarity, sortKey]);
 
   function toggleSort(key: CompSortKey) {
     if (sortKey === key) {

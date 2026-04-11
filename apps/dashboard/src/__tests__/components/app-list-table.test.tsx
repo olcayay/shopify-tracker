@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { setupAuthMock } from "../test-utils";
-
-const mockHasFeature = vi.fn<(slug: string) => boolean>(() => false);
 
 // Mock competitor-button since it uses useAuth internally
 vi.mock("@/components/competitor-button", () => ({
@@ -14,7 +11,7 @@ vi.mock("@/components/competitor-button", () => ({
 
 vi.mock("@/contexts/feature-flags-context", () => ({
   useFeatureFlag: () => false,
-  useFeatureFlags: () => ({ enabledFeatures: [], hasFeature: (slug: string) => mockHasFeature(slug) }),
+  useFeatureFlags: () => ({ enabledFeatures: [], hasFeature: () => false }),
 }));
 
 // Mock format-date hook
@@ -62,8 +59,6 @@ const defaultProps = {
 describe("AppListTable", () => {
   beforeEach(() => {
     vi.resetModules();
-    mockHasFeature.mockReset();
-    mockHasFeature.mockReturnValue(false);
     setupAuthMock();
     // Mock useParams to return shopify platform
     vi.doMock("next/navigation", async () => {
@@ -171,13 +166,7 @@ describe("AppListTable", () => {
     expect(screen.getByTestId("star-app-two")).toBeInTheDocument();
   });
 
-  it("hides Similar column when app-similarity is disabled", async () => {
-    await renderComponent();
-    expect(screen.queryByText("Similar")).not.toBeInTheDocument();
-  });
-
-  it("shows Similar column when app-similarity is enabled", async () => {
-    mockHasFeature.mockImplementation((slug: string) => slug === "app-similarity");
+  it("shows Similar column for platforms with similar apps", async () => {
     await renderComponent();
     expect(screen.getByText("Similar")).toBeInTheDocument();
   });

@@ -13,7 +13,6 @@ import {
 } from "@/lib/api";
 import { AppListTable } from "@/components/app-list-table";
 import type { PlatformId } from "@appranks/shared";
-import { hasServerFeature } from "@/lib/score-features-server";
 
 const TYPE_LABELS: Record<string, string> = {
   industry: "Industry",
@@ -29,7 +28,6 @@ export default async function DiscoverPage({
   const { platform, type, value } = await params;
   const decodedValue = decodeURIComponent(value);
   const typeLabel = TYPE_LABELS[type] || type;
-  const hasAppSimilarity = await hasServerFeature("app-similarity");
 
   let result: any;
   let competitors: any[] = [];
@@ -50,9 +48,7 @@ export default async function DiscoverPage({
     getAppsMinPaidPrices(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
     getAppsLaunchedDates(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, string | null>)),
     getAppsCategories(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, any[]>)),
-    hasAppSimilarity
-      ? getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>))
-      : Promise.resolve({} as Record<string, number>),
+    getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
     getAppsFeaturedSectionCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
     getAppsAdKeywordCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
     getAppsReviewVelocity(appSlugs, platform as PlatformId).catch(() => ({})),

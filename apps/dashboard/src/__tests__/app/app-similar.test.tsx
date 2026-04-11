@@ -5,7 +5,6 @@ import { render, screen } from "@testing-library/react";
 const mockGetAppSimilarApps = vi.fn();
 const mockGetAccountTrackedApps = vi.fn();
 const mockGetAccountCompetitors = vi.fn();
-const mockHasServerFeature = vi.fn((slug: string) => slug === "app-similarity");
 
 vi.mock("@/lib/api", () => ({
   getEnabledFeatures: vi.fn().mockResolvedValue([]),
@@ -13,20 +12,6 @@ vi.mock("@/lib/api", () => ({
   getAccountTrackedApps: (...args: any[]) => mockGetAccountTrackedApps(...args),
   getAccountCompetitors: (...args: any[]) => mockGetAccountCompetitors(...args),
 }));
-
-vi.mock("@/lib/score-features-server", () => ({
-  hasServerFeature: (slug: string) => mockHasServerFeature(slug),
-}));
-
-vi.mock("next/navigation", async () => {
-  const actual = await vi.importActual<typeof import("next/navigation")>("next/navigation");
-  return {
-    ...actual,
-    notFound: () => {
-      throw new Error("NEXT_NOT_FOUND");
-    },
-  };
-});
 
 // Mock AdHeatmap since it's a complex client component
 vi.mock("@/components/ad-heatmap", () => ({
@@ -48,7 +33,6 @@ function renderAsync(jsx: Promise<React.JSX.Element>) {
 describe("SimilarAppsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockHasServerFeature.mockImplementation((slug: string) => slug === "app-similarity");
     mockGetAccountTrackedApps.mockResolvedValue([]);
     mockGetAccountCompetitors.mockResolvedValue([]);
   });
@@ -169,10 +153,5 @@ describe("SimilarAppsPage", () => {
     expect(screen.getByText("Similar Apps")).toBeInTheDocument();
     expect(screen.getByText("Reverse Similar")).toBeInTheDocument();
     expect(screen.getByText("2nd Degree Similar")).toBeInTheDocument();
-  });
-
-  it("throws notFound when app-similarity is disabled", async () => {
-    mockHasServerFeature.mockReturnValue(false);
-    await expect(SimilarAppsPage({ params })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });

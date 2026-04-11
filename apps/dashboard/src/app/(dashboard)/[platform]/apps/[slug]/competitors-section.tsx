@@ -76,7 +76,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const isCol = (key: string) => {
     if (key === "visibility" && !hasFeature("app-visibility")) return false;
     if (key === "power" && !hasFeature("app-power")) return false;
-    if ((key === "similarity" || key === "similar") && !hasAppSimilarity) return false;
+    if (key === "similarity" && !hasAppSimilarity) return false;
     if (key === "featured" && !caps.hasFeaturedSections) return false;
     if (key === "similar" && !caps.hasSimilarApps) return false;
     if ((key === "rating" || key === "reviews" || key === "v7d" || key === "v30d" || key === "v90d" || key === "momentum") && !caps.hasReviews) return false;
@@ -98,7 +98,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     return TOGGLEABLE_COLUMNS.filter((col) => {
       if (col.key === "visibility" && !hasFeature("app-visibility")) return false;
       if (col.key === "power" && !hasFeature("app-power")) return false;
-      if ((col.key === "similarity" || col.key === "similar") && !hasAppSimilarity) return false;
+      if (col.key === "similarity" && !hasAppSimilarity) return false;
       if (col.key === "featured" && !caps.hasFeaturedSections) return false;
       if (col.key === "similar" && !caps.hasSimilarApps) return false;
       if ((col.key === "rating" || col.key === "reviews" || col.key === "v7d" || col.key === "v30d" || col.key === "v90d" || col.key === "momentum") && !caps.hasReviews) return false;
@@ -115,7 +115,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   }, [caps, hasAppSimilarity, hasFeature, platform]);
 
   useEffect(() => {
-    if (!hasAppSimilarity && (sortKey === "similarity" || sortKey === "similar")) {
+    if (!hasAppSimilarity && sortKey === "similarity") {
       setSortKey("order");
       setSortDir("asc");
     }

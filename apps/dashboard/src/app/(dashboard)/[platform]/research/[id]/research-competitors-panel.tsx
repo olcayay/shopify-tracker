@@ -31,7 +31,6 @@ import {
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import type { ResearchData } from "./research-types";
-import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 // ─── Competitor Suggestions ──────────────────────────────────
 
@@ -338,17 +337,9 @@ export function CompetitorTable({
 }) {
   const { platform } = useParams();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const hasAppSimilarity = useFeatureFlag("app-similarity");
   type CompSortKey = "name" | "rating" | "reviews" | "pricing" | "power" | "rankings" | "featured" | "similar" | "launched";
   const [sortKey, setSortKey] = useState<CompSortKey>(caps.hasReviews ? "reviews" : "name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">(caps.hasReviews ? "desc" : "asc");
-
-  useEffect(() => {
-    if (!hasAppSimilarity && sortKey === "similar") {
-      setSortKey(caps.hasReviews ? "reviews" : "name");
-      setSortDir(caps.hasReviews ? "desc" : "asc");
-    }
-  }, [caps.hasReviews, hasAppSimilarity, sortKey]);
 
   function toggleSort(key: CompSortKey) {
     if (sortKey === key) {
@@ -406,7 +397,7 @@ export function CompetitorTable({
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")} aria-sort={sortKey === "power" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Power <SortIcon col="power" /></TableHead>
             {keywords.length > 0 && <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")} aria-sort={sortKey === "rankings" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Rankings <SortIcon col="rankings" /></TableHead>}
             {caps.hasFeaturedSections && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")} aria-sort={sortKey === "featured" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Featured <SortIcon col="featured" /></TableHead>}
-            {caps.hasSimilarApps && hasAppSimilarity && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")} aria-sort={sortKey === "similar" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Similar <SortIcon col="similar" /></TableHead>}
+            {caps.hasSimilarApps && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")} aria-sort={sortKey === "similar" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Similar <SortIcon col="similar" /></TableHead>}
             <TableHead>Categories</TableHead>
             {caps.hasLaunchedDate && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")} aria-sort={sortKey === "launched" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Launched <SortIcon col="launched" /></TableHead>}
             {canEdit && <TableHead className="w-10" />}
@@ -503,7 +494,7 @@ export function CompetitorTable({
                     )}
                   </TableCell>
                 )}
-                {caps.hasSimilarApps && hasAppSimilarity && (
+                {caps.hasSimilarApps && (
                   <TableCell className="text-right text-sm">
                     {isPending ? (
                       <Skeleton className="h-4 w-6 ml-auto" />

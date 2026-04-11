@@ -39,7 +39,6 @@ export default async function AppOverviewPage({
     hasServerFeature("app-visibility"),
     hasServerFeature("app-power"),
   ]);
-  const hasAppSimilarity = await hasServerFeature("app-similarity");
   const shouldShowAppScores = hasAppVisibility || hasAppPower;
 
   // Round 1: parallel fetches (all apps)
@@ -67,7 +66,7 @@ export default async function AppOverviewPage({
       showAds
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-      caps.hasSimilarApps && hasAppSimilarity
+      caps.hasSimilarApps
         ? getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] }))
         : Promise.resolve({ direct: [], reverse: [], secondDegree: [] }),
       caps.hasPricing

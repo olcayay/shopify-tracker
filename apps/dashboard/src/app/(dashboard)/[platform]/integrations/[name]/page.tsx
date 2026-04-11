@@ -13,7 +13,6 @@ import {
 } from "@/lib/api";
 import { AppListTable } from "@/components/app-list-table";
 import type { PlatformId } from "@appranks/shared";
-import { hasServerFeature } from "@/lib/score-features-server";
 
 export default async function IntegrationDetailPage({
   params,
@@ -22,7 +21,6 @@ export default async function IntegrationDetailPage({
 }) {
   const { platform, name } = await params;
   const decodedName = decodeURIComponent(name);
-  const hasAppSimilarity = await hasServerFeature("app-similarity");
 
   let integration: any;
   let competitors: any[] = [];
@@ -43,9 +41,7 @@ export default async function IntegrationDetailPage({
     getAppsMinPaidPrices(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
     getAppsLaunchedDates(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, string | null>)),
     getAppsCategories(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, any[]>)),
-    hasAppSimilarity
-      ? getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>))
-      : Promise.resolve({} as Record<string, number>),
+    getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
     getAppsFeaturedSectionCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
     getAppsAdKeywordCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
     getAppsReviewVelocity(appSlugs, platform as PlatformId).catch(() => ({})),

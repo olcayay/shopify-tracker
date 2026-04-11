@@ -4,7 +4,7 @@ VALUES (
   gen_random_uuid(),
   'app-similarity',
   'App Similarity',
-  'App similarity pages, nav items, and reverse-similar surfaces',
+  'Competitor similarity score surfaces',
   false,
   NOW()
 )

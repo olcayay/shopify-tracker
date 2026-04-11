@@ -1,9 +1,7 @@
 import { getAppSimilarApps, getAccountTrackedApps, getAccountCompetitors } from "@/lib/api";
-import { hasServerFeature } from "@/lib/score-features-server";
 import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdHeatmap } from "@/components/ad-heatmap";
-import { notFound } from "next/navigation";
 
 export default async function V2SimilarAppsPage({
   params,
@@ -11,9 +9,6 @@ export default async function V2SimilarAppsPage({
   params: Promise<{ platform: string; slug: string }>;
 }) {
   const { platform, slug } = await params;
-  if (!(await hasServerFeature("app-similarity"))) {
-    notFound();
-  }
 
   let data: any = {};
   let trackedSlugs: string[] = [];

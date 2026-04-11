@@ -26,7 +26,6 @@ export function V2Nav({
   const { platform } = useParams();
   const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const hasAppSimilarity = hasFeature("app-similarity");
   const pathname = usePathname();
   const router = useRouter();
   const base = `/${platform}/apps/v2/${slug}`;
@@ -74,7 +73,7 @@ export function V2Nav({
   const intelSubItems = [
     { label: "Overview", href: `${base}/intel` },
     { label: "Competitors", href: `${base}/intel/competitors` },
-    ...(caps.hasSimilarApps && hasAppSimilarity ? [{ label: "Similar Apps", href: `${base}/intel/similar` }] : []),
+    ...(caps.hasSimilarApps ? [{ label: "Similar Apps", href: `${base}/intel/similar` }] : []),
     ...(caps.hasReviews ? [{ label: "Reviews", href: `${base}/intel/reviews` }] : []),
     { label: "Changes", href: `${base}/intel/changes` },
   ];

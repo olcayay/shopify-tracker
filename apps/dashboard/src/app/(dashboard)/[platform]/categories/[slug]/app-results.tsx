@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
@@ -29,7 +29,6 @@ import { TablePagination } from "@/components/pagination";
 import { PowerScorePopover } from "@/components/power-score-popover";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { shouldShowAdsClient } from "@/lib/ads-feature";
-import { useFeatureFlags } from "@/contexts/feature-flags-context";
 
 interface App {
   position: number;
@@ -79,9 +78,7 @@ export function CategoryAppResults({
   };
 }) {
   const { platform } = useParams();
-  const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const hasAppSimilarity = hasFeature("app-similarity");
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>(isHubPage ? "rating_count" : "position");
@@ -91,13 +88,6 @@ export function CategoryAppResults({
 
   const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
   const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
-
-  useEffect(() => {
-    if (!hasAppSimilarity && sortKey === "reverse_similar") {
-      setSortKey(isHubPage ? "rating_count" : "position");
-      setSortDir(isHubPage ? "desc" : "asc");
-    }
-  }, [hasAppSimilarity, isHubPage, sortKey]);
 
   const filtered = useMemo(() => {
     let result = apps;
@@ -271,7 +261,7 @@ export function CategoryAppResults({
                   Min. Paid <SortIcon col="min_paid" />
                 </TableHead>
               )}
-              {caps.hasSimilarApps && hasAppSimilarity && (
+              {caps.hasSimilarApps && (
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => toggleSort("reverse_similar")}
@@ -381,7 +371,7 @@ export function CategoryAppResults({
                         ) : "\u2014"}
                       </TableCell>
                     )}
-                    {caps.hasSimilarApps && hasAppSimilarity && (
+                    {caps.hasSimilarApps && (
                       <TableCell className="text-sm">
                         {reverseSimilarCounts?.[app.slug] ?? "\u2014"}
                       </TableCell>
