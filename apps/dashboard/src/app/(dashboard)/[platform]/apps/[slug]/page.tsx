@@ -247,7 +247,7 @@ export default async function AppOverviewPage({
   const totalVisibility =
     (caps.hasFeaturedSections ? featuredSections.length : 0) +
     (showAds ? adKeywords.length : 0) +
-    (caps.hasSimilarApps && hasAppSimilarity ? reverseSimilarSlugs.length : 0);
+    (caps.hasSimilarApps ? reverseSimilarSlugs.length : 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
