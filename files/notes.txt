@@ -1,6 +1,19 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-995: Improve Activity Log readability — contextual descriptions with links
+- Added member_role_changed to ACTION_LABELS and FILTER_OPTIONS
+- Rewrote getDetails() from plain string → JSX with contextual descriptions
+  - App actions: slug as clickable link to /{platform}/apps/{slug}
+  - Competitor actions: both competitor and tracked app as links, "for" context
+  - Keyword actions: quoted keyword with "for App" context and link
+  - Member actions: bold email, role context (invited as Editor, role changes)
+  - Platform actions: display name instead of raw key (Salesforce not salesforce)
+  - member_role_changed: email + oldRole → newRole
+- Added AppLink helper component for consistent app linking
+- 3 new tests: role change rendering, competitor links, keyword context
+- Falls back to slug/ID for old entries without enriched metadata
+
 PLA-996: Fix Shopify category tree — top-level categories missing, subcategories flat
 - Root cause: API filtered empty categories (appCount=null) BEFORE building the tree
   Hub categories like "Finding products" have no direct apps → filtered out → children orphaned

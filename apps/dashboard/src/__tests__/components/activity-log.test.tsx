@@ -11,6 +11,11 @@ vi.mock("@/lib/auth-context", () => ({
   }),
 }));
 
+vi.mock("next/link", () => ({
+  default: ({ children, href, ...props }: any) =>
+    React.createElement("a", { href, ...props }, children),
+}));
+
 function mockApiResponse(logs: any[], total: number, page = 1, limit = 25) {
   return {
     ok: true,
@@ -88,13 +93,18 @@ describe("ActivityLog", () => {
     });
   });
 
-  it("shows details from metadata", async () => {
+  it("shows details from metadata with contextual descriptions", async () => {
     mockFetchWithAuth.mockResolvedValue(mockApiResponse(MOCK_ENTRIES, 3));
     render(<ActivityLog />);
     await waitFor(() => {
-      expect(screen.getByText("slack")).toBeInTheDocument();
+      // App slug shown as link
+      const slackLink = screen.getByRole("link", { name: "slack" });
+      expect(slackLink).toBeInTheDocument();
+      expect(slackLink).toHaveAttribute("href", "/shopify/apps/slack");
+      // Member email shown in bold
       expect(screen.getByText("jane@test.com")).toBeInTheDocument();
-      expect(screen.getByText("salesforce")).toBeInTheDocument();
+      // Platform shown as display name
+      expect(screen.getAllByText("Salesforce").length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -102,8 +112,10 @@ describe("ActivityLog", () => {
     mockFetchWithAuth.mockResolvedValue(mockApiResponse(MOCK_ENTRIES, 3));
     render(<ActivityLog />);
     await waitFor(() => {
+      // Shopify appears in platform badge column
       expect(screen.getByText("Shopify")).toBeInTheDocument();
-      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      // Salesforce appears in both details (display name) and platform badge
+      expect(screen.getAllByText("Salesforce").length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -177,12 +189,72 @@ describe("ActivityLog", () => {
     });
   });
 
+  it("shows member_role_changed with old and new roles", async () => {
+    const roleEntry = {
+      id: 10,
+      action: "member_role_changed",
+      entityType: "user",
+      entityId: "u2",
+      metadata: { email: "bob@test.com", oldRole: "viewer", newRole: "editor" },
+      createdAt: new Date().toISOString(),
+      user: { id: "u1", name: "Admin", email: "admin@test.com" },
+    };
+    mockFetchWithAuth.mockResolvedValue(mockApiResponse([roleEntry], 1));
+    render(<ActivityLog />);
+    await waitFor(() => {
+      // Badge + filter option both say "Changed member role"
+      expect(screen.getAllByText("Changed member role").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("bob@test.com")).toBeInTheDocument();
+      expect(screen.getByText(/viewer/)).toBeInTheDocument();
+      expect(screen.getByText(/editor/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows competitor details with links to both apps", async () => {
+    const compEntry = {
+      id: 11,
+      action: "competitor_added",
+      entityType: "competitor",
+      entityId: "rival-app",
+      metadata: { competitorSlug: "rival-app", trackedAppSlug: "my-app", platform: "shopify" },
+      createdAt: new Date().toISOString(),
+      user: { id: "u1", name: "Test", email: "test@test.com" },
+    };
+    mockFetchWithAuth.mockResolvedValue(mockApiResponse([compEntry], 1));
+    render(<ActivityLog />);
+    await waitFor(() => {
+      const rivalLink = screen.getByRole("link", { name: "rival-app" });
+      expect(rivalLink).toHaveAttribute("href", "/shopify/apps/rival-app");
+      const myAppLink = screen.getByRole("link", { name: "my-app" });
+      expect(myAppLink).toHaveAttribute("href", "/shopify/apps/my-app");
+    });
+  });
+
+  it("shows keyword with app context", async () => {
+    const kwEntry = {
+      id: 12,
+      action: "keyword_tracked",
+      entityType: "keyword",
+      entityId: "kw-1",
+      metadata: { keyword: "email marketing", appSlug: "mailchimp", platform: "shopify" },
+      createdAt: new Date().toISOString(),
+      user: { id: "u1", name: "Test", email: "test@test.com" },
+    };
+    mockFetchWithAuth.mockResolvedValue(mockApiResponse([kwEntry], 1));
+    render(<ActivityLog />);
+    await waitFor(() => {
+      expect(screen.getByText(/email marketing/)).toBeInTheDocument();
+      const appLink = screen.getByRole("link", { name: "mailchimp" });
+      expect(appLink).toHaveAttribute("href", "/shopify/apps/mailchimp");
+    });
+  });
+
   it("has all expected action labels mapped", () => {
     const expectedActions = [
       "app_tracked", "app_untracked",
       "keyword_tracked", "keyword_untracked",
       "competitor_added", "competitor_removed",
-      "member_invited", "member_removed",
+      "member_invited", "member_removed", "member_role_changed",
       "invitation_accepted", "invitation_cancelled", "invitation_resent",
       "platform_enabled", "platform_disabled",
       "account_updated",

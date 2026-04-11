@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollText, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { getPlatformColor, PLATFORM_DISPLAY } from "@/lib/platform-display";
+import Link from "next/link";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,6 +67,7 @@ const ACTION_LABELS: Record<string, string> = {
   password_reset: "Reset password",
   password_changed: "Changed password",
   profile_updated: "Updated profile",
+  member_role_changed: "Changed member role",
   subscription_activated: "Activated subscription",
 };
 
@@ -84,6 +86,7 @@ const FILTER_OPTIONS = [
   { value: "invitation_accepted", label: "Joined account" },
   { value: "platform_enabled", label: "Enabled platform" },
   { value: "platform_disabled", label: "Disabled platform" },
+  { value: "member_role_changed", label: "Changed member role" },
   { value: "account_updated", label: "Updated account" },
 ];
 
@@ -117,30 +120,108 @@ function formatFullDate(date: string): string {
   });
 }
 
-function getDetails(entry: ActivityLogEntry): string {
+/** Format a slug into a display name: "my-cool-app" → "my-cool-app" (keep as-is for slugs) */
+function formatSlug(slug: string): string {
+  return slug;
+}
+
+/** Get platform display name */
+function platformName(key: string): string {
+  return PLATFORM_DISPLAY[key as keyof typeof PLATFORM_DISPLAY]?.label ?? key;
+}
+
+/** Build an app link */
+function AppLink({ platform, slug, name }: { platform?: string; slug: string; name?: string }) {
+  const href = platform ? `/${platform}/apps/${slug}` : "#";
+  return (
+    <Link href={href} className="font-medium text-foreground hover:underline">
+      {name || formatSlug(slug)}
+    </Link>
+  );
+}
+
+function getDetails(entry: ActivityLogEntry): React.ReactNode {
   const m = entry.metadata;
   if (!m) return entry.entityId || "";
 
   switch (entry.action) {
     case "app_tracked":
-    case "app_untracked":
-      return (m.slug as string) || entry.entityId || "";
-    case "keyword_tracked":
-      return (m.keyword as string) || entry.entityId || "";
-    case "keyword_untracked":
+    case "app_untracked": {
+      const slug = (m.slug as string) || entry.entityId || "";
+      const name = m.appName as string | undefined;
+      const platform = m.platform as string | undefined;
+      if (!slug) return "";
+      return <AppLink platform={platform} slug={slug} name={name} />;
+    }
+    case "keyword_tracked": {
+      const keyword = (m.keyword as string) || "";
+      const appSlug = m.appSlug as string | undefined;
+      const appName = m.appName as string | undefined;
+      const platform = m.platform as string | undefined;
+      if (!keyword && !appSlug) return entry.entityId || "";
+      return (
+        <span>
+          &ldquo;{keyword}&rdquo;
+          {appSlug && (
+            <> for <AppLink platform={platform} slug={appSlug} name={appName} /></>
+          )}
+        </span>
+      );
+    }
+    case "keyword_untracked": {
+      const keyword = (m.keyword as string) || (m.keywordText as string) || "";
+      if (keyword) return <span>&ldquo;{keyword}&rdquo;</span>;
       return entry.entityId ? `keyword #${entry.entityId}` : "";
+    }
     case "competitor_added":
-    case "competitor_removed":
-      return (m.competitorSlug as string) || entry.entityId || "";
+    case "competitor_removed": {
+      const competitorSlug = (m.competitorSlug as string) || "";
+      const competitorName = m.competitorName as string | undefined;
+      const trackedAppSlug = m.trackedAppSlug as string | undefined;
+      const trackedAppName = m.trackedAppName as string | undefined;
+      const platform = m.platform as string | undefined;
+      if (!competitorSlug) return entry.entityId || "";
+      return (
+        <span>
+          <AppLink platform={platform} slug={competitorSlug} name={competitorName} />
+          {trackedAppSlug && (
+            <> for <AppLink platform={platform} slug={trackedAppSlug} name={trackedAppName} /></>
+          )}
+        </span>
+      );
+    }
     case "member_invited":
+      return (
+        <span>
+          <span className="font-medium text-foreground">{(m.email as string) || ""}</span>
+          {m.role && <> as <span className="capitalize">{m.role as string}</span></>}
+        </span>
+      );
     case "member_removed":
-    case "invitation_accepted":
     case "invitation_cancelled":
     case "invitation_resent":
-      return (m.email as string) || entry.entityId || "";
+      return <span className="font-medium text-foreground">{(m.email as string) || entry.entityId || ""}</span>;
+    case "invitation_accepted":
+      return (
+        <span>
+          <span className="font-medium text-foreground">{(m.email as string) || ""}</span>
+          {" "}joined as <span className="capitalize">{(m.role as string) || "member"}</span>
+        </span>
+      );
+    case "member_role_changed":
+      return (
+        <span>
+          <span className="font-medium text-foreground">{(m.email as string) || ""}</span>
+          {m.oldRole && m.newRole && (
+            <> <span className="capitalize">{m.oldRole as string}</span> → <span className="capitalize">{m.newRole as string}</span></>
+          )}
+        </span>
+      );
     case "platform_enabled":
-    case "platform_disabled":
-      return (m.platform as string) || entry.entityId || "";
+    case "platform_disabled": {
+      const p = (m.platform as string) || entry.entityId || "";
+      return <span className="font-medium text-foreground">{platformName(p)}</span>;
+    }
     case "account_updated": {
       const fields = m.fields as string[] | undefined;
       return fields ? fields.join(", ") : "";
@@ -361,7 +442,7 @@ export function ActivityLog() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="text-xs text-muted-foreground truncate block max-w-[200px]">
+                            <span className="text-xs text-muted-foreground max-w-[250px] block truncate">
                               {getDetails(entry)}
                             </span>
                           </TableCell>
