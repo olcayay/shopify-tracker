@@ -40,6 +40,8 @@ import {
   featureFlags,
   accountFeatureFlags,
   appFieldChanges,
+  appUpdateLabels,
+  appUpdateLabelAssignments,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
@@ -4127,6 +4129,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       dateFrom?: string;
       dateTo?: string;
       sortOrder?: string;
+      labelId?: string;
     };
 
     const page = Math.max(1, parseInt(query.page || "1", 10));
@@ -4151,10 +4154,23 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     if (query.dateTo) {
       conditions.push(lte(appFieldChanges.detectedAt, new Date(query.dateTo)));
     }
+    if (query.labelId) {
+      conditions.push(
+        sql`${appFieldChanges.id} IN (
+          SELECT change_id FROM app_update_label_assignments WHERE label_id = ${parseInt(query.labelId, 10)}
+        )`
+      );
+    }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const baseQuery = db
+    const [{ count: total }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(appFieldChanges)
+      .innerJoin(apps, eq(appFieldChanges.appId, apps.id))
+      .where(whereClause);
+
+    const rows = await db
       .select({
         id: appFieldChanges.id,
         appName: apps.name,
@@ -4166,22 +4182,40 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         detectedAt: appFieldChanges.detectedAt,
       })
       .from(appFieldChanges)
-      .innerJoin(apps, eq(appFieldChanges.appId, apps.id));
-
-    const [{ count: total }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(appFieldChanges)
       .innerJoin(apps, eq(appFieldChanges.appId, apps.id))
-      .where(whereClause);
-
-    const data = await baseQuery
       .where(whereClause)
       .orderBy(sortOrder === "asc" ? appFieldChanges.detectedAt : desc(appFieldChanges.detectedAt))
       .limit(limit)
       .offset(offset);
 
-    // Get distinct field names and platforms for filter dropdowns
-    const [distinctFields, distinctPlatforms] = await Promise.all([
+    // Fetch labels for each change in the result set
+    const changeIds = rows.map((r) => r.id);
+    let labelMap: Record<number, { id: number; name: string; color: string }[]> = {};
+    if (changeIds.length > 0) {
+      const assignments = await db
+        .select({
+          changeId: appUpdateLabelAssignments.changeId,
+          labelId: appUpdateLabels.id,
+          labelName: appUpdateLabels.name,
+          labelColor: appUpdateLabels.color,
+        })
+        .from(appUpdateLabelAssignments)
+        .innerJoin(appUpdateLabels, eq(appUpdateLabelAssignments.labelId, appUpdateLabels.id))
+        .where(inArray(appUpdateLabelAssignments.changeId, changeIds));
+
+      for (const a of assignments) {
+        if (!labelMap[a.changeId]) labelMap[a.changeId] = [];
+        labelMap[a.changeId].push({ id: a.labelId, name: a.labelName, color: a.labelColor });
+      }
+    }
+
+    const data = rows.map((r) => ({
+      ...r,
+      labels: labelMap[r.id] || [],
+    }));
+
+    // Get distinct field names, platforms, and all labels for filter dropdowns
+    const [distinctFields, distinctPlatforms, allLabels] = await Promise.all([
       db
         .selectDistinct({ field: appFieldChanges.field })
         .from(appFieldChanges)
@@ -4191,6 +4225,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .from(appFieldChanges)
         .innerJoin(apps, eq(appFieldChanges.appId, apps.id))
         .orderBy(apps.platform),
+      db
+        .select()
+        .from(appUpdateLabels)
+        .orderBy(appUpdateLabels.name),
     ]);
 
     return {
@@ -4204,9 +4242,72 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       filters: {
         fields: distinctFields.map((r) => r.field),
         platforms: distinctPlatforms.map((r) => r.platform),
+        labels: allLabels,
       },
     };
   });
+
+  // -----------------------------------------------------------------------
+  // App Update Labels — CRUD
+  // -----------------------------------------------------------------------
+
+  // GET /api/system-admin/app-update-labels
+  app.get("/app-update-labels", async () => {
+    return db.select().from(appUpdateLabels).orderBy(appUpdateLabels.name);
+  });
+
+  // POST /api/system-admin/app-update-labels — create a label
+  app.post("/app-update-labels", async (request, reply) => {
+    const { name, color } = request.body as { name: string; color?: string };
+    if (!name || name.trim().length === 0) {
+      return reply.code(400).send({ error: "Label name is required" });
+    }
+    const [label] = await db
+      .insert(appUpdateLabels)
+      .values({ name: name.trim(), color: color || "#6b7280" })
+      .returning();
+    return reply.code(201).send(label);
+  });
+
+  // DELETE /api/system-admin/app-update-labels/:id
+  app.delete<{ Params: { id: string } }>("/app-update-labels/:id", async (request, reply) => {
+    const id = parseInt(request.params.id, 10);
+    await db.delete(appUpdateLabels).where(eq(appUpdateLabels.id, id));
+    return reply.code(204).send();
+  });
+
+  // POST /api/system-admin/app-updates/:changeId/labels — assign label to a change
+  app.post<{ Params: { changeId: string } }>("/app-updates/:changeId/labels", async (request, reply) => {
+    const changeId = parseInt(request.params.changeId, 10);
+    const { labelId } = request.body as { labelId: number };
+    if (!labelId) {
+      return reply.code(400).send({ error: "labelId is required" });
+    }
+    const [assignment] = await db
+      .insert(appUpdateLabelAssignments)
+      .values({ changeId, labelId })
+      .onConflictDoNothing()
+      .returning();
+    return reply.code(201).send(assignment || { changeId, labelId });
+  });
+
+  // DELETE /api/system-admin/app-updates/:changeId/labels/:labelId — remove label from a change
+  app.delete<{ Params: { changeId: string; labelId: string } }>(
+    "/app-updates/:changeId/labels/:labelId",
+    async (request, reply) => {
+      const changeId = parseInt(request.params.changeId, 10);
+      const labelId = parseInt(request.params.labelId, 10);
+      await db
+        .delete(appUpdateLabelAssignments)
+        .where(
+          and(
+            eq(appUpdateLabelAssignments.changeId, changeId),
+            eq(appUpdateLabelAssignments.labelId, labelId)
+          )
+        );
+      return reply.code(204).send();
+    }
+  );
 };
 
 /**

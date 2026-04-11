@@ -176,6 +176,8 @@ export {
   apps,
   appSnapshots,
   appFieldChanges,
+  appUpdateLabels,
+  appUpdateLabelAssignments,
   appCategoryRankings,
 } from "./schema/apps.js";
 export { reviews } from "./schema/reviews.js";

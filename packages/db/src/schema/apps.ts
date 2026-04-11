@@ -114,6 +114,32 @@ export const appFieldChanges = pgTable(
   ]
 );
 
+export const appUpdateLabels = pgTable("app_update_labels", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+  color: varchar("color", { length: 7 }).notNull().default("#6b7280"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const appUpdateLabelAssignments = pgTable(
+  "app_update_label_assignments",
+  {
+    id: serial("id").primaryKey(),
+    changeId: integer("change_id")
+      .notNull()
+      .references(() => appFieldChanges.id, { onDelete: "cascade" }),
+    labelId: integer("label_id")
+      .notNull()
+      .references(() => appUpdateLabels.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_app_update_label_unique").on(table.changeId, table.labelId),
+    index("idx_app_update_label_assignments_change").on(table.changeId),
+    index("idx_app_update_label_assignments_label").on(table.labelId),
+  ]
+);
+
 export const appCategoryRankings = pgTable(
   "app_category_rankings",
   {

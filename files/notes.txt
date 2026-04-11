@@ -15,6 +15,24 @@ PLA-1000: App Updates page — cross-platform change analysis
 - Sidebar: Added "App Updates" entry with GitCompareArrows icon
 - Tests: 15 unit tests (auth enforcement, pagination, filters, edge cases)
 
+PLA-1000 v2: Enhancements — ID column, date presets, labels, layout fixes
+- ID column added as first column (mono font, 10px) for easy reference
+- Date filter: preset dropdown (Today, Yesterday, Last 3 Days, This Week, This Month, Last Month, Custom Range)
+  - Custom Range shows From/To date inputs
+  - Presets compute dates client-side
+- Label mechanism:
+  - DB: `app_update_labels` + `app_update_label_assignments` tables (migration 0135)
+  - API: CRUD for labels, assign/remove labels to changes, filter by labelId
+  - UI: "Manage Labels" panel with color picker (9 colors), create/delete labels
+  - Per-row: label dropdown with assign/remove, colored badges
+  - Filter: dropdown to filter by label
+- Layout fixes:
+  - Before/After: `whitespace-pre-wrap break-words` prevents overlap, proper multi-line
+  - App name: truncated at 30 chars with ellipsis, title attribute for full name
+  - Rows use `align-top` so multi-line content doesn't misalign
+  - Column widths set explicitly (ID 60px, Before/After 280px each with min-w-200px)
+- Tests: 24 unit tests (up from 15), includes label CRUD auth/validation
+
 Bug Fixes (2026-04-11)
 ======================
 

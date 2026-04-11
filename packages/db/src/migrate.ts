@@ -156,6 +156,22 @@ async function run() {
         // PLA-963: pricing_model column (migration 0130)
         `ALTER TABLE apps ADD COLUMN IF NOT EXISTS pricing_model VARCHAR(30)`,
         `CREATE INDEX IF NOT EXISTS idx_apps_pricing_model ON apps(pricing_model)`,
+        // PLA-1000: app update labels (migration 0135)
+        `CREATE TABLE IF NOT EXISTS app_update_labels (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(50) NOT NULL UNIQUE,
+          color VARCHAR(7) NOT NULL DEFAULT '#6b7280',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )`,
+        `CREATE TABLE IF NOT EXISTS app_update_label_assignments (
+          id SERIAL PRIMARY KEY,
+          change_id INTEGER NOT NULL REFERENCES app_field_changes(id) ON DELETE CASCADE,
+          label_id INTEGER NOT NULL REFERENCES app_update_labels(id) ON DELETE CASCADE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          UNIQUE(change_id, label_id)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_app_update_label_assignments_change ON app_update_label_assignments(change_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_app_update_label_assignments_label ON app_update_label_assignments(label_id)`,
       ];
       for (const stmt of safetyStatements) {
         try {
