@@ -52,6 +52,8 @@ export default function CompetitorsPage() {
 
   const visibleToggleableColumns = useMemo(() => {
     return TOGGLEABLE_COLUMNS.filter((col) => {
+      if (col.key === "visibility" && !hasFeature("app-visibility")) return false;
+      if (col.key === "power" && !hasFeature("app-power")) return false;
       if (col.key === "featured" && !caps.hasFeaturedSections) return false;
       if (col.key === "similar" && !caps.hasSimilarApps) return false;
       if ((col.key === "rating" || col.key === "reviews" || col.key === "v7d" || col.key === "v30d" || col.key === "v90d" || col.key === "momentum") && !caps.hasReviews) return false;
@@ -60,7 +62,7 @@ export default function CompetitorsPage() {
       if (col.key === "launchedDate" && !caps.hasLaunchedDate) return false;
       return true;
     });
-  }, [caps]);
+  }, [caps, hasFeature]);
 
   useEffect(() => {
     try {
@@ -70,6 +72,8 @@ export default function CompetitorsPage() {
   }, []);
 
   const isCol = (key: string) => {
+    if (key === "visibility" && !hasFeature("app-visibility")) return false;
+    if (key === "power" && !hasFeature("app-power")) return false;
     if (key === "featured" && !caps.hasFeaturedSections) return false;
     if (key === "similar" && !caps.hasSimilarApps) return false;
     if ((key === "rating" || key === "reviews" || key === "v7d" || key === "v30d" || key === "v90d" || key === "momentum") && !caps.hasReviews) return false;

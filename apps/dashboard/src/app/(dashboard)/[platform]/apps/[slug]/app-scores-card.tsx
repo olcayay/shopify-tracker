@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisibilityScorePopover } from "@/components/visibility-score-popover";
 import { PowerScorePopover } from "@/components/power-score-popover";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import {
   Zap,
   Eye,
@@ -16,6 +17,11 @@ export function AppScoresCard({
   scoresData: any;
   caps: { hasReviews: boolean };
 }) {
+  const hasAppVisibility = useFeatureFlag("app-visibility");
+  const hasAppPower = useFeatureFlag("app-power");
+  const showVisibilityScores = hasAppVisibility && (scoresData.visibility as any[])?.length > 0;
+  const showPowerScores = hasAppPower && (scoresData.power as any[])?.length > 0;
+
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -25,10 +31,10 @@ export function AppScoresCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {((scoresData?.visibility || []).length > 0 || (scoresData?.power || []).length > 0) ? (
+        {(showVisibilityScores || showPowerScores) ? (
           <div className="space-y-4">
             {/* Visibility Section */}
-            {(scoresData.visibility as any[])?.length > 0 && (
+            {showVisibilityScores && (
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Eye className="h-3.5 w-3.5 text-blue-500" />
@@ -53,7 +59,7 @@ export function AppScoresCard({
               </div>
             )}
             {/* Power Section */}
-            {(scoresData.power as any[])?.length > 0 && (
+            {showPowerScores && (
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <TrendingUp className="h-3.5 w-3.5 text-purple-500" />

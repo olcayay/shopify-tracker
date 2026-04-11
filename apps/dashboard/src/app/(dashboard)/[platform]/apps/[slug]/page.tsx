@@ -25,6 +25,7 @@ import { CompetitorUpdatesCard, ListingChangesCard } from "./listing-changes-car
 import { AppScoresCard } from "./app-scores-card";
 import { VisibilityDiscoveryCard } from "./visibility-discovery-card";
 import { shouldShowAds } from "@/lib/ads-feature-server";
+import { hasServerFeature } from "@/lib/score-features-server";
 
 export default async function AppOverviewPage({
   params,
@@ -34,6 +35,11 @@ export default async function AppOverviewPage({
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const showAds = await shouldShowAds(caps);
+  const [hasAppVisibility, hasAppPower] = await Promise.all([
+    hasServerFeature("app-visibility"),
+    hasServerFeature("app-power"),
+  ]);
+  const shouldShowAppScores = hasAppVisibility || hasAppPower;
 
   // Round 1: parallel fetches (all apps)
   // Critical: getApp must succeed; everything else degrades gracefully
@@ -66,7 +72,9 @@ export default async function AppOverviewPage({
       caps.hasPricing
         ? getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({}))
         : Promise.resolve({}),
-      getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
+      shouldShowAppScores
+        ? getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 }))
+        : Promise.resolve({ visibility: [], power: [], weightedPowerScore: 0 }),
     ]);
 
   // Category ranking changes (computed early for category leader fetches)
@@ -315,10 +323,12 @@ export default async function AppOverviewPage({
       )}
 
       {/* Card 6: App Scores */}
-      <AppScoresCard
-        scoresData={scoresData}
-        caps={{ hasReviews: caps.hasReviews }}
-      />
+      {shouldShowAppScores && (
+        <AppScoresCard
+          scoresData={scoresData}
+          caps={{ hasReviews: caps.hasReviews }}
+        />
+      )}
 
       {/* Card 7: Visibility & Discovery */}
       <VisibilityDiscoveryCard

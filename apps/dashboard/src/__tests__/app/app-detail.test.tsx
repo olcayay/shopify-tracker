@@ -15,6 +15,7 @@ const mockGetAppSimilarApps = vi.fn();
 const mockGetAppsMinPaidPrices = vi.fn();
 const mockGetCategoriesBatch = vi.fn();
 const mockGetAppScores = vi.fn();
+const mockHasServerFeature = vi.fn((slug: string) => slug === "app-visibility" || slug === "app-power");
 
 vi.mock("@/lib/api", () => ({
   getEnabledFeatures: vi.fn().mockResolvedValue([]),
@@ -31,6 +32,14 @@ vi.mock("@/lib/api", () => ({
   getAppsMinPaidPrices: (...args: any[]) => mockGetAppsMinPaidPrices(...args),
   getCategoriesBatch: (...args: any[]) => mockGetCategoriesBatch(...args),
   getAppScores: (...args: any[]) => mockGetAppScores(...args),
+}));
+
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: (slug: string) => mockHasServerFeature(slug),
+}));
+
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: (slug: string) => mockHasServerFeature(slug),
 }));
 
 vi.mock("@/components/momentum-badge", () => ({
@@ -64,6 +73,7 @@ const baseApp = {
 };
 
 function setupDefaultMocks() {
+  mockHasServerFeature.mockImplementation((slug: string) => slug === "app-visibility" || slug === "app-power");
   mockGetApp.mockResolvedValue(baseApp);
   mockGetAppReviews.mockResolvedValue({
     reviews: [
@@ -175,6 +185,7 @@ function setupDefaultMocks() {
 }
 
 function setupNotFoundMocks() {
+  mockHasServerFeature.mockImplementation((slug: string) => slug === "app-visibility" || slug === "app-power");
   mockGetApp.mockRejectedValue(new Error("Not found"));
   // All others should also reject to trigger the catch
   mockGetAppReviews.mockRejectedValue(new Error("Not found"));
