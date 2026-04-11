@@ -30,7 +30,7 @@ describe("SHOPIFY_CONSTANTS", () => {
 
   it("has rate limit configuration", () => {
     expect(SHOPIFY_CONSTANTS.rateLimit).toBeDefined();
-    expect(SHOPIFY_CONSTANTS.rateLimit!.minDelayMs).toBe(500);
+    expect(SHOPIFY_CONSTANTS.rateLimit!.minDelayMs).toBe(250);
     expect(SHOPIFY_CONSTANTS.rateLimit!.maxDelayMs).toBe(1500);
   });
 

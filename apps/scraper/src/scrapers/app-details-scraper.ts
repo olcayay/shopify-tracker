@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
-import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper } from "@appranks/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper, platformDevelopers } from "@appranks/db";
 import { urls, createLogger, clampRating, clampCount, validatePlatformData, normalizePricingModel, type PlatformId } from "@appranks/shared";
 import { AppNotFoundError } from "../utils/app-not-found-error.js";
 
@@ -26,11 +26,23 @@ import type { PlatformModule } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
 import { recordItemError } from "../utils/record-item-error.js";
 
+/** Snapshot fields needed for change detection */
+interface PrevSnapshotData {
+  appIntroduction: string;
+  appDetails: string;
+  features: string[];
+  seoTitle: string;
+  seoMetaDescription: string;
+  pricingPlans: any[];
+}
+
 /** Pre-fetched data maps to avoid per-app DB queries in batch scraping */
 export interface PreFetchedData {
   existingApps: Map<string, { id: number }>;
   recentSnapshots: Map<number, Date>;
   currentApps: Map<string, { name: string; currentVersion: string | null }>;
+  prevSnapshots: Map<number, PrevSnapshotData>;
+  existingDevelopers: Map<string, number>;
 }
 
 /** Known platform boilerplate meta descriptions — indicate scraper got shell page, not app content */
@@ -149,13 +161,59 @@ export class AppDetailsScraper {
       }
     }
 
+    // Pre-fetch latest snapshots for change detection (DISTINCT ON for efficiency)
+    const prevSnapshots = new Map<number, PrevSnapshotData>();
+    if (allExisting.length > 0) {
+      const appIds = allExisting.map((a) => a.id);
+      const chunkSize = 200; // smaller chunks for snapshot data (large text fields)
+      for (let i = 0; i < appIds.length; i += chunkSize) {
+        const chunk = appIds.slice(i, i + chunkSize);
+        const snaps = await this.db.execute<{
+          app_id: number;
+          app_introduction: string;
+          app_details: string;
+          features: string[];
+          seo_title: string;
+          seo_meta_description: string;
+          pricing_plans: any[];
+        }>(sql`
+          SELECT DISTINCT ON (app_id) app_id, app_introduction, app_details, features, seo_title, seo_meta_description, pricing_plans
+          FROM app_snapshots
+          WHERE app_id IN (${sql.join(chunk.map((id) => sql`${id}`), sql`, `)})
+          ORDER BY app_id, scraped_at DESC
+        `);
+        for (const snap of snaps) {
+          prevSnapshots.set(snap.app_id, {
+            appIntroduction: snap.app_introduction,
+            appDetails: snap.app_details,
+            features: snap.features,
+            seoTitle: snap.seo_title,
+            seoMetaDescription: snap.seo_meta_description,
+            pricingPlans: snap.pricing_plans,
+          });
+        }
+      }
+    }
+
+    // Pre-fetch existing platform developers (skip ensurePlatformDeveloper for known devs)
+    const existingDevelopers = new Map<string, number>();
+    const devRows = await this.db
+      .select({ name: platformDevelopers.name, globalDeveloperId: platformDevelopers.globalDeveloperId })
+      .from(platformDevelopers)
+      .where(eq(platformDevelopers.platform, this.platform));
+    for (const d of devRows) {
+      existingDevelopers.set(d.name, d.globalDeveloperId);
+    }
+
     log.info("pre-fetched app data", {
       existingApps: existingApps.size,
       recentSnapshots: recentSnapshots.size,
+      prevSnapshots: prevSnapshots.size,
+      existingDevelopers: existingDevelopers.size,
       platform: this.platform,
     });
 
-    return { existingApps, recentSnapshots, currentApps };
+    return { existingApps, recentSnapshots, currentApps, prevSnapshots, existingDevelopers };
   }
 
   /** Scrape details for all tracked apps */
@@ -660,31 +718,25 @@ export class AppDetailsScraper {
       }
 
       // Get previous snapshot by app ID if we have one
-      let prevSnapshot: {
-        appIntroduction: string;
-        appDetails: string;
-        features: string[];
-        seoTitle: string;
-        seoMetaDescription: string;
-        pricingPlans: any[];
-      } | undefined;
+      let prevSnapshot: PrevSnapshotData | undefined;
 
       if (existingApp) {
-        const [snap] = await this.db
-          .select({
-            appIntroduction: appSnapshots.appIntroduction,
-            appDetails: appSnapshots.appDetails,
-            features: appSnapshots.features,
-            seoTitle: appSnapshots.seoTitle,
-            seoMetaDescription: appSnapshots.seoMetaDescription,
-            pricingPlans: appSnapshots.pricingPlans,
-          })
-          .from(appSnapshots)
-          .where(eq(appSnapshots.appId, existingApp.id))
-          .orderBy(desc(appSnapshots.scrapedAt))
-          .limit(1);
-
-        prevSnapshot = snap;
+        prevSnapshot = preFetched
+          ? preFetched.prevSnapshots.get(existingApp.id)
+          : await this.db
+              .select({
+                appIntroduction: appSnapshots.appIntroduction,
+                appDetails: appSnapshots.appDetails,
+                features: appSnapshots.features,
+                seoTitle: appSnapshots.seoTitle,
+                seoMetaDescription: appSnapshots.seoMetaDescription,
+                pricingPlans: appSnapshots.pricingPlans,
+              })
+              .from(appSnapshots)
+              .where(eq(appSnapshots.appId, existingApp.id))
+              .orderBy(desc(appSnapshots.scrapedAt))
+              .limit(1)
+              .then((rows) => rows[0]);
       }
 
       if (prevSnapshot) {
@@ -911,43 +963,59 @@ export class AppDetailsScraper {
         platformData: platformDataToStore as Record<string, unknown>,
       });
 
-      // Link developer to global developer profile
+      // Link developer to global developer profile (skip if already known from pre-fetch)
       if (details.developer?.name) {
-        try {
-          await ensurePlatformDeveloper(
-            this.db,
-            this.platform,
-            details.developer.name,
-            details.developer.website || details.developer.url || null
-          );
-        } catch (err) {
-          log.warn("failed to link developer", { slug, developer: details.developer.name, error: (err as Error).message });
+        const devName = details.developer.name.trim();
+        const alreadyLinked = preFetched && devName && preFetched.existingDevelopers.has(devName);
+        if (!alreadyLinked) {
+          try {
+            await ensurePlatformDeveloper(
+              this.db,
+              this.platform,
+              details.developer.name,
+              details.developer.website || details.developer.url || null
+            );
+          } catch (err) {
+            log.warn("failed to link developer", { slug, developer: details.developer.name, error: (err as Error).message });
+          }
         }
       }
 
       // Register category rankings from snapshot data
       if (resolvedCategories.length > 0) {
+        // Shopify: batch ensure all categories exist in one query
+        if (this.isShopify) {
+          const catValues = resolvedCategories
+            .map((cat) => {
+              const slugMatch = cat.url.match(/\/categories\/([^/]+)/);
+              if (!slugMatch) return null;
+              return {
+                platform: this.platform,
+                slug: slugMatch[1],
+                title: cat.title,
+                url: cat.url || "",
+                parentSlug: null as string | null,
+                categoryLevel: 0,
+                isTracked: false,
+                isListingPage: true,
+              };
+            })
+            .filter((v): v is NonNullable<typeof v> => v !== null);
+
+          if (catValues.length > 0) {
+            await this.db
+              .insert(categories)
+              .values(catValues)
+              .onConflictDoNothing({ target: [categories.platform, categories.slug] });
+          }
+        }
+
         for (const cat of resolvedCategories) {
           let catSlug: string;
           if (this.isShopify) {
             const slugMatch = cat.url.match(/\/categories\/([^/]+)/);
             if (!slugMatch) continue;
             catSlug = slugMatch[1];
-
-            // Shopify: ensure category exists in DB
-            await this.db
-              .insert(categories)
-              .values({
-                platform: this.platform,
-                slug: catSlug,
-                title: cat.title,
-                url: cat.url || "",
-                parentSlug: null,
-                categoryLevel: 0,
-                isTracked: false,
-                isListingPage: true,
-              })
-              .onConflictDoNothing({ target: [categories.platform, categories.slug] });
           } else {
             // Non-Shopify: only match existing DB categories, never create new ones
             const resolved = catSlugMap.get(cat.title);
@@ -1051,38 +1119,53 @@ export class AppDetailsScraper {
       const similarApps = this.isShopify ? parseSimilarApps(html) : [];
       if (similarApps.length > 0) {
         const todayStr = new Date().toISOString().slice(0, 10);
-        for (const similar of similarApps) {
-          // Ensure similar app exists in apps table
-          const [upsertedSimilar] = await this.db
-            .insert(apps)
-            .values({
-              platform: this.platform,
-              slug: similar.slug,
-              name: similar.name,
-              iconUrl: similar.icon_url || null,
-            })
-            .onConflictDoUpdate({
-              target: [apps.platform, apps.slug],
-              set: {
-                name: similar.name,
-                iconUrl: similar.icon_url || undefined,
-                updatedAt: new Date(),
-              },
-            })
-            .returning({ id: apps.id });
 
-          // Upsert sighting (one per appId + similarAppId + date)
-          await this.db
-            .insert(similarAppSightings)
-            .values({
+        // Batch upsert all similar apps at once
+        const upsertedSimilarApps = await this.db
+          .insert(apps)
+          .values(similarApps.map((similar) => ({
+            platform: this.platform,
+            slug: similar.slug,
+            name: similar.name,
+            iconUrl: similar.icon_url || null,
+          })))
+          .onConflictDoUpdate({
+            target: [apps.platform, apps.slug],
+            set: {
+              name: sql`excluded.name`,
+              iconUrl: sql`excluded.icon_url`,
+              updatedAt: new Date(),
+            },
+          })
+          .returning({ id: apps.id, slug: apps.slug });
+
+        // Build slug→id map for sighting inserts
+        const similarIdMap = new Map<string, number>();
+        for (const row of upsertedSimilarApps) {
+          similarIdMap.set(row.slug, row.id);
+        }
+
+        // Batch upsert all sightings at once
+        const sightingValues = similarApps
+          .map((similar) => {
+            const similarAppId = similarIdMap.get(similar.slug);
+            if (!similarAppId) return null;
+            return {
               appId,
-              similarAppId: upsertedSimilar.id,
+              similarAppId,
               position: similar.position ?? null,
               seenDate: todayStr,
               firstSeenRunId: runId!,
               lastSeenRunId: runId!,
               timesSeenInDay: 1,
-            })
+            };
+          })
+          .filter((v): v is NonNullable<typeof v> => v !== null);
+
+        if (sightingValues.length > 0) {
+          await this.db
+            .insert(similarAppSightings)
+            .values(sightingValues)
             .onConflictDoUpdate({
               target: [
                 similarAppSightings.appId,
@@ -1091,7 +1174,7 @@ export class AppDetailsScraper {
               ],
               set: {
                 lastSeenRunId: runId!,
-                position: similar.position ?? null,
+                position: sql`excluded.position`,
                 timesSeenInDay: sql`${similarAppSightings.timesSeenInDay} + 1`,
               },
             });
