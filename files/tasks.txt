@@ -1157,3 +1157,5 @@ track delisted apps with dedicated state + admin observation page (PLA-1035) ✅
 
 fix app count semantics + default sort on developers page (PLA-1037) ✅
 align columns across 3 developer tables on developers page (PLA-1038) ✅
+
+simplify rankings date picker UX — compact popover trigger (PLA-1018)

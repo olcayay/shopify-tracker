@@ -21,6 +21,10 @@ vi.mock("next/navigation", () => ({
 
 import { RankingsDatePicker } from "@/components/rankings-date-picker";
 
+function openPicker() {
+  fireEvent.click(screen.getByRole("button", { expanded: false }));
+}
+
 describe("RankingsDatePicker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,10 +33,14 @@ describe("RankingsDatePicker", () => {
     mockSearchParams = new URLSearchParams();
   });
 
-  it("renders all preset options", () => {
+  it("shows the current selection on the trigger and reveals preset options when opened", () => {
     render(<RankingsDatePicker />);
 
-    expect(screen.getByRole("button", { name: "Last month" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Last month/ })).toBeInTheDocument();
+
+    openPicker();
+
+    expect(screen.getAllByRole("button", { name: /Last month/ }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Last 3 months" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Last 6 months" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Last year" })).toBeInTheDocument();
@@ -42,6 +50,7 @@ describe("RankingsDatePicker", () => {
   it("updates the URL and localStorage when a preset is selected", async () => {
     render(<RankingsDatePicker />);
 
+    openPicker();
     fireEvent.click(screen.getByRole("button", { name: "Last 3 months" }));
 
     await waitFor(() => {
@@ -53,6 +62,7 @@ describe("RankingsDatePicker", () => {
   it("validates custom ranges before applying them", async () => {
     render(<RankingsDatePicker />);
 
+    openPicker();
     fireEvent.click(screen.getByRole("button", { name: /Custom range/ }));
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-03-10" } });
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-03-01" } });
@@ -65,6 +75,7 @@ describe("RankingsDatePicker", () => {
   it("applies a custom range to the URL and localStorage", async () => {
     render(<RankingsDatePicker />);
 
+    openPicker();
     fireEvent.click(screen.getByRole("button", { name: /Custom range/ }));
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-02-10" } });
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-02-28" } });

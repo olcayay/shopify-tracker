@@ -1,7 +1,7 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState } from "react";
-import { CalendarRange } from "lucide-react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { Calendar, Check, ChevronDown } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,9 +31,8 @@ function formatDisplayDate(value: string): string {
 
 function getSelectionLabel(selection: RankingsDateRangeSelection): string {
   if (selection.preset === "custom") {
-    return `${formatDisplayDate(selection.from)} - ${formatDisplayDate(selection.to)}`;
+    return `${formatDisplayDate(selection.from)} – ${formatDisplayDate(selection.to)}`;
   }
-
   return RANKINGS_PRESETS.find((preset) => preset.value === selection.preset)?.label ?? "Last month";
 }
 
@@ -45,18 +44,39 @@ export function RankingsDatePicker({ className }: { className?: string }) {
     () => getRankingsDateRangeFromSearchParams(searchParams),
     [searchParams]
   );
+
+  const [open, setOpen] = useState(false);
+  const [showCustom, setShowCustom] = useState(currentSelection.preset === "custom");
   const [customDraft, setCustomDraft] = useState({
     from: currentSelection.from,
     to: currentSelection.to,
   });
-  const [showCustom, setShowCustom] = useState(currentSelection.preset === "custom");
   const [error, setError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setCustomDraft({ from: currentSelection.from, to: currentSelection.to });
     setShowCustom(currentSelection.preset === "custom");
     setError(null);
   }, [currentSelection.from, currentSelection.preset, currentSelection.to]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointer = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
 
   useEffect(() => {
     const hasExplicitParams =
@@ -93,10 +113,10 @@ export function RankingsDatePicker({ className }: { className?: string }) {
   };
 
   const applyPreset = (preset: Exclude<RankingsDateRangeSelection["preset"], "custom">) => {
-    const selection = getPresetRange(preset);
     setShowCustom(false);
     setError(null);
-    persistAndNavigate(selection);
+    setOpen(false);
+    persistAndNavigate(getPresetRange(preset));
   };
 
   const applyCustom = () => {
@@ -104,13 +124,12 @@ export function RankingsDatePicker({ className }: { className?: string }) {
       setError("Select both a start and end date.");
       return;
     }
-
     if (customDraft.from > customDraft.to) {
       setError("Start date must be on or before the end date.");
       return;
     }
-
     setError(null);
+    setOpen(false);
     persistAndNavigate({
       preset: "custom",
       from: customDraft.from,
@@ -120,68 +139,98 @@ export function RankingsDatePicker({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn("flex flex-col items-start gap-3 rounded-xl border bg-card/70 p-3", className)}>
-      <div className="flex flex-wrap items-center gap-2">
-        {RANKINGS_PRESETS.map((preset) => (
-          <Button
-            key={preset.value}
-            variant={currentSelection.preset === preset.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => applyPreset(preset.value)}
-          >
-            {preset.label}
-          </Button>
-        ))}
-        <Button
-          variant={currentSelection.preset === "custom" || showCustom ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            setShowCustom((value) => !value || currentSelection.preset !== "custom");
-            setError(null);
-          }}
+    <div ref={rootRef} className={cn("relative inline-block", className)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="h-9 gap-2 font-normal"
+      >
+        <Calendar className="size-4 text-muted-foreground" />
+        <span>{getSelectionLabel(currentSelection)}</span>
+        <ChevronDown className="size-4 text-muted-foreground" />
+      </Button>
+
+      {open && (
+        <div
+          role="dialog"
+          className="absolute right-0 z-20 mt-2 w-72 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
         >
-          <CalendarRange className="size-4" />
-          Custom range
-        </Button>
-      </div>
+          <ul className="flex flex-col">
+            {RANKINGS_PRESETS.map((preset) => {
+              const active = currentSelection.preset === preset.value;
+              return (
+                <li key={preset.value}>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset(preset.value)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
+                      active && "font-medium"
+                    )}
+                  >
+                    <span>{preset.label}</span>
+                    {active && <Check className="size-4" />}
+                  </button>
+                </li>
+              );
+            })}
+            <li role="separator" className="my-1 h-px bg-border" />
+            <li>
+              <button
+                type="button"
+                onClick={() => setShowCustom((value) => !value)}
+                aria-expanded={showCustom}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
+                  currentSelection.preset === "custom" && "font-medium"
+                )}
+              >
+                <span>Custom range…</span>
+                {currentSelection.preset === "custom" && !showCustom && <Check className="size-4" />}
+              </button>
+            </li>
+          </ul>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-medium">Selected range:</span>
-        <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-          {getSelectionLabel(currentSelection)}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          Applies to Category Rankings and Keyword Rankings.
-        </span>
-      </div>
-
-      {showCustom && (
-        <div className="flex flex-col gap-2 md:flex-row md:items-end">
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            From
-            <Input
-              type="date"
-              value={customDraft.from}
-              onChange={(event) => setCustomDraft((current) => ({ ...current, from: event.target.value }))}
-              className="h-9 w-full md:w-[180px]"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            To
-            <Input
-              type="date"
-              value={customDraft.to}
-              onChange={(event) => setCustomDraft((current) => ({ ...current, to: event.target.value }))}
-              className="h-9 w-full md:w-[180px]"
-            />
-          </label>
-          <Button size="sm" onClick={applyCustom}>
-            Apply range
-          </Button>
+          {showCustom && (
+            <div className="border-t px-3 pt-3 pb-2">
+              <div className="flex flex-col gap-2">
+                <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                  From
+                  <Input
+                    type="date"
+                    value={customDraft.from}
+                    max={customDraft.to || undefined}
+                    onChange={(event) =>
+                      setCustomDraft((current) => ({ ...current, from: event.target.value }))
+                    }
+                    className="h-9"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                  To
+                  <Input
+                    type="date"
+                    value={customDraft.to}
+                    min={customDraft.from || undefined}
+                    onChange={(event) =>
+                      setCustomDraft((current) => ({ ...current, to: event.target.value }))
+                    }
+                    className="h-9"
+                  />
+                </label>
+                {error && <p className="text-xs text-destructive">{error}</p>}
+                <Button size="sm" onClick={applyCustom} className="mt-1 w-full">
+                  Apply range
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
-
-      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

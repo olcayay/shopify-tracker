@@ -87,9 +87,9 @@ export default async function RankingsPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <DataFreshness dateStr={latestRanking?.scrapedAt} />
-        <RankingsDatePicker className="w-full lg:w-auto lg:min-w-[420px]" />
+        <RankingsDatePicker />
       </div>
       {rankings?.categoryRankings?.length > 0 && (
         <Card>

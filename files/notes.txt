@@ -5909,3 +5909,10 @@ PLA-179: Global API rate limiting middleware
 - Main Developers table default sort changed from `name asc` to `apps desc` (backend already supported `sort=apps&order=desc`).
 - Column alignment: all 3 tables now share `table-fixed` layout — `w-10` spacer, flexible Developer, `w-72` Apps, `w-36 text-right` App Count.
 - Added API tests for totalApps in /tracked and /competitors responses.
+
+## 2026-04-12 — Rankings date picker UX simplification (PLA-1018 follow-up)
+- Replaced inline 5-button bar + chip + expanded custom inputs with a single compact trigger (`[📅 Last month ▾]`) that opens a popover (Linear/Stripe/GitHub pattern).
+- Popover shows presets as a list with a checkmark on the active item; Custom range reveals From/To + Apply inline inside the popover.
+- Added click-outside + Escape handlers; selection auto-closes popover.
+- Dropped forced `min-w-[420px]` container on both v1 and v2 rankings pages.
+- Updated rankings-date-picker.test.tsx to open the popover before asserting inner options; all 16 rankings tests pass.
