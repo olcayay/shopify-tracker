@@ -5901,3 +5901,11 @@ PLA-179: Global API rate limiting middleware
 - Observation phase: delisted apps are still retried each run so the re-listed path stays exercised
 - 6 unit tests added for `is404Error` (including AppNotFoundError interop, non-404 HTTP errors, null/undefined safety, no false-positive substring matches)
 - Updated `files/ADDING_NEW_PLATFORM.md` Quick Checklist + new "Delisted App Handling" section: HTTP-based platforms auto-work, API-based platforms must throw `AppNotFoundError` explicitly
+
+## PLA-1037 + PLA-1038: /shopify/developers table cleanup (2026-04-12)
+- App Count column in My Developers + Competitor Developers tables now shows `global_developers.total_apps` (developer's total published apps on the platform) instead of tracked-apps count or competitor-apps count.
+- Added `totalApps` to `/api/developers/tracked` and `/api/developers/competitors` response.
+- Top two tables default-sort by totalApps DESC (starred-first preserved); App Count header is clickable to toggle asc/desc client-side.
+- Main Developers table default sort changed from `name asc` to `apps desc` (backend already supported `sort=apps&order=desc`).
+- Column alignment: all 3 tables now share `table-fixed` layout — `w-10` spacer, flexible Developer, `w-72` Apps, `w-36 text-right` App Count.
+- Added API tests for totalApps in /tracked and /competitors responses.

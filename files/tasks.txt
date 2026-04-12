@@ -1154,3 +1154,6 @@ separate tracked vs available platforms on dashboard homepage (PLA-100) ✅
 slug-based platform developer URLs with cross-platform link (PLA-98) ✅
 fix studio draft editor showing empty title and subtitle (PLA-235) ✅
 track delisted apps with dedicated state + admin observation page (PLA-1035) ✅
+
+fix app count semantics + default sort on developers page (PLA-1037) ✅
+align columns across 3 developer tables on developers page (PLA-1038) ✅

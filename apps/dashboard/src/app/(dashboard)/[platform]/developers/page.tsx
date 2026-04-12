@@ -58,6 +58,7 @@ interface TrackedDeveloper {
   name: string;
   platformCount: number;
   platforms: string[];
+  totalApps: number;
   isStarred: boolean;
   trackedApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
 }
@@ -68,6 +69,7 @@ interface CompetitorDeveloper {
   name: string;
   platformCount: number;
   platforms: string[];
+  totalApps: number;
   isStarred: boolean;
   competitorApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
 }
@@ -138,8 +140,10 @@ function PlatformDevelopersContent() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState("name");
-  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [sort, setSort] = useState("apps");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [topOrder, setTopOrder] = useState<"asc" | "desc">("desc");
+  const [competitorOrder, setCompetitorOrder] = useState<"asc" | "desc">("desc");
   const limit = 25;
 
   const loadData = useCallback(async () => {
@@ -204,6 +208,26 @@ function PlatformDevelopersContent() {
     setPage(1);
     loadData();
   }
+
+  const sortedTrackedDevs = useMemo(() => {
+    const signed = topOrder === "desc" ? -1 : 1;
+    return [...trackedDevs].sort((a, b) => {
+      if (a.isStarred !== b.isStarred) return a.isStarred ? -1 : 1;
+      const cmp = (a.totalApps || 0) - (b.totalApps || 0);
+      if (cmp !== 0) return signed * cmp;
+      return a.name.localeCompare(b.name);
+    });
+  }, [trackedDevs, topOrder]);
+
+  const sortedCompetitorDevs = useMemo(() => {
+    const signed = competitorOrder === "desc" ? -1 : 1;
+    return [...competitorDevs].sort((a, b) => {
+      if (a.isStarred !== b.isStarred) return a.isStarred ? -1 : 1;
+      const cmp = (a.totalApps || 0) - (b.totalApps || 0);
+      if (cmp !== 0) return signed * cmp;
+      return a.name.localeCompare(b.name);
+    });
+  }, [competitorDevs, competitorOrder]);
 
   function sortDevelopers(devs: Developer[]): Developer[] {
     return [...devs].sort((a, b) => {
@@ -318,17 +342,26 @@ function PlatformDevelopersContent() {
             ctaHref={`/${platform}/apps`}
           />
         ) : (
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10"></TableHead>
                 <TableHead>Developer</TableHead>
-                <TableHead>My Tracked Apps</TableHead>
-                <TableHead className="w-28 text-right">App Count</TableHead>
+                <TableHead className="w-72">My Tracked Apps</TableHead>
+                <TableHead className="w-36 text-right">
+                  <button
+                    onClick={() => setTopOrder(topOrder === "desc" ? "asc" : "desc")}
+                    className="flex items-center gap-1 justify-end hover:text-foreground ml-auto"
+                  >
+                    App Count <ArrowUpDown className="h-3 w-3" />
+                  </button>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trackedDevs.map((dev) => (
+              {sortedTrackedDevs.map((dev) => (
                 <TableRow key={dev.id}>
+                  <TableCell className="w-10"></TableCell>
                   <TableCell>
                     <Link href={`/${platform}/developers/${dev.slug}`} className="font-medium hover:underline">
                       {dev.name}
@@ -352,7 +385,7 @@ function PlatformDevelopersContent() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-right">
-                    {dev.trackedApps.filter((a) => a.platform === platform).length}
+                    {dev.totalApps || 0}
                   </TableCell>
                 </TableRow>
               ))}
@@ -377,17 +410,26 @@ function PlatformDevelopersContent() {
             ctaHref={`/${platform}/competitors`}
           />
         ) : (
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10"></TableHead>
                 <TableHead>Developer</TableHead>
-                <TableHead>Competitor Apps</TableHead>
-                <TableHead className="w-28 text-right">App Count</TableHead>
+                <TableHead className="w-72">Competitor Apps</TableHead>
+                <TableHead className="w-36 text-right">
+                  <button
+                    onClick={() => setCompetitorOrder(competitorOrder === "desc" ? "asc" : "desc")}
+                    className="flex items-center gap-1 justify-end hover:text-foreground ml-auto"
+                  >
+                    App Count <ArrowUpDown className="h-3 w-3" />
+                  </button>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {competitorDevs.map((dev) => (
+              {sortedCompetitorDevs.map((dev) => (
                 <TableRow key={dev.id}>
+                  <TableCell className="w-10"></TableCell>
                   <TableCell>
                     <Link href={`/${platform}/developers/${dev.slug}`} className="font-medium hover:underline">
                       {dev.name}
@@ -411,7 +453,7 @@ function PlatformDevelopersContent() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-right">
-                    {dev.competitorApps.length}
+                    {dev.totalApps || 0}
                   </TableCell>
                 </TableRow>
               ))}

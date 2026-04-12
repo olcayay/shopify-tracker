@@ -200,7 +200,7 @@ export async function developerRoutes(app: FastifyInstance) {
 
     const rows: any[] = await db.execute(sql`
       SELECT
-        g.id, g.slug, g.name,
+        g.id, g.slug, g.name, g.total_apps,
         COUNT(DISTINCT pd.platform) AS platform_count,
         ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
         CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
@@ -228,7 +228,7 @@ export async function developerRoutes(app: FastifyInstance) {
       LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
       WHERE s.developer->>'name' = pd.name ${platformFilterSql}
       GROUP BY g.id, asd.id
-      ORDER BY (asd.id IS NOT NULL) DESC, g.name ASC
+      ORDER BY (asd.id IS NOT NULL) DESC, g.total_apps DESC, g.name ASC
     `);
 
     return {
@@ -238,6 +238,7 @@ export async function developerRoutes(app: FastifyInstance) {
         name: r.name,
         platformCount: Number(r.platform_count || 0),
         platforms: r.platforms || [],
+        totalApps: Number(r.total_apps || 0),
         isStarred: r.is_starred === true || r.is_starred === "true",
         trackedApps: (r.tracked_apps || []).map((a: any) => ({
           slug: a.slug,
@@ -276,7 +277,7 @@ export async function developerRoutes(app: FastifyInstance) {
 
     const rows: any[] = await db.execute(sql`
       SELECT
-        g.id, g.slug, g.name,
+        g.id, g.slug, g.name, g.total_apps,
         COUNT(DISTINCT pd.platform) AS platform_count,
         ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
         CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
@@ -304,7 +305,7 @@ export async function developerRoutes(app: FastifyInstance) {
       LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
       WHERE s.developer->>'name' = pd.name ${platformFilterSql}
       GROUP BY g.id, asd.id
-      ORDER BY (asd.id IS NOT NULL) DESC, g.name ASC
+      ORDER BY (asd.id IS NOT NULL) DESC, g.total_apps DESC, g.name ASC
     `);
 
     return {
@@ -314,6 +315,7 @@ export async function developerRoutes(app: FastifyInstance) {
         name: r.name,
         platformCount: Number(r.platform_count || 0),
         platforms: r.platforms || [],
+        totalApps: Number(r.total_apps || 0),
         isStarred: r.is_starred === true || r.is_starred === "true",
         competitorApps: (r.competitor_apps || []).map((a: any) => ({
           slug: a.slug,

@@ -247,6 +247,98 @@ describe("Developer routes", () => {
   });
 
   // -----------------------------------------------------------------------
+  // GET /api/developers/tracked
+  // -----------------------------------------------------------------------
+  describe("GET /api/developers/tracked", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers/tracked",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("includes totalApps field for each developer", async () => {
+      const trackedApp = await buildTestApp({
+        routes: developerRoutes,
+        prefix: "/api/developers",
+        db: {
+          executeResult: [
+            {
+              id: 1,
+              slug: "acme",
+              name: "Acme",
+              total_apps: 42,
+              platform_count: 1,
+              platforms: ["shopify"],
+              is_starred: false,
+              tracked_apps: [],
+            },
+          ],
+        },
+      });
+
+      const res = await trackedApp.inject({
+        method: "GET",
+        url: "/api/developers/tracked",
+        headers: authHeaders(adminToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.developers).toHaveLength(1);
+      expect(body.developers[0].totalApps).toBe(42);
+      await trackedApp.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // GET /api/developers/competitors
+  // -----------------------------------------------------------------------
+  describe("GET /api/developers/competitors", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers/competitors",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("includes totalApps field for each developer", async () => {
+      const compApp = await buildTestApp({
+        routes: developerRoutes,
+        prefix: "/api/developers",
+        db: {
+          executeResult: [
+            {
+              id: 2,
+              slug: "rival",
+              name: "Rival Co",
+              total_apps: 7,
+              platform_count: 1,
+              platforms: ["shopify"],
+              is_starred: false,
+              competitor_apps: [],
+            },
+          ],
+        },
+      });
+
+      const res = await compApp.inject({
+        method: "GET",
+        url: "/api/developers/competitors",
+        headers: authHeaders(adminToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.developers).toHaveLength(1);
+      expect(body.developers[0].totalApps).toBe(7);
+      await compApp.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Admin endpoints
   // -----------------------------------------------------------------------
   describe("Admin endpoints", () => {
