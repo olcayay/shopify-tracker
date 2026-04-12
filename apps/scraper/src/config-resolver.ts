@@ -20,7 +20,7 @@ import * as GLOBAL_CONSTANTS from "./constants.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("config-resolver");
-import { SCRAPER_CONFIG_SCHEMA } from "./config-schema.js";
+import { SCRAPER_CONFIG_SCHEMA } from "@appranks/shared";
 
 /** Result of resolving one (platform, scraperType) pair. */
 export interface ResolvedScraperConfig {
@@ -41,7 +41,12 @@ interface CacheEntry {
   expiresAt: number;
 }
 
-const CACHE_TTL_MS = 60_000;
+/**
+ * Cache TTL is short so admin edits propagate quickly to any worker that
+ * doesn't get an explicit pub/sub invalidation signal (Phase 4 adds that).
+ * For now every worker re-fetches from DB at least once per 15s.
+ */
+const CACHE_TTL_MS = 15_000;
 const cache = new Map<string, CacheEntry>();
 
 function cacheKey(platform: PlatformId, type: ScraperJobType): string {
@@ -88,7 +93,7 @@ function buildCodeDefaults(
   const defaults = clone((platformConstants ?? {}) as PlatformConstants) as PlatformConstants &
     Record<string, unknown>;
 
-  const typeSchema = SCRAPER_CONFIG_SCHEMA[scraperType];
+  const typeSchema = (SCRAPER_CONFIG_SCHEMA as Record<string, Record<string, { defaultFrom: "platform" | "global"; path: string }>>)[scraperType];
   if (typeSchema) {
     for (const [knobKey, knob] of Object.entries(typeSchema)) {
       if (knob.defaultFrom !== "global") continue;
@@ -112,7 +117,7 @@ function applyOverrides(
   overrides: Record<string, unknown>,
   scraperType: ScraperJobType
 ): PlatformConstants & Record<string, unknown> {
-  const typeSchema = SCRAPER_CONFIG_SCHEMA[scraperType];
+  const typeSchema = (SCRAPER_CONFIG_SCHEMA as Record<string, Record<string, unknown>>)[scraperType];
   if (!typeSchema || Object.keys(overrides).length === 0) return base;
 
   const out = clone(base);

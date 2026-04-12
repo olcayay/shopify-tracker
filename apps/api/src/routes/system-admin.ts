@@ -2777,13 +2777,14 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  // GET /api/system-admin/scraper-configs/:platform/:type — single row
+  // GET /api/system-admin/scraper-configs/:platform/:type — single row + schema
   app.get<{ Params: { platform: string; type: string } }>(
     "/scraper-configs/:platform/:type",
     async (request, reply) => {
       const { platform, type } = request.params;
       if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
       const { scraperConfigs } = await import("@appranks/db");
+      const { SCRAPER_CONFIG_SCHEMA } = await import("@appranks/shared");
       const rows = await db
         .select()
         .from(scraperConfigs)
@@ -2797,7 +2798,119 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         overrides: row?.overrides ?? {},
         updatedAt: row?.updatedAt ?? null,
         updatedBy: row?.updatedBy ?? null,
+        schema: (SCRAPER_CONFIG_SCHEMA as Record<string, unknown>)[type] ?? null,
       };
+    }
+  );
+
+  /**
+   * Validate overrides against the schema registry. Returns `{ ok: true }` or
+   * `{ ok: false, errors: [...] }`. Only registered knobs are accepted; values
+   * must satisfy the knob's type and min/max. Unknown keys are rejected so
+   * typos don't silently accumulate in the DB.
+   */
+  function validateOverrides(
+    schema: Record<string, { type: string; min?: number; max?: number }> | null,
+    overrides: Record<string, unknown>,
+  ): { ok: true } | { ok: false; errors: string[] } {
+    if (!schema) return { ok: false, errors: ["no schema registered for this scraper type"] };
+    const errors: string[] = [];
+    for (const [key, value] of Object.entries(overrides)) {
+      const def = schema[key];
+      if (!def) {
+        errors.push(`unknown knob "${key}"`);
+        continue;
+      }
+      if (def.type === "number" || def.type === "ms") {
+        if (typeof value !== "number" || !Number.isFinite(value)) {
+          errors.push(`"${key}" must be a finite number`);
+          continue;
+        }
+        if (def.min != null && value < def.min) errors.push(`"${key}" below min ${def.min}`);
+        if (def.max != null && value > def.max) errors.push(`"${key}" above max ${def.max}`);
+      } else if (def.type === "boolean") {
+        if (typeof value !== "boolean") errors.push(`"${key}" must be boolean`);
+      } else if (def.type === "string") {
+        if (typeof value !== "string") errors.push(`"${key}" must be string`);
+      } else if (def.type === "string[]") {
+        if (!Array.isArray(value) || !value.every((v) => typeof v === "string"))
+          errors.push(`"${key}" must be string[]`);
+      }
+    }
+    return errors.length === 0 ? { ok: true } : { ok: false, errors };
+  }
+
+  // PATCH /api/system-admin/scraper-configs/:platform/:type — update overrides / enabled
+  app.patch<{
+    Params: { platform: string; type: string };
+    Body: { enabled?: boolean; overrides?: Record<string, unknown> };
+  }>("/scraper-configs/:platform/:type", async (request, reply) => {
+    const { platform, type } = request.params;
+    if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+    const { enabled, overrides } = request.body ?? {};
+    if (enabled === undefined && overrides === undefined) {
+      return reply.code(400).send({ error: "body must include enabled and/or overrides" });
+    }
+
+    const { scraperConfigs } = await import("@appranks/db");
+    const { SCRAPER_CONFIG_SCHEMA } = await import("@appranks/shared");
+    const schema = (SCRAPER_CONFIG_SCHEMA as Record<string, any>)[type] ?? null;
+
+    if (overrides !== undefined) {
+      const result = validateOverrides(schema, overrides);
+      if (!result.ok) return reply.code(400).send({ error: "validation failed", details: result.errors });
+    }
+
+    const userEmail = request.user?.email || "api";
+    const updates: Record<string, unknown> = { updatedAt: new Date(), updatedBy: userEmail };
+    if (enabled !== undefined) updates.enabled = enabled;
+    if (overrides !== undefined) updates.overrides = overrides;
+
+    await db
+      .insert(scraperConfigs)
+      .values({
+        platform,
+        scraperType: type,
+        enabled: enabled ?? true,
+        overrides: overrides ?? {},
+        updatedAt: new Date(),
+        updatedBy: userEmail,
+      })
+      .onConflictDoUpdate({
+        target: [scraperConfigs.platform, scraperConfigs.scraperType],
+        set: updates,
+      });
+
+    // Return the new state (same shape as GET)
+    const rows = await db
+      .select()
+      .from(scraperConfigs)
+      .where(and(eq(scraperConfigs.platform, platform), eq(scraperConfigs.scraperType, type)))
+      .limit(1);
+    const row = rows[0];
+    return {
+      platform,
+      scraperType: type,
+      enabled: row?.enabled ?? true,
+      overrides: row?.overrides ?? {},
+      updatedAt: row?.updatedAt ?? null,
+      updatedBy: row?.updatedBy ?? null,
+    };
+  });
+
+  // POST /api/system-admin/scraper-configs/:platform/:type/reset — clear all overrides
+  app.post<{ Params: { platform: string; type: string } }>(
+    "/scraper-configs/:platform/:type/reset",
+    async (request, reply) => {
+      const { platform, type } = request.params;
+      if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+      const { scraperConfigs } = await import("@appranks/db");
+      const userEmail = request.user?.email || "api";
+      await db
+        .update(scraperConfigs)
+        .set({ overrides: {}, updatedAt: new Date(), updatedBy: userEmail })
+        .where(and(eq(scraperConfigs.platform, platform), eq(scraperConfigs.scraperType, type)));
+      return { platform, scraperType: type, overrides: {} };
     }
   );
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -15,8 +16,9 @@ import {
 } from "@/components/ui/table";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { timeAgo } from "@/lib/format-utils";
+import { ConfigEditDialog } from "./components/config-edit-dialog";
 
-interface ScraperConfigRow {
+export interface ScraperConfigRow {
   platform: string;
   scraperType: string;
   enabled: boolean;
@@ -29,34 +31,37 @@ export default function ScraperManagementPage() {
   const { fetchWithAuth } = useAuth();
   const [rows, setRows] = useState<ScraperConfigRow[] | null>(null);
   const [error, setError] = useState<string>("");
+  const [editing, setEditing] = useState<{ platform: string; type: string } | null>(null);
 
-  useEffect(() => {
-    fetchWithAuth("/api/system-admin/scraper-configs")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { configs: ScraperConfigRow[] };
-        setRows(data.configs);
-      })
-      .catch((err) => setError(String(err)));
+  const load = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth("/api/system-admin/scraper-configs");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { configs: ScraperConfigRow[] };
+      setRows(data.configs);
+    } catch (err) {
+      setError(String(err));
+    }
   }, [fetchWithAuth]);
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <p className="text-destructive">Failed to load: {error}</p>
-      </div>
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function toggleEnabled(row: ScraperConfigRow) {
+    const res = await fetchWithAuth(
+      `/api/system-admin/scraper-configs/${row.platform}/${row.scraperType}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ enabled: !row.enabled }),
+      },
     );
+    if (res.ok) await load();
   }
 
-  if (!rows) {
-    return (
-      <div className="p-6">
-        <p className="text-muted-foreground">Loading scraper configs…</p>
-      </div>
-    );
-  }
+  if (error) return <div className="p-6 text-destructive">Failed to load: {error}</div>;
+  if (!rows) return <div className="p-6 text-muted-foreground">Loading scraper configs…</div>;
 
-  // Group rows by platform for a more scannable layout
   const byPlatform = new Map<string, ScraperConfigRow[]>();
   for (const row of rows) {
     if (!byPlatform.has(row.platform)) byPlatform.set(row.platform, []);
@@ -68,18 +73,19 @@ export default function ScraperManagementPage() {
       <div>
         <h1 className="text-2xl font-semibold">Scraper Management</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Per-(platform, scraper type) runtime config. Phase 1 is read-only — live
-          editing ships in{" "}
+          Per-(platform, scraper type) runtime config. Click <b>Configure</b> to edit overrides
+          on a row; changes apply to the next job within ~15s (worker cache TTL). Empty overrides
+          means the scraper is using the code defaults. Schema registry currently covers only{" "}
+          <code className="font-mono text-xs">app_details</code> —{" "}
           <Link
-            href="https://linear.app/plan-b-side-projects/issue/PLA-1041"
+            href="https://linear.app/plan-b-side-projects/issue/PLA-1042"
             className="underline hover:text-primary"
             target="_blank"
             rel="noreferrer"
           >
-            PLA-1041
-          </Link>
-          . Rows with a non-empty <code className="font-mono text-xs">overrides</code> object
-          are not using default code values.
+            PLA-1042
+          </Link>{" "}
+          extends it to every type.
         </p>
       </div>
 
@@ -93,11 +99,17 @@ export default function ScraperManagementPage() {
               <CardTitle className="text-base flex items-center gap-2">
                 <span
                   className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: PLATFORM_COLORS[platform as keyof typeof PLATFORM_COLORS] }}
+                  style={{
+                    backgroundColor:
+                      PLATFORM_COLORS[platform as keyof typeof PLATFORM_COLORS],
+                  }}
                 />
                 {PLATFORM_LABELS[platform as keyof typeof PLATFORM_LABELS] ?? platform}
                 {anyOverrides && (
-                  <Badge variant="outline" className="ml-2 text-[9px] px-1 py-0 h-4 bg-orange-50 text-orange-600 border-orange-200">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 text-[9px] px-1 py-0 h-4 bg-orange-50 text-orange-600 border-orange-200"
+                  >
                     has overrides
                   </Badge>
                 )}
@@ -111,6 +123,7 @@ export default function ScraperManagementPage() {
                     <TableHead className="w-24">Enabled</TableHead>
                     <TableHead>Overrides</TableHead>
                     <TableHead className="w-40">Last updated</TableHead>
+                    <TableHead className="w-32">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -120,21 +133,22 @@ export default function ScraperManagementPage() {
                       <TableRow key={row.scraperType}>
                         <TableCell className="font-mono text-xs">{row.scraperType}</TableCell>
                         <TableCell>
-                          {row.enabled ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              on
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                              off
-                            </Badge>
-                          )}
+                          <Button
+                            size="sm"
+                            variant={row.enabled ? "outline" : "destructive"}
+                            className="h-6 text-xs"
+                            onClick={() => toggleEnabled(row)}
+                          >
+                            {row.enabled ? "on" : "off"}
+                          </Button>
                         </TableCell>
                         <TableCell>
                           {overrideKeys.length === 0 ? (
-                            <span className="text-xs text-muted-foreground">— (all defaults)</span>
+                            <span className="text-xs text-muted-foreground">
+                              — (all defaults)
+                            </span>
                           ) : (
-                            <pre className="text-xs bg-muted rounded p-2 overflow-x-auto">
+                            <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-w-md">
                               {JSON.stringify(row.overrides, null, 2)}
                             </pre>
                           )}
@@ -143,11 +157,25 @@ export default function ScraperManagementPage() {
                           {row.updatedAt ? (
                             <>
                               {timeAgo(row.updatedAt)}
-                              {row.updatedBy && <span className="block">by {row.updatedBy}</span>}
+                              {row.updatedBy && (
+                                <span className="block">by {row.updatedBy}</span>
+                              )}
                             </>
                           ) : (
                             "—"
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() =>
+                              setEditing({ platform: row.platform, type: row.scraperType })
+                            }
+                          >
+                            Configure
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -158,6 +186,18 @@ export default function ScraperManagementPage() {
           </Card>
         );
       })}
+
+      {editing && (
+        <ConfigEditDialog
+          platform={editing.platform}
+          scraperType={editing.type}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

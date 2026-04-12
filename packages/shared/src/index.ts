@@ -322,3 +322,5 @@ export type {
   AuditImpact,
   SectionWeights,
 } from "./audit/index.js";
+export { SCRAPER_CONFIG_SCHEMA, getManagedScraperTypes, isKnownKnob } from "./scraper-config-schema.js";
+export type { ScraperConfigType, KnobDef, KnobType } from "./scraper-config-schema.js";

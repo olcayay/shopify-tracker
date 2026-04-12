@@ -8,7 +8,18 @@
  *
  * Phase 1 scope: `app_details` only. Other types are added in Phase 3 (PLA-1042).
  */
-import type { ScraperJobType } from "./queue.js";
+/**
+ * Scraper job types that can carry tunable config. Kept local to this file so
+ * `@appranks/shared` stays independent of `@appranks/scraper`. Must match
+ * `ScraperConfigType` in `apps/scraper/src/queue.ts` — any new tunable type added
+ * there should be added here too.
+ */
+export type ScraperConfigType =
+  | "category"
+  | "app_details"
+  | "keyword_search"
+  | "keyword_suggestions"
+  | "reviews";
 
 export type KnobType = "number" | "ms" | "boolean" | "string" | "string[]";
 
@@ -37,7 +48,7 @@ export interface KnobDef {
  * Keys in each inner record match the flattened override key stored in DB JSON.
  * Dotted keys (e.g. "rateLimit.minDelayMs") encode nested paths.
  */
-export const SCRAPER_CONFIG_SCHEMA: Partial<Record<ScraperJobType, Record<string, KnobDef>>> = {
+export const SCRAPER_CONFIG_SCHEMA: Partial<Record<ScraperConfigType, Record<string, KnobDef>>> = {
   app_details: {
     appDetailsConcurrency: {
       type: "number",
@@ -107,12 +118,12 @@ export const SCRAPER_CONFIG_SCHEMA: Partial<Record<ScraperJobType, Record<string
 };
 
 /** All scraper types that currently have at least one registered knob. */
-export function getManagedScraperTypes(): ScraperJobType[] {
-  return Object.keys(SCRAPER_CONFIG_SCHEMA) as ScraperJobType[];
+export function getManagedScraperTypes(): ScraperConfigType[] {
+  return Object.keys(SCRAPER_CONFIG_SCHEMA) as ScraperConfigType[];
 }
 
 /** Returns `true` if the given key is a registered knob for the scraper type. */
-export function isKnownKnob(scraperType: ScraperJobType, key: string): boolean {
+export function isKnownKnob(scraperType: ScraperConfigType, key: string): boolean {
   const typeSchema = SCRAPER_CONFIG_SCHEMA[scraperType];
   return typeSchema != null && key in typeSchema;
 }
