@@ -110,6 +110,8 @@ export interface PlatformConstants {
   httpMaxConcurrency?: number;
   /** Max concurrent app detail scrapes (default: 3) */
   appDetailsConcurrency?: number;
+  /** Max concurrent app detail scrapes for bulk scope=all runs (default: min(appDetailsConcurrency, 3)) */
+  appDetailsConcurrencyBulk?: number;
   /** Max seed categories to crawl in parallel (default: 1 = sequential) */
   concurrentSeedCategories?: number;
   /** Max keywords to scrape in parallel (default: 3) */

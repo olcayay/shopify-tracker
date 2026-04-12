@@ -412,7 +412,8 @@ export class AppDetailsScraper {
         } finally {
           currentlyProcessing.delete(app.slug);
         }
-      }, this.platformModule?.constants?.appDetailsConcurrency ?? 3);
+      }, this.platformModule?.constants?.appDetailsConcurrencyBulk
+          ?? Math.min(this.platformModule?.constants?.appDetailsConcurrency ?? 3, 3));
 
       await this.db
         .update(scrapeRuns)
