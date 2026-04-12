@@ -182,10 +182,10 @@ describe("HttpClient", () => {
 
   describe("cumulative backoff budget", () => {
     it("bails early when 429 backoff exceeds budget", async () => {
-      // With maxRetries=4 and base=2000ms: 2000 + 4000 + 8000 + 16000 + 32000 = 62000ms
-      // Budget is 45000ms, so should bail after cumulative exceeds 45s
+      // With maxRetries=5 and base=2000ms: 2 + 4 + 8 + 16 + 32 + 64 = 126000ms
+      // Budget is 90000ms, so should bail after cumulative exceeds 90s
       mockFetch.mockResolvedValue(httpError(429, "Too Many Requests"));
-      const client = new HttpClient({ delayMs: 0, maxRetries: 4, maxConcurrency: 10 });
+      const client = new HttpClient({ delayMs: 0, maxRetries: 5, maxConcurrency: 10 });
       // Mock sleep to be instant
       vi.spyOn(client, "sleep").mockResolvedValue(undefined);
 
@@ -196,7 +196,7 @@ describe("HttpClient", () => {
 
     it("bails early in fetchRaw when 429 backoff exceeds budget", async () => {
       mockFetch.mockResolvedValue(httpError(429, "Too Many Requests"));
-      const client = new HttpClient({ delayMs: 0, maxRetries: 4, maxConcurrency: 10 });
+      const client = new HttpClient({ delayMs: 0, maxRetries: 5, maxConcurrency: 10 });
       vi.spyOn(client, "sleep").mockResolvedValue(undefined);
 
       await expect(client.fetchRaw("https://example.com", { method: "GET" })).rejects.toThrow(

@@ -63,7 +63,7 @@ export const HTTP_RAW_RATE_LIMIT_BASE_MS = IS_SMOKE_TEST ? 2_000 : 8_000;
 /** Per-request timeout in ms (AbortSignal.timeout) — prevents a single hung request from consuming the entire keyword timeout */
 export const HTTP_REQUEST_TIMEOUT_MS = IS_SMOKE_TEST ? 15_000 : 30_000;
 /** Maximum cumulative backoff budget in ms — bail early if rate-limit retries exceed this */
-export const HTTP_MAX_CUMULATIVE_BACKOFF_MS = IS_SMOKE_TEST ? 10_000 : 45_000;
+export const HTTP_MAX_CUMULATIVE_BACKOFF_MS = IS_SMOKE_TEST ? 10_000 : 90_000;
 
 // ── Job timeouts (ms) ───────────────────────────────────────────────
 export const JOB_TIMEOUT_CATEGORY_MS = 45 * 60 * 1000;
