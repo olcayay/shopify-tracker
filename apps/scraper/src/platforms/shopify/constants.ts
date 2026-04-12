@@ -31,7 +31,7 @@ export const SHOPIFY_CONSTANTS: PlatformConstants = {
   rateLimit: { minDelayMs: 500, maxDelayMs: 3000 },
   httpMaxConcurrency: 6,
   appDetailsConcurrency: 8,
-  appDetailsConcurrencyBulk: 3,
+  appDetailsConcurrencyBulk: 2,
   concurrentSeedCategories: 2,
   keywordConcurrency: 3,
   keywordDelayMs: 500,
