@@ -12,6 +12,7 @@ import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
 import { BrowserClient } from "./browser-client.js";
 import { getModule, getPlatformConstants } from "./platforms/registry.js";
+import { resolveConfig } from "./config-resolver.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
 import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
 import { recordSuccess, recordFailure } from "./circuit-breaker.js";
@@ -153,8 +154,18 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
 
-    // Per-job HttpClient — use platform-specific rate limits when available
-    const platformConstants = getPlatformConstants(platform);
+    // Resolve runtime config: code defaults + DB overrides (per-type scope).
+    // Phase 1 only merges real overrides for `app_details`; other types return
+    // plain code defaults (schema registry has no entries for them yet).
+    const resolvedConfig = await resolveConfig(db, platform, type).catch(() => null);
+    if (resolvedConfig && resolvedConfig.enabled === false) {
+      log.warn("scraper config disabled for (platform, type), skipping job", {
+        jobId: job.id, platform, type,
+      });
+      return;
+    }
+    // Per-job HttpClient — use resolved rate limits when available, else platform constants
+    const platformConstants = resolvedConfig?.merged ?? getPlatformConstants(platform);
     // Use keyword-specific delay if available and this is a keyword search job
     const isKeywordJob = type === "keyword_search";
     const baseDelayMs = isKeywordJob && platformConstants?.keywordDelayMs
@@ -244,6 +255,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       case "app_details": {
         const scraper = new AppDetailsScraper(db, httpClient, platformModule);
         scraper.jobId = job.id;
+        scraper.resolvedConfig = resolvedConfig ?? undefined;
         if (job.data.slug) {
           await scraper.scrapeApp(job.data.slug, undefined, triggeredBy, queueName, opts?.force);
           log.info("single app scrape completed", { slug: job.data.slug });

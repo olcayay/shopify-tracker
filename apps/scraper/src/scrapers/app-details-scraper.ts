@@ -3,6 +3,7 @@ import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper, platformDevelopers } from "@appranks/db";
 import { urls, createLogger, clampRating, clampCount, validatePlatformData, normalizePricingModel, type PlatformId } from "@appranks/shared";
 import { AppNotFoundError } from "../utils/app-not-found-error.js";
+import type { ResolvedScraperConfig } from "../config-resolver.js";
 
 const log = createLogger("app-details-scraper");
 
@@ -117,6 +118,29 @@ export class AppDetailsScraper {
   private platform: PlatformId;
   private platformModule?: PlatformModule;
   public jobId?: string;
+  public resolvedConfig?: ResolvedScraperConfig;
+
+  /**
+   * Pick a config value with fallback priority: resolved (DB overrides) → platform constants → provided default.
+   * Supports dotted paths (e.g. "rateLimit.minDelayMs").
+   */
+  private configValue<T>(key: string, fallback: T): T {
+    const read = (src: unknown, path: string): unknown => {
+      if (!src || typeof src !== "object") return undefined;
+      const parts = path.split(".");
+      let cursor: any = src;
+      for (const part of parts) {
+        if (cursor == null || typeof cursor !== "object") return undefined;
+        cursor = cursor[part];
+      }
+      return cursor;
+    };
+    const resolved = read(this.resolvedConfig?.merged, key);
+    if (resolved !== undefined) return resolved as T;
+    const fromPlatform = read(this.platformModule?.constants as unknown, key);
+    if (fromPlatform !== undefined) return fromPlatform as T;
+    return fallback;
+  }
 
   constructor(db: Database, httpClient?: HttpClient, platformModule?: PlatformModule) {
     this.db = db;
@@ -248,6 +272,9 @@ export class AppDetailsScraper {
         triggeredBy,
         queue,
         jobId: this.jobId ?? null,
+        metadata: this.resolvedConfig
+          ? { config_snapshot: { merged: this.resolvedConfig.merged, overrides: this.resolvedConfig.overrides } }
+          : undefined,
       })
       .returning();
 
@@ -301,7 +328,7 @@ export class AppDetailsScraper {
         } finally {
           currentlyProcessing.delete(app.slug);
         }
-      }, this.platformModule?.constants?.appDetailsConcurrency ?? 3);
+      }, this.configValue("appDetailsConcurrency", 3));
 
       await this.db
         .update(scrapeRuns)
@@ -365,6 +392,9 @@ export class AppDetailsScraper {
         triggeredBy,
         queue,
         jobId: this.jobId ?? null,
+        metadata: this.resolvedConfig
+          ? { config_snapshot: { merged: this.resolvedConfig.merged, overrides: this.resolvedConfig.overrides }, scope: "all" }
+          : { scope: "all" },
       })
       .returning();
 
@@ -419,8 +449,10 @@ export class AppDetailsScraper {
         } finally {
           currentlyProcessing.delete(app.slug);
         }
-      }, this.platformModule?.constants?.appDetailsConcurrencyBulk
-          ?? Math.min(this.platformModule?.constants?.appDetailsConcurrency ?? 3, 3));
+      }, this.configValue(
+        "appDetailsConcurrencyBulk",
+        Math.min(this.configValue("appDetailsConcurrency", 3), 3),
+      ));
 
       await this.db
         .update(scrapeRuns)

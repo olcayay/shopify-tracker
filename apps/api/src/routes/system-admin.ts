@@ -2760,6 +2760,47 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return result;
   });
 
+  // GET /api/system-admin/scraper-configs — list all (platform, scraper_type) rows
+  // Phase 1: read-only. Phase 2 (PLA-1041) adds PATCH + schema from registry.
+  app.get("/scraper-configs", async () => {
+    const { scraperConfigs } = await import("@appranks/db");
+    const rows = await db.select().from(scraperConfigs);
+    return {
+      configs: rows.map((row) => ({
+        platform: row.platform,
+        scraperType: row.scraperType,
+        enabled: row.enabled,
+        overrides: row.overrides ?? {},
+        updatedAt: row.updatedAt,
+        updatedBy: row.updatedBy,
+      })),
+    };
+  });
+
+  // GET /api/system-admin/scraper-configs/:platform/:type — single row
+  app.get<{ Params: { platform: string; type: string } }>(
+    "/scraper-configs/:platform/:type",
+    async (request, reply) => {
+      const { platform, type } = request.params;
+      if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+      const { scraperConfigs } = await import("@appranks/db");
+      const rows = await db
+        .select()
+        .from(scraperConfigs)
+        .where(and(eq(scraperConfigs.platform, platform), eq(scraperConfigs.scraperType, type)))
+        .limit(1);
+      const row = rows[0];
+      return {
+        platform,
+        scraperType: type,
+        enabled: row?.enabled ?? true,
+        overrides: row?.overrides ?? {},
+        updatedAt: row?.updatedAt ?? null,
+        updatedBy: row?.updatedBy ?? null,
+      };
+    }
+  );
+
   // PATCH /api/system-admin/scraper/platform/:platform/toggle — toggle scraperEnabled for a platform
   app.patch<{ Params: { platform: string } }>(
     "/scraper/platform/:platform/toggle",

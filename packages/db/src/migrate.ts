@@ -175,6 +175,21 @@ async function run() {
         // PLA-1001: dismiss_reason on app_field_changes (migration 0136)
         `ALTER TABLE app_field_changes ADD COLUMN IF NOT EXISTS dismiss_reason VARCHAR(50)`,
         `CREATE INDEX IF NOT EXISTS idx_app_field_changes_dismiss_reason ON app_field_changes(dismiss_reason)`,
+        // PLA-1035: apps.delisted_at (migration 0141)
+        `ALTER TABLE apps ADD COLUMN IF NOT EXISTS delisted_at TIMESTAMP NULL`,
+        `CREATE INDEX IF NOT EXISTS idx_apps_delisted_at ON apps (delisted_at) WHERE delisted_at IS NOT NULL`,
+        // PLA-1040: scraper_configs (migration 0142)
+        `CREATE TABLE IF NOT EXISTS scraper_configs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          platform TEXT NOT NULL,
+          scraper_type TEXT NOT NULL,
+          enabled BOOLEAN NOT NULL DEFAULT true,
+          overrides JSONB NOT NULL DEFAULT '{}'::jsonb,
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_by TEXT
+        )`,
+        `CREATE UNIQUE INDEX IF NOT EXISTS scraper_configs_platform_type_uq ON scraper_configs (platform, scraper_type)`,
+        `CREATE INDEX IF NOT EXISTS idx_scraper_configs_platform ON scraper_configs (platform)`,
       ];
       for (const stmt of safetyStatements) {
         try {

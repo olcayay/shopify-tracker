@@ -334,6 +334,10 @@ Cascade options (`scrapeAppDetails`, `scrapeReviews`) can be enabled when jobs a
 
 Platform-specific overrides are defined in `apps/scraper/src/platforms/shopify/constants.ts` and applied in `process-job.ts:155-161`. The bulk knob (`appDetailsConcurrencyBulk`) caps Shopify at ~4 RPS effective (2 concurrent × 1/0.5s) during full `scope=all` runs, well under Shopify's ~10 RPS tolerance. Tracked cron scrapes stay at 8 concurrent for speed — they only touch 36 apps, so burst is acceptable.
 
+### Runtime config overrides (PLA-1040, Phase 1)
+
+A new `scraper_configs` table (introduced in migration `0142_scraper_configs.sql`) stores per-(platform, scraper_type) JSONB overrides on top of the code defaults. At job start the resolver (`apps/scraper/src/config-resolver.ts`) merges code defaults + DB overrides; the result is stored on `scrape_runs.metadata.config_snapshot` for forensics. Empty overrides = "use all defaults" (no behavior change on day 1). The schema registry (`apps/scraper/src/config-schema.ts`) defines which knobs are tunable per scraper type — Phase 1 covers `app_details` only; Phase 3 (PLA-1042) extends to category/keyword/reviews. Admin visibility page: `/system-admin/scraper-management` (read-only in Phase 1; live editing ships with PLA-1041 Phase 2). The `enabled` column on each row acts as a per-(platform, type) kill switch, independent of the platform-wide `platform_visibility.scraper_enabled`.
+
 ### Adaptive Delay
 
 The HttpClient has an adaptive delay mechanism (`http-client.ts`):

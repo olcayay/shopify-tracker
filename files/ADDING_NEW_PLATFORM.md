@@ -45,6 +45,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Create migration to seed `account_platforms` for existing accounts
 - [ ] Create migration to seed `platform_visibility` (hidden by default until tested)
 - [ ] Create migration to seed categories
+- [ ] Create migration to seed `scraper_configs` — one row per (new_platform, scraper_type) with `enabled=true, overrides='{}'`. Without this, the admin Scraper Config page (`/system-admin/scraper-management`) won't show the new platform's knobs. Pattern: `INSERT ... ON CONFLICT (platform, scraper_type) DO NOTHING`. See migration 0142 for the canonical CROSS JOIN seed pattern.
 - [ ] Update `packages/db/src/migrations/meta/_journal.json` with new migration entries
 
 ### Phase 3: Scraper
