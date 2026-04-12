@@ -44,6 +44,26 @@ export class KeywordScraper {
   private platform: PlatformId;
   private platformModule?: PlatformModule;
   public jobId?: string;
+  /** Resolved runtime config (code defaults + DB overrides). Set by process-job.ts. */
+  public resolvedConfig?: import("../config-resolver.js").ResolvedScraperConfig;
+
+  /** Read a config value with priority: resolved (DB) → platform constants → fallback. */
+  private configValue<T>(key: string, fallback: T): T {
+    const read = (src: unknown, path: string): unknown => {
+      if (!src || typeof src !== "object") return undefined;
+      let cursor: any = src;
+      for (const part of path.split(".")) {
+        if (cursor == null || typeof cursor !== "object") return undefined;
+        cursor = cursor[part];
+      }
+      return cursor;
+    };
+    const resolved = read(this.resolvedConfig?.merged, key);
+    if (resolved !== undefined) return resolved as T;
+    const fromPlatform = read(this.platformModule?.constants as unknown, key);
+    if (fromPlatform !== undefined) return fromPlatform as T;
+    return fallback;
+  }
 
   constructor(db: Database, httpClient?: HttpClient, platformModule?: PlatformModule) {
     this.db = db;
@@ -140,7 +160,7 @@ export class KeywordScraper {
         } finally {
           currentlyProcessing.delete(kw.keyword);
         }
-      }, this.platformModule?.constants?.keywordConcurrency ?? 3);
+      }, this.configValue("keywordConcurrency", 3));
 
       await this.db
         .update(scrapeRuns)

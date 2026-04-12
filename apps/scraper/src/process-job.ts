@@ -207,6 +207,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     switch (type) {
       case "category": {
         const scraper = new CategoryScraper(db, { httpClient, platformModule });
+        scraper.resolvedConfig = resolvedConfig ?? undefined;
         scraper.jobId = job.id;
         let discoveredSlugs: string[] = [];
         if (job.data.slug) {
@@ -319,6 +320,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
       case "keyword_search": {
         const scraper = new KeywordScraper(db, httpClient, platformModule);
+        scraper.resolvedConfig = resolvedConfig ?? undefined;
         scraper.jobId = job.id;
         let discoveredSlugs: string[] = [];
         if (job.data.keyword) {
