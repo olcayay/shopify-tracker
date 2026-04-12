@@ -721,7 +721,9 @@ export class CategoryScraper {
     const now = new Date();
     const slugToIdMap = new Map<string, number>();
 
-    // Prepare app values for batch upsert
+    // Prepare app values for batch upsert, dedup by slug to avoid
+    // "ON CONFLICT DO UPDATE cannot affect row a second time" error
+    const seenSlugs = new Set<string>();
     const appValues = appList.map(app => {
       const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
       const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
@@ -730,6 +732,10 @@ export class CategoryScraper {
       const validCount = clampCount(app.rating_count);
       const hasCount = validCount != null && validCount > 0;
       return { appSlug, subtitle, validRating, hasRating, validCount, hasCount, app };
+    }).filter(v => {
+      if (seenSlugs.has(v.appSlug)) return false;
+      seenSlugs.add(v.appSlug);
+      return true;
     });
 
     // Batch upsert apps in chunks of 100
@@ -1086,10 +1092,17 @@ export class CategoryScraper {
     const allFeaturedApps = sections.flatMap(s => s.apps);
     if (allFeaturedApps.length === 0) return;
 
+    // Deduplicate apps by slug before batch upsert (same app can appear in multiple sections)
+    const uniqueAppsMap = new Map<string, typeof allFeaturedApps[0]>();
+    for (const app of allFeaturedApps) {
+      if (!uniqueAppsMap.has(app.slug)) uniqueAppsMap.set(app.slug, app);
+    }
+    const uniqueApps = [...uniqueAppsMap.values()];
+
     // Batch upsert app master records
     const slugToIdMap = new Map<string, number>();
-    for (let c = 0; c < allFeaturedApps.length; c += 100) {
-      const chunk = allFeaturedApps.slice(c, c + 100);
+    for (let c = 0; c < uniqueApps.length; c += 100) {
+      const chunk = uniqueApps.slice(c, c + 100);
       const upserted = await this.db
         .insert(apps)
         .values(chunk.map(app => ({
@@ -1110,12 +1123,19 @@ export class CategoryScraper {
       for (const r of upserted) slugToIdMap.set(r.slug, r.id);
     }
 
-    // Batch insert featured sightings
+    // Deduplicate sightings by conflict key before batch insert
+    // PostgreSQL cannot update the same row twice in a single INSERT
+    const sightingKey = (v: { appId: number; sectionHandle: string; surfaceDetail: string }) =>
+      `${v.appId}:${v.sectionHandle}:${v.surfaceDetail}`;
+    const seenSightings = new Set<string>();
     const sightingValues: { appId: number; surface: string; surfaceDetail: string; sectionHandle: string; sectionTitle: string; position: number | null; seenDate: string; firstSeenRunId: string; lastSeenRunId: string; timesSeenInDay: number }[] = [];
     for (const section of sections) {
       for (const app of section.apps) {
         const appId = slugToIdMap.get(app.slug);
         if (!appId) continue;
+        const key = sightingKey({ appId, sectionHandle: section.sectionHandle, surfaceDetail: section.surfaceDetail });
+        if (seenSightings.has(key)) continue;
+        seenSightings.add(key);
         sightingValues.push({
           appId, surface: section.surface, surfaceDetail: section.surfaceDetail,
           sectionHandle: section.sectionHandle, sectionTitle: section.sectionTitle,
