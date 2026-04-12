@@ -30,6 +30,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
+import { formatDuration } from "@/lib/format-utils";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { buildItemReport, buildRunReport, buildFallbackReport, type RunInfo } from "@/lib/scraper-report";
@@ -331,7 +332,7 @@ export function RunHistoryTable({
                   </TableCell>
                   <TableCell className="text-sm">
                     {run.metadata?.duration_ms
-                      ? `${(run.metadata.duration_ms / 1000).toFixed(1)}s`
+                      ? formatDuration(run.metadata.duration_ms)
                       : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm">
