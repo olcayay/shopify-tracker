@@ -20,6 +20,24 @@ import type { PlatformModule, NormalizedSearchApp } from "../platforms/platform-
 import { runConcurrent } from "../utils/run-concurrent.js";
 import { recordItemError } from "../utils/record-item-error.js";
 
+/** Retry a DB operation on deadlock (up to 3 attempts with jittered backoff) */
+async function withDeadlockRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      if (attempt < 3 && err?.message?.includes("deadlock detected")) {
+        const jitter = Math.random() * 200 * attempt;
+        log.warn("deadlock detected, retrying", { label, attempt, jitterMs: Math.round(jitter) });
+        await new Promise(r => setTimeout(r, jitter));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("unreachable");
+}
+
 export class KeywordScraper {
   private db: Database;
   private httpClient: HttpClient;
@@ -303,7 +321,7 @@ export class KeywordScraper {
     if (organicApps.length > 0) {
       for (let c = 0; c < organicApps.length; c += 100) {
         const chunk = organicApps.slice(c, c + 100);
-        const upserted = await this.db
+        const upserted = await withDeadlockRetry(() => this.db
           .insert(apps)
           .values(chunk.map(app => ({
             platform: this.platform,
@@ -327,7 +345,7 @@ export class KeywordScraper {
               pricingHint: sql`COALESCE(excluded.pricing_hint, ${apps.pricingHint})`,
             },
           })
-          .returning({ id: apps.id, slug: apps.slug });
+          .returning({ id: apps.id, slug: apps.slug }), "organic-apps-upsert");
         for (const r of upserted) slugToIdMap.set(r.slug, r.id);
       }
     }
@@ -372,7 +390,7 @@ export class KeywordScraper {
     if (sponsoredApps.length > 0) {
       for (let c = 0; c < sponsoredApps.length; c += 100) {
         const chunk = sponsoredApps.slice(c, c + 100);
-        const upserted = await this.db
+        const upserted = await withDeadlockRetry(() => this.db
           .insert(apps)
           .values(chunk.map(app => ({
             platform: this.platform,
@@ -394,7 +412,7 @@ export class KeywordScraper {
               pricingHint: sql`COALESCE(excluded.pricing_hint, ${apps.pricingHint})`,
             },
           })
-          .returning({ id: apps.id, slug: apps.slug });
+          .returning({ id: apps.id, slug: apps.slug }), "sponsored-apps-upsert");
         for (const r of upserted) slugToIdMap.set(r.slug, r.id);
       }
 

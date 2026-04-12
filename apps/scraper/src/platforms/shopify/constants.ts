@@ -32,7 +32,7 @@ export const SHOPIFY_CONSTANTS: PlatformConstants = {
   httpMaxConcurrency: 6,
   appDetailsConcurrency: 8,
   concurrentSeedCategories: 2,
-  keywordConcurrency: 8,
+  keywordConcurrency: 5,
 };
 
 export const SHOPIFY_SCORING: PlatformScoringConfig = {
