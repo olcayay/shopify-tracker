@@ -175,11 +175,18 @@ The smaller improvement compared to categories is because keyword scraper is HTT
 
 ### Scope
 
-Runs on **tracked apps only** (apps associated with an account).
+Two modes, selected by `options.scope`:
 
-### 12-Hour Cache
+| `scope` | Target | Trigger | Typical count (Shopify) |
+|---------|--------|---------|-----------------------|
+| **`"tracked"`** (default) | Tracked apps only (`apps.is_tracked = true`) | Cron every 12h | 36 |
+| **`"all"`** | Every discovered app (`apps.platform = ?`) | Manual via System Admin UI | 13,681 |
 
-Before scraping, checks the most recent snapshot. If the app was scraped within the last **12 hours**, it is skipped. This prevents redundant scraping when multiple triggers hit the same app.
+The `scope=all` path is wired through `process-job.ts:261` → `AppDetailsScraper.scrapeAll()`. Triggered from the System Admin scraper page via the Database icon button per platform (confirms with "resume mode vs force re-scrape" dialog). See §11 for the bulk playbook.
+
+### 12-Hour Cache (Resume Mechanism)
+
+Before scraping, checks the most recent snapshot via `buildPreFetchedData(force)`. If the app was scraped within the last **12 hours**, it is skipped (in-memory check, ~48 apps/sec skim rate). This prevents redundant scraping when multiple triggers hit the same app and **doubles as the resume mechanism for bulk scrapes** — a killed/failed `scope=all` run can be re-triggered with `force=false` and will transparently skip already-scraped apps. When `force=true`, the cache is bypassed.
 
 ### What It Collects
 
@@ -197,7 +204,13 @@ Compares current values against previous snapshot for: `name`, `appIntroduction`
 
 ### Does It Scrape Reviews?
 
-**No.** The cron job does not cascade into review scraping. Cascade can be enabled manually via `scrapeReviews: true` option.
+**No.** The cron job does not cascade into review scraping. Cascade can be enabled manually via `scrapeReviews: true` option. (Note: reviews cascade only fires for `scope=tracked` — skipped for `scope=all` to avoid queueing 13k review jobs.)
+
+### Handling Delisted Apps (HTTP 404)
+
+During full `scope=all` scrapes, ~0.5% of discovered apps return HTTP 404 (developer removed or Shopify delisted). Currently `AppNotFoundError` is only thrown by the Zoom platform module — Shopify and other platforms fall through to generic error handling, so 404s are incorrectly counted as `items_failed`. See PLA-1035 for the fix (add `apps.delisted_at` column + admin observation page).
+
+Until PLA-1035 ships, expect `items_failed` on bulk runs to include ~0.5% delisted apps in addition to real failures.
 
 ---
 
@@ -309,13 +322,17 @@ Cascade options (`scrapeAppDetails`, `scrapeReviews`) can be enabled when jobs a
 
 | Setting | Default | Shopify Override | Env Variable |
 |---------|---------|-----------------|-------------|
-| Delay between requests | **2000 ms** | **250 ms** (categories), **500 ms** (keywords) | `SCRAPER_DELAY_MS` |
-| Max concurrent requests | **2** | **6** | `SCRAPER_MAX_CONCURRENCY` |
+| Delay between requests | **2000 ms** | **500 ms** (`rateLimit.minDelayMs`), **500 ms** (keywords via `keywordDelayMs`) | `SCRAPER_DELAY_MS` |
+| Adaptive max delay | — | **3000 ms** (`rateLimit.maxDelayMs`) | — |
+| Max concurrent requests | **2** | **6** (`httpMaxConcurrency`) | `SCRAPER_MAX_CONCURRENCY` |
+| App-detail concurrency (tracked) | **3** | **8** (`appDetailsConcurrency`) | — |
+| App-detail concurrency (bulk `scope=all`) | **3** | **2** (`appDetailsConcurrencyBulk`) | — |
 | Max retries per request | **4** (5 total attempts) | — | — |
-| Cumulative backoff budget | **45s** | — | — |
+| Cumulative backoff budget | **90s** | — | — |
 | Request timeout | **30s** | — | — |
+| Job timeout (`scope=all`) | — | **6h** (`JOB_TIMEOUT_APP_DETAILS_ALL_MS`) | — |
 
-Platform-specific overrides are defined in `apps/scraper/src/platforms/shopify/constants.ts` and applied in `process-job.ts:155-161`. The keyword scraper uses `keywordDelayMs` (500ms) instead of the default `rateLimit.minDelayMs` (250ms) because Shopify's search endpoint is more rate-limit sensitive.
+Platform-specific overrides are defined in `apps/scraper/src/platforms/shopify/constants.ts` and applied in `process-job.ts:155-161`. The bulk knob (`appDetailsConcurrencyBulk`) caps Shopify at ~4 RPS effective (2 concurrent × 1/0.5s) during full `scope=all` runs, well under Shopify's ~10 RPS tolerance. Tracked cron scrapes stay at 8 concurrent for speed — they only touch 36 apps, so burst is acceptable.
 
 ### Adaptive Delay
 
@@ -452,3 +469,107 @@ Mitigation: `withDeadlockRetry()` wrapper with 3 attempts and jittered backoff.
 | Batch DB removes natural inter-request delays | Previously, slow sequential DB ops acted as implicit rate limiting; batch DB makes requests fire faster, requiring explicit delay increases |
 | Circuit breaker has 1-hour TTL | After rate limit incidents, must manually reset or wait before new scrape jobs work |
 | `keywordDelayMs` separate from `rateLimit.minDelayMs` | Different scraper types need different rate limits for the same platform |
+| Bulk scrape needs a separate concurrency knob from tracked cron | Tracked (36 apps) tolerates bursts at concurrency=8; bulk (13k apps) sustains pressure for hours and 429s compound. `appDetailsConcurrencyBulk: 2` is the validated setting. |
+| A killed BullMQ job auto-retries as "stalled" if `active` list isn't cleaned | Removing just the job hash + stalled ZSET leaves the `active` LIST entry; BullMQ re-runs it in parallel with any replacement job, doubling load. Observed 2026-04-12: jobs 1233+1235 ran in parallel for 3h, tripling 429 rate. Always `LREM ... :active` too. See §11. |
+| Single persistent 429s continue to occur even at conservative rates | After rate tuning, ~0% HTTP 429 in single-job mode is achievable. Apparent "10% 429 rate" seen during tuning was pollution from a duplicate job. |
+
+---
+
+## 11. Bulk App-Details Scrape (`scope=all`) Playbook
+
+This section documents operating the "scrape all discovered apps" feature — how to trigger, monitor, kill, and resume safely. Based on the first full Shopify bulk scrape (2026-04-12, jobs 1228–1252, baseline 13,681 apps).
+
+### Triggering
+
+Preferred path (UI):
+1. System Admin → Scraper → Operational Matrix
+2. Per-platform row → click **Database icon** (next to "All" + power buttons)
+3. First confirm: "Resume mode OK / cancel" → OK
+4. Second confirm: "Force re-scrape? / resume-friendly" → pick based on intent
+   - **force=false (resume mode)**: skips apps scraped in last 12h. Use for re-runs / retries. Default recommendation.
+   - **force=true**: bypasses cache, re-scrapes every app. Use only when snapshot data is known to be stale/corrupt.
+
+Direct BullMQ enqueue (when UI is down or for scripting):
+```bash
+gcloud compute ssh deploy@appranks-api --zone=europe-west1-b --tunnel-through-iap --command \
+  "docker exec appranks-api-1 node -e \"
+  const { Queue } = require('bullmq');
+  const q = new Queue('scraper-jobs-background', { connection: { host: '10.0.1.5', port: 6379 } });
+  q.add('scrape:app_details', {
+    type: 'app_details',
+    platform: 'shopify',
+    triggeredBy: 'admin:<reason>',
+    options: { scope: 'all', force: false }
+  }).then(j => console.log('enqueued', j.id));
+  \""
+```
+
+### Monitoring
+
+Live progress from DB (replace `<jobId>`):
+```sql
+SELECT job_id, status, NOW() - started_at AS elapsed,
+  metadata->>'items_scraped' sc, metadata->>'items_failed' fl,
+  metadata->>'current_index' idx, metadata->>'total_apps' tot
+FROM scrape_runs WHERE job_id = '<jobId>' ORDER BY created_at DESC LIMIT 1;
+```
+
+Error breakdown:
+```sql
+SELECT COUNT(*) FILTER (WHERE error_message LIKE '%HTTP 429%')       AS http_429,
+       COUNT(*) FILTER (WHERE error_message LIKE '%HTTP 404%')       AS not_found,
+       COUNT(*) FILTER (WHERE error_message LIKE '%Rate limit backoff%') AS backoff_budget
+FROM scrape_item_errors
+WHERE scrape_run_id IN (SELECT id FROM scrape_runs WHERE job_id = '<jobId>');
+```
+
+Duplicate-job check (CRITICAL before diagnosing elevated error rates):
+```bash
+gcloud compute ssh deploy@appranks-email --zone=europe-west1-b --tunnel-through-iap \
+  --command="docker exec appranks-redis-1 redis-cli lrange bull:scraper-jobs-background:active 0 -1"
+```
+If more than one job id appears, see "Clean kill" below — parallel jobs double request rate.
+
+### Clean kill procedure (must do ALL steps in order)
+
+Skipping any step causes BullMQ to auto-retry the "stalled" job in parallel with any replacement. This happened on 2026-04-12 and tripled the observed 429 rate.
+
+```bash
+# 1) Redis cleanup (run on VM with Redis — appranks-email)
+gcloud compute ssh deploy@appranks-email --zone=europe-west1-b --tunnel-through-iap --command="
+  docker exec appranks-redis-1 redis-cli lrem bull:scraper-jobs-background:active 0 <jobId>
+  docker exec appranks-redis-1 redis-cli zrem bull:scraper-jobs-background:stalled <jobId>
+  docker exec appranks-redis-1 redis-cli del bull:scraper-jobs-background:<jobId> bull:scraper-jobs-background:<jobId>:logs
+"
+
+# 2) Restart workers (flushes in-flight promises, resets circuit breaker state)
+gcloud compute ssh deploy@appranks-scraper --zone=europe-west1-b --tunnel-through-iap \
+  --command="docker restart appranks-worker-1 appranks-worker-interactive-1"
+
+# 3) Mark scrape_run row as failed in DB
+#    (run on appranks-api VM with the postgres psql container)
+UPDATE scrape_runs SET status='failed', completed_at=NOW(),
+  error='killed by admin: <reason>'
+WHERE job_id='<jobId>' AND status='running';
+```
+
+Notes on the Redis data types — `:active` is a **LIST** (use `LREM`), `:stalled` is a **ZSET** (use `ZREM`). Using the wrong command silently no-ops.
+
+### Expected performance (Shopify, 13.5k apps)
+
+| Phase | Duration | Throughput |
+|-------|----------|-----------|
+| 12h cache skim (previously-scraped apps) | ~5 min for ~7k apps | ~25–50 apps/sec |
+| Fresh scraping | ~4–6 h for ~6k fresh apps | ~0.4–0.7 apps/sec |
+| Full pass (no cache hits) | ~5–6 h | ~0.65 apps/sec |
+
+Failure rate in clean single-job mode: **<0.1% HTTP 429** + ~0.5% HTTP 404 (delisted apps — see PLA-1035).
+
+### Resume behavior
+
+- Failure-tolerant by design. If the job crashes/times out mid-run, simply re-trigger with `force=false`:
+  - Apps successfully scraped in the last 12h → skipped (cached)
+  - Failed apps (429, etc.) → retried (they have no fresh snapshot, so cache doesn't hit)
+  - Never-scraped apps → scraped for the first time
+- The `app_snapshots.scraped_at` timestamp is authoritative; `scrape_runs.status` is just run-level bookkeeping and can be safely set to `failed` without affecting the cache.
+- Practical pattern: trigger once → wait ~6h → if any failures remain → re-trigger with `force=false` (will only retry the failures, ~10 min). After 2–3 such passes, failure rate approaches zero.
