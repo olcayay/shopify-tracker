@@ -36,6 +36,27 @@ All schedules are defined in `apps/scraper/src/scheduler.ts`.
 - **Max recursion depth:** 4 levels (`MAX_CATEGORY_DEPTH = 4` in `packages/shared/src/constants/seed-categories.ts`)
 - Recursion only runs in full-crawl mode (not single-category mode)
 
+### Concurrency & Parallelism
+
+| Setting | Value | Config Location |
+|---------|-------|----------------|
+| **Seed category concurrency** | 2 | `shopify/constants.ts → concurrentSeedCategories` |
+| **Subcategory concurrency** | 3 | `category-scraper.ts → runConcurrent(..., 3)` |
+| **Page fetching** | Sequential | `category-scraper.ts` (parallel was reverted — overwhelms Shopify) |
+
+Seed categories are processed in batches of 2 (3 batches for 6 seeds). Within each seed, subcategories at each depth level are processed 3 at a time via `runConcurrent`. HttpClient's `waitForSlot()` (250ms delay, max 6 concurrent) provides global rate limiting across all parallel tasks.
+
+### Batch DB Operations
+
+All DB writes use chunked batch inserts (100 rows per chunk) instead of one-by-one:
+
+- **`recordAppRankings()`** → batch upsert apps + batch insert rankings. Returns `slugToIdMap` reused by downstream methods. Deduplicates slugs before insert to avoid "ON CONFLICT cannot affect row twice" errors.
+- **`recordCategoryAdSightings()`** → uses `slugToIdMap` from rankings (no extra SELECT queries). Batch insert sightings.
+- **`ensureAppRecords()`** → batch upsert for hub pages.
+- **`recordFeaturedSightings()`** → deduplicates both app slugs and sighting conflict keys before batch operations.
+
+All batch values use explicit `null` (not `undefined` / spread omission) to ensure consistent column shapes across rows — Drizzle hangs on inconsistent shapes.
+
 ### Stop Conditions
 
 1. Reached page limit (default 10)
@@ -55,6 +76,14 @@ The category scraper also extracts **featured app sections** from the same HTML 
 - **Depth 3+**: Skipped (no featured sections at deep levels)
 - Uses `parseFeaturedSections()` from `featured-parser.ts`
 - Records to `featured_app_sightings` table (app slug, section, position, date)
+
+### Performance
+
+| Metric | Before Optimization | After |
+|--------|-------------------|-------|
+| **Duration** | 22m 47s | **1m 28s** (93.5% reduction) |
+| Categories scraped | ~119 | 119 |
+| Rankings recorded | ~6000+ | 6373 |
 
 ### Does It Scrape App Details?
 
@@ -80,6 +109,34 @@ The category scraper also extracts **featured app sections** from the same HTML 
 1. Reached page limit (default 10)
 2. `has_next_page` is false (no next button in HTML)
 
+### Concurrency & Rate Limiting
+
+| Setting | Value | Config Location |
+|---------|-------|----------------|
+| **Keyword concurrency** | 3 | `shopify/constants.ts → keywordConcurrency` |
+| **HTTP delay** | 500ms | `shopify/constants.ts → keywordDelayMs` (higher than category's 250ms) |
+| **HTTP max concurrency** | 6 | `shopify/constants.ts → httpMaxConcurrency` |
+| **Keyword timeout** | 90s | `keyword-scraper.ts → KEYWORD_TIMEOUT_MS` |
+| **Page fetching** | Sequential | 10 pages per keyword fetched one at a time |
+| **Metadata update** | Every 5 keywords | Reduces DB overhead (was every keyword) |
+
+Keyword concurrency is intentionally kept at 3 (not higher) because:
+1. Shopify's search endpoint is more rate-limit sensitive than categories
+2. Keywords often return overlapping apps, causing PostgreSQL deadlocks on batch upserts at higher concurrency
+3. The `keywordDelayMs: 500` (vs 250ms for categories) provides extra breathing room
+
+### Batch DB Operations
+
+All DB writes use chunked batch inserts (100 rows per chunk) with deadlock retry:
+
+- **Subtitle change detection** → single batch SELECT existing apps + batch SELECT last changes (was: 2 queries per app)
+- **Organic app upserts** → batch insert with `withDeadlockRetry()` wrapper (3 attempts, jittered backoff)
+- **Rankings** → batch insert with `onConflictDoNothing`
+- **Dropped apps** → batch insert null-position rankings
+- **Sponsored apps** → batch upsert with deadlock retry + batch insert ad sightings
+
+The `withDeadlockRetry()` helper retries on PostgreSQL deadlock errors (up to 3 attempts with randomized backoff), which can occur when concurrent keywords upsert the same popular apps.
+
 ### Deduplication
 
 Maintains separate sets for sponsored and organic app slugs. The same app can appear in both categories. Organic position counter excludes sponsored and built-in apps.
@@ -87,6 +144,16 @@ Maintains separate sets for sponsored and organic app slugs. The same app can ap
 ### Dropped App Detection
 
 After scraping, the scraper compares current results against the previous run. Apps that previously had a ranking but are no longer in results get recorded with `position: null` — this is how ranking drops are tracked.
+
+### Performance
+
+| Metric | Before Optimization | After |
+|--------|-------------------|-------|
+| **Duration** | 9m 36s | **~8m 18s** (14% reduction) |
+| Keywords scraped | 78 | 77-78 |
+| Failed | 0 | 0-1 |
+
+The smaller improvement compared to categories is because keyword scraper is HTTP-bound (sequential page fetching per keyword, rate-limit-sensitive search endpoint), while category scraper benefited massively from subcategory parallelism.
 
 ### Does It Scrape App Details?
 
@@ -236,23 +303,39 @@ Cascade options (`scrapeAppDetails`, `scrapeReviews`) can be enabled when jobs a
 
 ## 8. Rate Limiting & HTTP Configuration
 
-**Source:** `apps/scraper/src/http-client.ts`, `apps/scraper/src/worker.ts`
+**Source:** `apps/scraper/src/http-client.ts`, `apps/scraper/src/constants.ts`, `apps/scraper/src/process-job.ts`
 
 ### HTTP Client Defaults
 
-| Setting | Default | Env Variable |
-|---------|---------|-------------|
-| Delay between requests | **2000 ms** (2 seconds) | `SCRAPER_DELAY_MS` |
-| Max concurrent requests | **2** | `SCRAPER_MAX_CONCURRENCY` |
-| Max retries per request | **3** (4 total attempts) | — |
-| Retry backoff | Exponential (1s, 2s, 4s, 8s...) | — |
+| Setting | Default | Shopify Override | Env Variable |
+|---------|---------|-----------------|-------------|
+| Delay between requests | **2000 ms** | **250 ms** (categories), **500 ms** (keywords) | `SCRAPER_DELAY_MS` |
+| Max concurrent requests | **2** | **6** | `SCRAPER_MAX_CONCURRENCY` |
+| Max retries per request | **4** (5 total attempts) | — | — |
+| Cumulative backoff budget | **45s** | — | — |
+| Request timeout | **30s** | — | — |
+
+Platform-specific overrides are defined in `apps/scraper/src/platforms/shopify/constants.ts` and applied in `process-job.ts:155-161`. The keyword scraper uses `keywordDelayMs` (500ms) instead of the default `rateLimit.minDelayMs` (250ms) because Shopify's search endpoint is more rate-limit sensitive.
+
+### Adaptive Delay
+
+The HttpClient has an adaptive delay mechanism (`http-client.ts`):
+- On 429 (rate limit): delay multiplier doubles (up to 4x)
+- After 20 consecutive successes: multiplier decreases by 10%
+- This automatically adjusts request rate to Shopify's current tolerance
+
+### Circuit Breaker
+
+**Source:** `apps/scraper/src/circuit-breaker.ts`
+
+When HTTP failures exceed a threshold, the circuit breaker opens for 1 hour, rejecting new scrape jobs for that platform. This prevents wasting resources when Shopify is actively blocking requests. The circuit must be manually reset or waited out before new jobs can start.
 
 ### Worker Queue
 
 | Setting | Value |
 |---------|-------|
-| Job concurrency | **1** (one job at a time) |
-| Rate limit | **1 job per 5 seconds** |
+| Background worker concurrency | **11** (one per platform) |
+| Platform lock TTL | **5 minutes** (prevents same platform running twice) |
 | Retry attempts | **2** per job |
 | Retry backoff | Exponential, 30s base |
 
@@ -317,3 +400,55 @@ HTTP 4xx errors (404, 403, etc.) fail immediately without retrying.
 - **Keyword suggestions** is the only cascade that runs automatically from cron
 - All other cascades (listing → details → reviews) are opt-in via manual triggers
 - All scrapers have hard page caps (10 pages for category, keyword, and reviews)
+
+---
+
+## 10. Performance Optimization Summary
+
+### Batch DB Operations (All Scrapers)
+
+Both category and keyword scrapers use **chunked batch inserts** (100 rows per chunk) instead of one-by-one DB operations. This is the single biggest performance improvement:
+
+- **Before:** Each app required 2-5 sequential DB queries (upsert + ranking + ad sighting + change detection)
+- **After:** All apps from a page/keyword batched into 2-3 queries total
+- **Impact:** Reduced thousands of DB round-trips to dozens
+
+Key implementation details:
+- All batch values use explicit `null` (never `undefined` or spread omission) for consistent column shapes
+- `sql\`excluded.column_name\`` syntax for ON CONFLICT DO UPDATE in batch inserts
+- `COALESCE(excluded.field, current.field)` preserves existing values when new value is null
+- Slug deduplication before batch insert prevents "ON CONFLICT cannot affect row twice" PostgreSQL error
+
+### Category Scraper Parallelism
+
+The category scraper runs 3 levels of parallelism, all throttled by a single shared HttpClient:
+
+```
+Seeds (2 parallel) → Subcategories (3 parallel each) → Pages (sequential)
+```
+
+- **2 seed categories** processed simultaneously (`concurrentSeedCategories: 2`)
+- **3 subcategories** per parent in parallel (`runConcurrent(..., 3)`)
+- **Pages** fetched sequentially (parallel page fetching was reverted — it overwhelmed Shopify with too many concurrent requests when combined with subcategory parallelism)
+- HttpClient enforces 250ms minimum delay and max 6 concurrent HTTP requests globally
+
+### Keyword Scraper: Conservative Approach
+
+Unlike categories, keyword scraper cannot safely increase parallelism because:
+
+1. **Rate limiting:** Shopify search endpoint is more sensitive (500ms delay needed vs 250ms for categories)
+2. **Deadlocks:** Multiple keywords upsert the same popular apps → PostgreSQL row-level lock contention
+3. **No structural parallelism:** Keywords don't have subcategories — the only dimension is keyword count
+
+Mitigation: `withDeadlockRetry()` wrapper with 3 attempts and jittered backoff.
+
+### Lessons Learned
+
+| Lesson | Context |
+|--------|---------|
+| Batch values must have identical column shapes | Drizzle hangs on `INSERT ... VALUES` with inconsistent columns from spread operator |
+| Deduplicate before batch upsert | PostgreSQL cannot update the same row twice in one INSERT ... ON CONFLICT |
+| Parallel page fetching is unsafe with parallel subcategories | Combined parallelism overwhelms target servers; sequential pages + parallel structure is the sweet spot |
+| Batch DB removes natural inter-request delays | Previously, slow sequential DB ops acted as implicit rate limiting; batch DB makes requests fire faster, requiring explicit delay increases |
+| Circuit breaker has 1-hour TTL | After rate limit incidents, must manually reset or wait before new scrape jobs work |
+| `keywordDelayMs` separate from `rateLimit.minDelayMs` | Different scraper types need different rate limits for the same platform |
