@@ -33,6 +33,7 @@ export const SHOPIFY_CONSTANTS: PlatformConstants = {
   appDetailsConcurrency: 8,
   concurrentSeedCategories: 2,
   keywordConcurrency: 3,
+  keywordDelayMs: 500,
 };
 
 export const SHOPIFY_SCORING: PlatformScoringConfig = {

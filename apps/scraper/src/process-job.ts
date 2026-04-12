@@ -154,8 +154,13 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
     // Per-job HttpClient — use platform-specific rate limits when available
     const platformConstants = getPlatformConstants(platform);
+    // Use keyword-specific delay if available and this is a keyword search job
+    const isKeywordJob = type === "keyword_search";
+    const baseDelayMs = isKeywordJob && platformConstants?.keywordDelayMs
+      ? platformConstants.keywordDelayMs
+      : (platformConstants?.rateLimit?.minDelayMs ?? HTTP_DEFAULT_DELAY_MS);
     const httpClient = new HttpClient({
-      delayMs: parseInt(process.env.SCRAPER_DELAY_MS || String(platformConstants?.rateLimit?.minDelayMs ?? HTTP_DEFAULT_DELAY_MS), 10),
+      delayMs: parseInt(process.env.SCRAPER_DELAY_MS || String(baseDelayMs), 10),
       maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || String(platformConstants?.httpMaxConcurrency ?? HTTP_DEFAULT_MAX_CONCURRENCY), 10),
       platform,
     });

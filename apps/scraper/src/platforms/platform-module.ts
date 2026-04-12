@@ -114,6 +114,8 @@ export interface PlatformConstants {
   concurrentSeedCategories?: number;
   /** Max keywords to scrape in parallel (default: 3) */
   keywordConcurrency?: number;
+  /** HTTP delay override for keyword search (ms). Falls back to rateLimit.minDelayMs */
+  keywordDelayMs?: number;
 }
 
 // --- Scoring config ---
