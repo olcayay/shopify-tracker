@@ -19,6 +19,7 @@ import { Globe, Star, Bookmark, ArrowRight } from "lucide-react";
 import { formatNumber } from "@/lib/format-utils";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import type { PlatformId } from "@appranks/shared";
 
 interface DeveloperProfile {
@@ -125,6 +126,31 @@ export default function PlatformDeveloperPage() {
     () => visibleData?.apps.filter((a) => a.platform === platform) ?? [],
     [visibleData, platform]
   );
+
+  const [sortKey, setSortKey] = useState<"rating" | "reviews" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const sortedPlatformApps = useMemo(() => {
+    if (!sortKey) return platformApps;
+    const field = sortKey === "rating" ? "averageRating" : "ratingCount";
+    return [...platformApps].sort((a, b) => {
+      const av = a[field];
+      const bv = b[field];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+  }, [platformApps, sortKey, sortDir]);
+
+  const handleSort = (key: string) => {
+    const typedKey = key as "rating" | "reviews";
+    if (sortKey === typedKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(typedKey);
+      setSortDir("desc");
+    }
+  };
 
   const hasInstalls = useMemo(
     () => platformApps.some((a) => a.activeInstalls != null),
@@ -258,8 +284,28 @@ export default function PlatformDeveloperPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[200px]">App</TableHead>
-                  <TableHead className="text-right w-[80px]">Rating</TableHead>
-                  <TableHead className="text-right w-[90px]">Reviews</TableHead>
+                  <TableHead className="text-right w-[80px]">
+                    <div className="flex justify-end">
+                      <SortableHeader
+                        label="Rating"
+                        sortKey="rating"
+                        currentSort={sortKey ?? ""}
+                        currentDir={sortDir}
+                        onSort={handleSort}
+                      />
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-right w-[90px]">
+                    <div className="flex justify-end">
+                      <SortableHeader
+                        label="Reviews"
+                        sortKey="reviews"
+                        currentSort={sortKey ?? ""}
+                        currentDir={sortDir}
+                        onSort={handleSort}
+                      />
+                    </div>
+                  </TableHead>
                   <TableHead className="w-[160px]">Pricing</TableHead>
                   {hasInstalls && (
                     <TableHead className="text-right w-[100px]">Installs</TableHead>
@@ -267,7 +313,7 @@ export default function PlatformDeveloperPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {platformApps.map((app) => (
+                {sortedPlatformApps.map((app) => (
                   <TableRow key={app.slug}>
                     <TableCell className="min-w-[200px]">
                       <Link
