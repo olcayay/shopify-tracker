@@ -18,8 +18,8 @@ vi.mock("@/components/rating-review-chart", () => ({
   ),
 }));
 
-vi.mock("@/components/review-trend-date-picker", () => ({
-  ReviewTrendDatePicker: () => <div data-testid="review-trend-date-picker" />,
+vi.mock("@/components/ui/date-range-picker", () => ({
+  DateRangePicker: () => <div data-testid="review-trend-date-picker" />,
 }));
 
 vi.mock(

@@ -27,8 +27,8 @@ vi.mock("@/components/data-freshness", () => ({
   DataFreshness: ({ dateStr }: any) => <div data-testid="data-freshness">{dateStr || "none"}</div>,
 }));
 
-vi.mock("@/components/rankings-date-picker", () => ({
-  RankingsDatePicker: () => <div data-testid="rankings-date-picker" />,
+vi.mock("@/components/ui/date-range-picker", () => ({
+  DateRangePicker: () => <div data-testid="rankings-date-picker" />,
 }));
 
 import RankingsPage from "@/app/(dashboard)/[platform]/apps/[slug]/rankings/page";

@@ -15,12 +15,13 @@ import {
 import { RankingChart } from "@/components/ranking-chart";
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { DataFreshness } from "@/components/data-freshness";
-import { RankingsDatePicker } from "@/components/rankings-date-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
-  getRankingsDateRangeFromSearchParams,
-  getRankingsFetchDays,
+  RANKINGS_DATE_RANGE_CONFIG,
+  getDateRangeFromSearchParams,
+  getFetchDaysFromStart,
   isDateWithinRange,
-} from "@/lib/rankings-date-range";
+} from "@/lib/date-range";
 
 export default async function RankingsPage({
   params,
@@ -31,13 +32,13 @@ export default async function RankingsPage({
 }) {
   const { platform, slug } = await params;
   const resolvedSearchParams = await searchParams;
-  const dateRange = getRankingsDateRangeFromSearchParams(resolvedSearchParams);
+  const dateRange = getDateRangeFromSearchParams(resolvedSearchParams, RANKINGS_DATE_RANGE_CONFIG);
 
   let rankings: any;
   try {
     rankings = await getAppRankings(
       slug,
-      getRankingsFetchDays(dateRange),
+      getFetchDaysFromStart(dateRange, RANKINGS_DATE_RANGE_CONFIG),
       platform as PlatformId
     );
   } catch {
@@ -89,7 +90,7 @@ export default async function RankingsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <DataFreshness dateStr={latestRanking?.scrapedAt} />
-        <RankingsDatePicker />
+        <DateRangePicker config={RANKINGS_DATE_RANGE_CONFIG} />
       </div>
       {rankings?.categoryRankings?.length > 0 && (
         <Card>

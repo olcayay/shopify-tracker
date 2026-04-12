@@ -5916,3 +5916,11 @@ PLA-179: Global API rate limiting middleware
 - Added click-outside + Escape handlers; selection auto-closes popover.
 - Dropped forced `min-w-[420px]` container on both v1 and v2 rankings pages.
 - Updated rankings-date-picker.test.tsx to open the popover before asserting inner options; all 16 rankings tests pass.
+
+## 2026-04-12 — Date picker consolidation
+- Replaced `components/rankings-date-picker.tsx`, `components/review-trend-date-picker.tsx`, and the old `components/ui/date-range-picker.tsx` stub with one shared `components/ui/date-range-picker.tsx` driven by a `DateRangeConfig` prop (storage key, URL param names, preset set, default preset).
+- Merged `lib/rankings-date-range.ts` + `lib/review-trend-date-range.ts` into one `lib/date-range.ts`. Both configs (`RANKINGS_DATE_RANGE_CONFIG`, `REVIEW_TREND_DATE_RANGE_CONFIG`) live there.
+- Rankings and reviews pages (v1 + v2, 4 pages total) now render `<DateRangePicker config={...} />`.
+- Review-specific `getReviewTrendFetchLimit` (min 365 days for custom) is now a 2-line inline helper in the two reviews pages — not worth a shared export.
+- Collapsed two duplicate picker test files into one parameterized `date-range-picker.test.tsx` that runs the same suite for both configs. 10 tests pass (5 per config).
+- All 2262 dashboard tests pass.

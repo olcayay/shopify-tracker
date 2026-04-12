@@ -2,12 +2,17 @@ import { getApp, getAppReviews, getAppHistory } from "@/lib/api";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RatingReviewChart } from "@/components/rating-review-chart";
-import { ReviewTrendDatePicker } from "@/components/review-trend-date-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
-  getReviewTrendDateRangeFromSearchParams,
-  getReviewTrendFetchLimit,
-  isReviewSnapshotWithinRange,
-} from "@/lib/review-trend-date-range";
+  REVIEW_TREND_DATE_RANGE_CONFIG,
+  getDateRangeFromSearchParams,
+  isDateWithinRange,
+  type DateRangeSelection,
+} from "@/lib/date-range";
+
+function getReviewTrendFetchLimit(selection: DateRangeSelection): number {
+  return selection.preset === "custom" ? Math.max(selection.days, 365) : selection.days;
+}
 import { ReviewList } from "../review-list";
 
 export default async function ReviewsPage({
@@ -19,7 +24,7 @@ export default async function ReviewsPage({
 }) {
   const { platform, slug } = await params;
   const resolvedSearchParams = await searchParams;
-  const dateRange = getReviewTrendDateRangeFromSearchParams(resolvedSearchParams);
+  const dateRange = getDateRangeFromSearchParams(resolvedSearchParams, REVIEW_TREND_DATE_RANGE_CONFIG);
   const maxStars = isPlatformId(platform) ? PLATFORMS[platform as PlatformId].maxRatingStars : 5;
 
   let reviewData: any;
@@ -34,7 +39,7 @@ export default async function ReviewsPage({
   }
 
   const filteredSnapshots = (history?.snapshots || []).filter((snapshot: any) =>
-    isReviewSnapshotWithinRange(snapshot.scrapedAt, dateRange.from, dateRange.to)
+    isDateWithinRange(snapshot.scrapedAt, dateRange.from, dateRange.to)
   );
 
   return (
@@ -48,7 +53,7 @@ export default async function ReviewsPage({
                 Review velocity and rating changes across the selected range.
               </p>
             </div>
-            <ReviewTrendDatePicker className="w-full lg:w-auto lg:min-w-[420px]" />
+            <DateRangePicker config={REVIEW_TREND_DATE_RANGE_CONFIG} />
           </div>
           <RatingReviewChart snapshots={filteredSnapshots} />
         </section>

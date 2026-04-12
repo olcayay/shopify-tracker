@@ -28,8 +28,8 @@ vi.mock("@/components/data-freshness", () => ({
   ),
 }));
 
-vi.mock("@/components/rankings-date-picker", () => ({
-  RankingsDatePicker: () => <div data-testid="rankings-date-picker" />,
+vi.mock("@/components/ui/date-range-picker", () => ({
+  DateRangePicker: () => <div data-testid="rankings-date-picker" />,
 }));
 
 import V2RankingsPage from "@/app/(dashboard)/[platform]/apps/v2/[slug]/visibility/rankings/page";
