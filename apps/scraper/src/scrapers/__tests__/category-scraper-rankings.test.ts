@@ -52,6 +52,7 @@ function createMockDb() {
   const selectChain = {
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue([{ id: 1 }]), // existing snapshot found — skip insert
   };
 

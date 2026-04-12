@@ -5944,3 +5944,9 @@ PLA-179: Global API rate limiting middleware
 - `SALESFORCE_CONSTANTS.concurrentSeedCategories` 3 → 5 (`apps/scraper/src/platforms/salesforce/constants.ts:33`). HttpClient adaptive backoff + `rateLimit.minDelayMs: 200` keep 429s contained.
 - New `salesforce/__tests__/constants.test.ts` asserts value and also pins `trackedFields` & rate-limit bounds.
 - Bulk-scope-specific HTTP concurrency override deferred to PLA-1048.
+
+## PLA-1049: Category scraper refreshes snapshots (2026-04-12)
+- New `PlatformConstants` knobs `refreshSnapshotFromCategoryCard` (default false) + `refreshSnapshotMaxAgeMs` (default 20h), set true/20h for Salesforce.
+- `category-scraper.ts` snapshot block refactored into `upsertSnapshotFromCategoryCard`: flag=false keeps seed-once; flag=true compares 5 tracked fields (averageRating/ratingCount/pricing/appIntroduction/developer.name) against latest snapshot. Insert new snapshot when any drift OR snapshot older than maxAgeMs; emit `appFieldChanges` per drifted field.
+- Existing `category-scraper-rankings.test.ts` mock updated (added `orderBy` stub). New `category-scraper-refresh.test.ts` covers 5 cases (flag off seed, flag off existing, flag on change, flag on fresh no-op, flag on stale).
+- `files/ADDING_NEW_PLATFORM.md` Pitfall 29 added.

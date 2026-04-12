@@ -31,6 +31,10 @@ export const SALESFORCE_CONSTANTS: PlatformConstants = {
   ],
   rateLimit: { minDelayMs: 200, maxDelayMs: 500 },
   concurrentSeedCategories: 5, // HTTP-only API with adaptive backoff as safety net
+  // Salesforce category API returns every tracked field in the card JSON,
+  // so we can refresh snapshots daily for the whole catalog at zero cost.
+  refreshSnapshotFromCategoryCard: true,
+  refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
 };
 
 /** Headers required for Salesforce AppExchange API to return correct search rankings */

@@ -118,6 +118,16 @@ export interface PlatformConstants {
   keywordConcurrency?: number;
   /** HTTP delay override for keyword search (ms). Falls back to rateLimit.minDelayMs */
   keywordDelayMs?: number;
+  /** If true, the category scraper inserts a new appSnapshots row each run
+   *  whenever a tracked field in the card differs from the latest snapshot or
+   *  the snapshot is older than `refreshSnapshotMaxAgeMs` (default 20h).
+   *  Enable only when the platform's category API carries the tracked fields
+   *  (e.g. Salesforce). Default: false — preserves seed-once behaviour. */
+  refreshSnapshotFromCategoryCard?: boolean;
+  /** Max age (ms) before a snapshot is refreshed from a category card even
+   *  when no tracked field changed. Only used when refreshSnapshotFromCategoryCard
+   *  is true. Default: 20 hours. */
+  refreshSnapshotMaxAgeMs?: number;
 }
 
 // --- Scoring config ---

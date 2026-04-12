@@ -1169,3 +1169,5 @@ worker: per-(platform, scraperType) lock key (PLA-1050) ✅
 raise Salesforce concurrentSeedCategories 3→5 (PLA-1052) ✅
 
 raise Salesforce concurrentSeedCategories 3→5 (PLA-1052) ✅
+
+category scraper refreshes snapshots when flag set (PLA-1049) ✅
