@@ -197,7 +197,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     }
 
     // Job-level timeout to prevent hanging indefinitely
-    const timeoutMs = (type === "app_details" && (opts?.scope === "all" || opts?.scope === "bulk_via_category"))
+    const timeoutMs = (type === "app_details" && (opts?.scope === "all" || opts?.scope === "bulk_via_category" || opts?.scope === "all_with_full_details"))
       ? JOB_TIMEOUT_APP_DETAILS_ALL_MS
       : (JOB_TIMEOUT_MAP[type] ?? JOB_TIMEOUT_MAP.default);
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -275,6 +275,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           }
         } else if (opts?.scope === "bulk_via_category") {
           await scraper.scrapeAllViaCategoryApi(triggeredBy, queueName, opts?.force ?? false);
+        } else if (opts?.scope === "all_with_full_details") {
+          await scraper.scrapeAllWithFullDetails(triggeredBy, queueName, opts?.force ?? false);
         } else if (opts?.scope === "all") {
           await scraper.scrapeAll(triggeredBy, queueName, opts?.force ?? false);
         } else {

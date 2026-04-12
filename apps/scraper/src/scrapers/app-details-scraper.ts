@@ -731,6 +731,189 @@ export class AppDetailsScraper {
     });
   }
 
+  /**
+   * PLA-1051 — Selective full-detail enrichment.
+   *
+   * Runs the browser-based per-app scraper, but only for apps that actually
+   * need full detail refresh: tracked apps, apps with empty/stale
+   * `appSnapshots.appDetails`, newly-discovered apps (no snapshot yet), and a
+   * rolling weekly cohort so every app is fully enriched at least once a week.
+   *
+   * The selection breakdown is emitted into `scrape_runs.metadata` for tuning.
+   */
+  async scrapeAllWithFullDetails(
+    triggeredBy?: string,
+    queue?: string,
+    force?: boolean,
+    opts: { staleDays?: number; cohortModulus?: number } = {},
+  ): Promise<void> {
+    const staleDays = opts.staleDays ?? 7;
+    const cohortModulus = opts.cohortModulus ?? 7;
+
+    const selection = await this.selectFullDetailCandidates({ staleDays, cohortModulus, now: new Date() });
+    const total = selection.rows.length;
+
+    if (total === 0) {
+      log.info("all_with_full_details: no apps matched selection", { platform: this.platform });
+      return;
+    }
+
+    log.info("all_with_full_details: selected apps for enrichment", {
+      platform: this.platform,
+      total,
+      breakdown: selection.breakdown,
+    });
+
+    const [run] = await this.db
+      .insert(scrapeRuns)
+      .values({
+        scraperType: "app_details",
+        platform: this.platform,
+        status: "running",
+        createdAt: new Date(),
+        startedAt: new Date(),
+        triggeredBy,
+        queue,
+        jobId: this.jobId ?? null,
+        metadata: {
+          scope: "all_with_full_details",
+          selection_breakdown: selection.breakdown,
+          total_apps: total,
+        },
+      })
+      .returning();
+
+    const startTime = Date.now();
+    let itemsScraped = 0;
+    let itemsFailed = 0;
+    const preFetched = await this.buildPreFetchedData(force);
+    const selectedSlugs = selection.rows.map((r) => r.slug);
+
+    try {
+      await runConcurrent(selectedSlugs, async (slug, index) => {
+        if (index % 25 === 0 || index === selectedSlugs.length - 1) {
+          await this.db.update(scrapeRuns).set({
+            metadata: {
+              scope: "all_with_full_details",
+              selection_breakdown: selection.breakdown,
+              items_scraped: itemsScraped,
+              items_failed: itemsFailed,
+              duration_ms: Date.now() - startTime,
+              current_index: index,
+              total_apps: total,
+            },
+          }).where(eq(scrapeRuns.id, run.id));
+        }
+        try {
+          await this.scrapeApp(slug, run.id, triggeredBy, undefined, force, preFetched);
+          itemsScraped++;
+        } catch (err) {
+          if (err instanceof AppNotFoundError) {
+            itemsScraped++;
+          } else {
+            itemsFailed++;
+            await recordItemError(this.db, {
+              scrapeRunId: run.id,
+              itemIdentifier: slug,
+              itemType: "app",
+              error: err,
+            });
+          }
+        }
+      }, this.configValue(
+        "appDetailsConcurrencyBulk",
+        Math.min(this.configValue("appDetailsConcurrency", 3), 3),
+      ));
+
+      await this.db.update(scrapeRuns).set({
+        status: "completed",
+        completedAt: new Date(),
+        metadata: {
+          scope: "all_with_full_details",
+          selection_breakdown: selection.breakdown,
+          items_scraped: itemsScraped,
+          items_failed: itemsFailed,
+          duration_ms: Date.now() - startTime,
+          total_apps: total,
+        },
+      }).where(eq(scrapeRuns.id, run.id));
+    } catch (err) {
+      await this.db.update(scrapeRuns).set({
+        status: "failed",
+        completedAt: new Date(),
+        error: String(err),
+        metadata: {
+          scope: "all_with_full_details",
+          selection_breakdown: selection.breakdown,
+          items_scraped: itemsScraped,
+          items_failed: itemsFailed,
+          duration_ms: Date.now() - startTime,
+          total_apps: total,
+        },
+      }).where(eq(scrapeRuns.id, run.id));
+      throw err;
+    }
+  }
+
+  /**
+   * Identify which apps deserve the browser-based full-detail fetch. Exposed
+   * for tests; also reused by scrapeAllWithFullDetails above. Returns the
+   * deduped union of four selection predicates plus a per-bucket count.
+   */
+  async selectFullDetailCandidates(opts: {
+    staleDays: number;
+    cohortModulus: number;
+    now: Date;
+  }): Promise<{
+    rows: Array<{ id: number; slug: string; reason: "tracked" | "new" | "stale" | "cohort" }>;
+    breakdown: { tracked: number; new: number; stale: number; cohort: number; total: number };
+  }> {
+    const { staleDays, cohortModulus, now } = opts;
+
+    const allRows = await this.db
+      .select({
+        id: apps.id,
+        slug: apps.slug,
+        isTracked: apps.isTracked,
+        latestScrapedAt: sql<Date | null>`MAX(${appSnapshots.scrapedAt})`.as("latestScrapedAt"),
+        latestAppDetailsLen: sql<number>`COALESCE(MAX(LENGTH(${appSnapshots.appDetails})), 0)`.as("latestAppDetailsLen"),
+      })
+      .from(apps)
+      .leftJoin(appSnapshots, eq(apps.id, appSnapshots.appId))
+      .where(eq(apps.platform, this.platform))
+      .groupBy(apps.id, apps.slug, apps.isTracked);
+
+    const cohortIndex = Math.floor(now.getTime() / (24 * 60 * 60 * 1000)) % Math.max(1, cohortModulus);
+    const staleCutoff = now.getTime() - staleDays * 24 * 60 * 60 * 1000;
+
+    const breakdown = { tracked: 0, new: 0, stale: 0, cohort: 0, total: 0 };
+    const picked = new Map<number, { id: number; slug: string; reason: "tracked" | "new" | "stale" | "cohort" }>();
+
+    for (const row of allRows) {
+      let reason: "tracked" | "new" | "stale" | "cohort" | null = null;
+      if (row.isTracked) {
+        reason = "tracked";
+        breakdown.tracked++;
+      } else if (row.latestScrapedAt == null || row.latestAppDetailsLen === 0) {
+        reason = "new";
+        breakdown.new++;
+      } else if (new Date(row.latestScrapedAt).getTime() < staleCutoff) {
+        reason = "stale";
+        breakdown.stale++;
+      } else if (row.id % Math.max(1, cohortModulus) === cohortIndex) {
+        reason = "cohort";
+        breakdown.cohort++;
+      }
+      if (reason && !picked.has(row.id)) {
+        picked.set(row.id, { id: row.id, slug: row.slug, reason });
+      }
+    }
+
+    const rows = [...picked.values()];
+    breakdown.total = rows.length;
+    return { rows, breakdown };
+  }
+
   /** Scrape a single app by slug */
   async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string, force?: boolean, preFetched?: PreFetchedData): Promise<void> {
     log.info("scraping app", { slug, force });

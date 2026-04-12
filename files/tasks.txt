@@ -1173,3 +1173,5 @@ raise Salesforce concurrentSeedCategories 3→5 (PLA-1052) ✅
 category scraper refreshes snapshots when flag set (PLA-1049) ✅
 
 bulk_via_category scope for Salesforce app_details (PLA-1048) ✅
+
+selective browser enrichment (PLA-1051) ✅

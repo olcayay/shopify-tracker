@@ -26,10 +26,13 @@ export interface ScraperJobOptions {
   scrapeReviews?: boolean;
   /** Skip the 12-hour dedup check (for manual re-scrapes) */
   force?: boolean;
-  /** For app_details: "tracked" (default, cron), "all" (every discovered app via
-   *  browser), or "bulk_via_category" (refresh every app using only the platform's
-   *  category API — HTTP-only, ~1000× faster but omits fullDescription/highlights/media). */
-  scope?: "tracked" | "all" | "bulk_via_category";
+  /** For app_details:
+   *  - `tracked` (default, cron) — only tracked apps
+   *  - `all` — every discovered app via the per-app browser path
+   *  - `bulk_via_category` — refresh every app via category API only (no browser)
+   *  - `all_with_full_details` — browser path but selective: only apps that need
+   *    full-detail enrichment (tracked, stale, seed-only, or weekly cohort slice). */
+  scope?: "tracked" | "all" | "bulk_via_category" | "all_with_full_details";
 }
 
 export interface ScraperJobData {

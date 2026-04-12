@@ -5959,3 +5959,11 @@ PLA-179: Global API rate limiting middleware
 - Concurrency: `appDetailsConcurrencyBulk` (5) + `concurrentSeedCategories` (5 for Salesforce).
 - Tests: new `app-details-bulk-via-category.test.ts` (5 cases). Full scraper suite 172 files / 2541 tests green.
 - Expected impact: ~13k Salesforce apps refreshed in < 5 min (vs ~24h via scope=all). Trade-off: no fullDescription/highlights/media — those remain in browser-based scope=all (PLA-1051 will make that selective).
+
+## PLA-1051: Selective full-detail enrichment (2026-04-12)
+- New scope `all_with_full_details` on `app_details`. New method `AppDetailsScraper.scrapeAllWithFullDetails` runs browser path only for apps matching one of 4 predicates: tracked, new (no snapshot / appDetails empty), stale (snapshot > staleDays old, default 7), or today's weekly cohort (`appId % 7 == day_index`).
+- `selectFullDetailCandidates` exposed separately for testability; emits per-bucket breakdown into `scrape_runs.metadata.selection_breakdown = {tracked, new, stale, cohort, total}`.
+- `process-job.ts` routes new scope and extends the long-running timeout.
+- `queue.ts` scope union widened to include `all_with_full_details`.
+- Tests in `app-details-selective.test.ts` (6 cases) cover each predicate independently plus combined breakdown.
+- Kept `scope=all` untouched for backwards compatibility; selective path is opt-in via explicit `scope=all_with_full_details` (no cron yet — can be added as a weekly schedule once tuned in prod).
