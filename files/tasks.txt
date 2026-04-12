@@ -1165,3 +1165,7 @@ consolidate 3 date pickers + 2 helper libs into one shared component (PLA-1018 c
 show 10 app icons + widen apps column in developer tables (PLA-1039) ✅
 
 worker: per-(platform, scraperType) lock key (PLA-1050) ✅
+
+raise Salesforce concurrentSeedCategories 3→5 (PLA-1052) ✅
+
+raise Salesforce concurrentSeedCategories 3→5 (PLA-1052) ✅

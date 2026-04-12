@@ -5934,3 +5934,13 @@ PLA-179: Global API rate limiting middleware
 - Same (platform, jobType) pair still serializes — safety preserved.
 - New test file `worker-lock-key.test.ts` asserts distinct keys across types/platforms and identity for same pair.
 - Existing `worker-lock-bypass.test.ts` still green; no other code relied on the old key shape.
+
+## PLA-1052: Salesforce HTTP concurrency (2026-04-12)
+- `SALESFORCE_CONSTANTS.concurrentSeedCategories` 3 → 5 (`apps/scraper/src/platforms/salesforce/constants.ts:33`). HttpClient adaptive backoff + `rateLimit.minDelayMs: 200` keep 429s contained.
+- New `salesforce/__tests__/constants.test.ts` asserts value and also pins `trackedFields` & rate-limit bounds so future edits surface in PRs.
+- Bulk-scope-specific HTTP concurrency override (5–8) deferred to PLA-1048 where the `bulk_via_category` scope is introduced.
+
+## PLA-1052: Salesforce HTTP concurrency (2026-04-12)
+- `SALESFORCE_CONSTANTS.concurrentSeedCategories` 3 → 5 (`apps/scraper/src/platforms/salesforce/constants.ts:33`). HttpClient adaptive backoff + `rateLimit.minDelayMs: 200` keep 429s contained.
+- New `salesforce/__tests__/constants.test.ts` asserts value and also pins `trackedFields` & rate-limit bounds.
+- Bulk-scope-specific HTTP concurrency override deferred to PLA-1048.

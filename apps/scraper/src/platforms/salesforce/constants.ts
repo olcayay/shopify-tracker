@@ -30,7 +30,7 @@ export const SALESFORCE_CONSTANTS: PlatformConstants = {
     "pricing",
   ],
   rateLimit: { minDelayMs: 200, maxDelayMs: 500 },
-  concurrentSeedCategories: 3, // HTTP-only API, safe to parallelize
+  concurrentSeedCategories: 5, // HTTP-only API with adaptive backoff as safety net
 };
 
 /** Headers required for Salesforce AppExchange API to return correct search rankings */
