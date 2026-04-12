@@ -5891,3 +5891,13 @@ PLA-179: Global API rate limiting middleware
 - Fix: read `name`/`appCardSubtitle` from `app` object, fall back to snapshot for backward compat
 - Added `app` prop to `ListingScorecard` component
 - 2 new regression tests for ListingScorecard (app prop vs snapshot fallback)
+
+## PLA-1035: Track delisted apps with dedicated state + admin observation page (2026-04-12)
+- Added `apps.delisted_at` column + partial index via migration 0141
+- `scrapeApp()` in `app-details-scraper.ts` now catches HTTP 404 via `is404Error()` helper, upserts app row with `delisted_at = COALESCE(existing, NOW())`, and throws `AppNotFoundError` — batch callers already count this as processed (not failed), so `items_failed` metric is cleaned up as a side-effect
+- Re-listed detection: successful re-scrape clears `delisted_at` back to NULL via the main upsert
+- New API endpoints: `GET /api/system-admin/apps/delisted` (platform/search/date filters + pagination) and `POST /api/system-admin/apps/:id/mark-relisted`
+- New dashboard page at `/system-admin/delisted-apps` with filter bar + table + "Mark re-listed" action
+- Observation phase: delisted apps are still retried each run so the re-listed path stays exercised
+- 6 unit tests added for `is404Error` (including AppNotFoundError interop, non-404 HTTP errors, null/undefined safety, no false-positive substring matches)
+- Updated `files/ADDING_NEW_PLATFORM.md` Quick Checklist + new "Delisted App Handling" section: HTTP-based platforms auto-work, API-based platforms must throw `AppNotFoundError` explicitly

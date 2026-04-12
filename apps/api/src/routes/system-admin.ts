@@ -4381,6 +4381,108 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(204).send();
     }
   );
+
+  // GET /api/system-admin/apps/delisted — list apps with delisted_at set
+  app.get<{
+    Querystring: {
+      platform?: string;
+      search?: string;
+      from?: string;
+      to?: string;
+      limit?: string;
+      offset?: string;
+    };
+  }>("/apps/delisted", async (request, reply) => {
+    const { platform, search, from, to } = request.query;
+    const limit = Math.min(parseInt(request.query.limit ?? "50", 10), 200);
+    const offset = parseInt(request.query.offset ?? "0", 10);
+
+    if (platform && !isPlatformId(platform)) {
+      return reply.code(400).send({ error: "invalid platform" });
+    }
+
+    const conds = [sql`${apps.delistedAt} IS NOT NULL`];
+    if (platform) conds.push(eq(apps.platform, platform));
+    if (search) {
+      const pat = `%${search}%`;
+      conds.push(sql`(${apps.name} ILIKE ${pat} OR ${apps.slug} ILIKE ${pat})`);
+    }
+    if (from) conds.push(gte(apps.delistedAt, new Date(from)));
+    if (to) conds.push(lte(apps.delistedAt, new Date(to)));
+
+    const where = and(...conds);
+
+    const rows = await db
+      .select({
+        id: apps.id,
+        slug: apps.slug,
+        name: apps.name,
+        platform: apps.platform,
+        iconUrl: apps.iconUrl,
+        delistedAt: apps.delistedAt,
+      })
+      .from(apps)
+      .where(where)
+      .orderBy(desc(apps.delistedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(apps)
+      .where(where);
+
+    const ids = rows.map((r) => r.id);
+    const snapshotStats = ids.length
+      ? await db
+          .select({
+            appId: appSnapshots.appId,
+            lastSnapshotAt: sql<Date>`max(${appSnapshots.scrapedAt})`,
+            totalSnapshots: sql<number>`count(*)::int`,
+          })
+          .from(appSnapshots)
+          .where(inArray(appSnapshots.appId, ids))
+          .groupBy(appSnapshots.appId)
+      : [];
+    const statMap = new Map(snapshotStats.map((s) => [s.appId, s]));
+
+    return {
+      total: count,
+      apps: rows.map((r) => {
+        const s = statMap.get(r.id);
+        return {
+          id: r.id,
+          slug: r.slug,
+          name: r.name,
+          platform: r.platform,
+          icon_url: r.iconUrl,
+          delisted_at: r.delistedAt,
+          last_snapshot_at: s?.lastSnapshotAt ?? null,
+          total_snapshots: s?.totalSnapshots ?? 0,
+        };
+      }),
+    };
+  });
+
+  // POST /api/system-admin/apps/:id/mark-relisted — clear delisted_at
+  app.post<{ Params: { id: string } }>(
+    "/apps/:id/mark-relisted",
+    async (request, reply) => {
+      const id = parseInt(request.params.id, 10);
+      if (!Number.isFinite(id)) {
+        return reply.code(400).send({ error: "invalid id" });
+      }
+      const result = await db
+        .update(apps)
+        .set({ delistedAt: null, updatedAt: new Date() })
+        .where(eq(apps.id, id))
+        .returning({ id: apps.id, slug: apps.slug });
+      if (result.length === 0) {
+        return reply.code(404).send({ error: "app not found" });
+      }
+      return { ok: true, app: result[0] };
+    }
+  );
 };
 
 /**

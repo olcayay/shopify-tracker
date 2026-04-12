@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { normalizePlan } from "../app-details-scraper.js";
+import { normalizePlan, is404Error } from "../app-details-scraper.js";
+import { AppNotFoundError } from "../../utils/app-not-found-error.js";
 
 /**
  * stripHtmlTags and parseWordPressDate are private functions.
@@ -637,5 +638,49 @@ describe("change detection guards", () => {
       seoTitle: ["Title", ""],
     }, "canva");
     expect(changes).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// is404Error — detect HTTP 404 in errors thrown by HttpClient/platform fetchers.
+// Guards the delisted_at flow in scrapeApp — if this regresses, 404s will be
+// counted as scrape failures instead of delistings. See PLA-1035.
+// ---------------------------------------------------------------------------
+describe("is404Error", () => {
+  it("detects HTTP 404 in wrapped HttpClient error", () => {
+    // HttpClient rethrows as: "All N attempts failed for URL: HTTP 404: Not Found"
+    const err = new Error(
+      "All 5 attempts failed for https://apps.shopify.com/buy-again: HTTP 404: Not Found"
+    );
+    expect(is404Error(err)).toBe(true);
+  });
+
+  it("detects HTTP 404 in direct error", () => {
+    expect(is404Error(new Error("HTTP 404: Not Found"))).toBe(true);
+  });
+
+  it("returns true for AppNotFoundError with HTTP 404 detail", () => {
+    // Belt-and-suspenders: AppNotFoundError is handled before is404Error in
+    // the caller, but the string detection still holds up.
+    const err = new AppNotFoundError("slug", "shopify", "HTTP 404");
+    expect(is404Error(err)).toBe(true);
+  });
+
+  it("does not match other HTTP errors", () => {
+    expect(is404Error(new Error("HTTP 500: Internal Server Error"))).toBe(false);
+    expect(is404Error(new Error("HTTP 403: Forbidden"))).toBe(false);
+    expect(is404Error(new Error("HTTP 429: Too Many Requests"))).toBe(false);
+  });
+
+  it("does not match a naked '404' substring (avoids false positives in slugs/paths)", () => {
+    expect(is404Error(new Error("request to 404.html failed"))).toBe(false);
+    expect(is404Error(new Error("error code: 4040"))).toBe(false);
+  });
+
+  it("handles null/undefined/string inputs safely", () => {
+    expect(is404Error(null)).toBe(false);
+    expect(is404Error(undefined)).toBe(false);
+    expect(is404Error("HTTP 404: Not Found")).toBe(true);
+    expect(is404Error("")).toBe(false);
   });
 });

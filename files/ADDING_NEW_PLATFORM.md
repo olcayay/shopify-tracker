@@ -55,6 +55,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
 - [ ] **Add fallback scraping methods** using `withFallback()` in each fetch method (see [Fallback Scraping](#fallback-scraping) below)
+- [ ] **Throw `AppNotFoundError` on HTTP 404** from `fetchAppPage` (see [Delisted App Handling](#delisted-app-handling) below). The generic `is404Error()` wrapper in `app-details-scraper.ts::scrapeApp()` catches HTTP-based 404s automatically, but platforms that don't surface a literal `HTTP 404` string (e.g. API-based like Zoom) must throw `AppNotFoundError` explicitly.
 - [ ] Add smoke test checks in `scripts/smoke-test.sh` (see [Smoke Test](#smoke-test) below)
 - [ ] Test fallback path: `./scripts/smoke-test.sh --platform <name> --fallback`
 - [ ] Bootstrap first data: seed categories → run category scraper → run app detail scraper (see [First Data Bootstrap](#first-data-bootstrap--testing-a-new-platform-end-to-end))
@@ -1457,6 +1458,23 @@ Most platforms use a 5-star rating scale, but some differ (e.g., Atlassian uses 
 6. Update sidebar `getNavItems()` if it controls navigation
 7. Update `app-nav.tsx` if it controls a tab
 8. Update `isCol()` and `visibleToggleableColumns` if it controls table columns
+
+---
+
+## Delisted App Handling
+
+When a marketplace removes an app (dev unpublishes, Shopify takedown, etc.), the app-detail URL returns HTTP 404. The platform tracker treats this as a first-class state on the `apps` table via `delisted_at`, not a scrape failure (see PLA-1035).
+
+**What happens today:**
+1. `apps/scraper/src/scrapers/app-details-scraper.ts::scrapeApp()` catches fetch errors and checks `is404Error(err)`. If matched, it upserts the app row with `delisted_at = NOW()` (idempotent — won't overwrite an earlier delisting date) and throws `AppNotFoundError`.
+2. The batch callers (`scrapeTracked`/`scrapeAll`) already have an `instanceof AppNotFoundError` branch that counts the app as *processed*, not *failed*, so `scrape_runs.metadata.items_failed` stays clean.
+3. On any successful re-scrape of the same slug, the upsert at the end of `scrapeApp` clears `delisted_at` back to `NULL` (re-listed detection).
+
+**Per-platform requirement:**
+- HTTP-based platforms (Shopify, Canva, Wix, WordPress, Salesforce, etc.): no code change needed — the generic `HTTP 404` error message from `HttpClient.fetchPage()` is auto-detected.
+- API/custom platforms (e.g. Zoom's filter-API pagination, any platform whose fetch path never surfaces a literal `HTTP 404`): the platform module **must throw `AppNotFoundError(slug, platform, detail)` explicitly** from `fetchAppPage()` when the app is confirmed gone. See `apps/scraper/src/platforms/zoom/index.ts:116` for the canonical example.
+
+**Observation phase:** delisted apps are NOT skipped by `scrapeAll()` — they keep getting retried so the re-listed path stays exercised. The admin dashboard at `/system-admin/delisted-apps` is the observation surface.
 
 ---
 

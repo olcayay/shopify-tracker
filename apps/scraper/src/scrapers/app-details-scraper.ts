@@ -6,6 +6,13 @@ import { AppNotFoundError } from "../utils/app-not-found-error.js";
 
 const log = createLogger("app-details-scraper");
 
+/** Detect HTTP 404 in a thrown error from HttpClient/platform fetchers. */
+export function is404Error(err: unknown): boolean {
+  if (!err) return false;
+  const msg = err instanceof Error ? err.message : String(err);
+  return /\bHTTP 404\b/.test(msg);
+}
+
 /** Normalize a pricing plan object to a canonical key order for stable JSON comparison */
 export function normalizePlan(p: any) {
   return {
@@ -514,10 +521,40 @@ export class AppDetailsScraper {
     }
 
     try {
-      // Fetch app page using platform module if available
-      const html = this.platformModule
-        ? await this.platformModule.fetchAppPage(slug)
-        : await this.httpClient.fetchPage(urls.app(slug));
+      // Fetch app page using platform module if available.
+      // HTTP 404 means the app was removed/delisted from the marketplace —
+      // mark it in the apps table and throw AppNotFoundError so the batch caller
+      // counts it as processed (not failed). Only Zoom throws AppNotFoundError
+      // directly; for every other platform (Shopify et al.), the generic HTTP
+      // fetch wrapper surfaces "HTTP 404" in the error message and we detect it here.
+      let html: string;
+      try {
+        html = this.platformModule
+          ? await this.platformModule.fetchAppPage(slug)
+          : await this.httpClient.fetchPage(urls.app(slug));
+      } catch (fetchErr) {
+        if (fetchErr instanceof AppNotFoundError || is404Error(fetchErr)) {
+          // Idempotent: preserve the original delisted_at if already set.
+          await this.db
+            .insert(apps)
+            .values({
+              platform: this.platform,
+              slug,
+              name: slug,
+              delistedAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: [apps.platform, apps.slug],
+              set: {
+                delistedAt: sql`COALESCE(${apps.delistedAt}, NOW())`,
+                updatedAt: new Date(),
+              },
+            });
+          if (fetchErr instanceof AppNotFoundError) throw fetchErr;
+          throw new AppNotFoundError(slug, this.platform, "HTTP 404");
+        }
+        throw fetchErr;
+      }
 
       // Use platform module for non-Shopify or fall back to Shopify parser
       const useGeneric = this.platformModule && !this.isShopify;
@@ -854,6 +891,8 @@ export class AppDetailsScraper {
             iconUrl: details.icon_url,
             pricingHint: details.pricing || undefined,
             updatedAt: new Date(),
+            // Re-listed detection: clear delisted_at on any successful scrape.
+            delistedAt: null,
             ...(validRating != null && { averageRating: String(validRating) }),
             ...(validRatingCount != null && { ratingCount: validRatingCount }),
             ...(metaVersion != null && { currentVersion: metaVersion }),

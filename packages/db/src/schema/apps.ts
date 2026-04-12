@@ -44,10 +44,12 @@ export const apps = pgTable(
     activeInstalls: integer("active_installs"),
     lastUpdatedAt: timestamp("last_updated_at"),
     externalId: varchar("external_id", { length: 100 }),
+    delistedAt: timestamp("delisted_at"),
   },
   (table) => [
     uniqueIndex("idx_apps_platform_slug").on(table.platform, table.slug),
     index("idx_apps_is_tracked").on(table.isTracked),
+    index("idx_apps_delisted_at").on(table.delistedAt),
   ]
 );
 

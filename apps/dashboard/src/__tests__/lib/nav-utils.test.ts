@@ -139,7 +139,7 @@ describe("nav-utils", () => {
 
   describe("systemAdminItems", () => {
     it("has correct number of items", () => {
-      expect(systemAdminItems.length).toBe(26);
+      expect(systemAdminItems.length).toBe(27);
     });
 
     it("includes Feature Flags link", () => {
