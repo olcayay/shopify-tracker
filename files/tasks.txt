@@ -1177,3 +1177,5 @@ bulk_via_category scope for Salesforce app_details (PLA-1048) ✅
 selective browser enrichment (PLA-1051) ✅
 
 fix false drift in bulk_via_category snapshot diff (PLA-1048 followup) ✅
+
+validation run 3: 19.83s, 5573 apps, 0 drift (PLA-1048 validated end-to-end) ✅

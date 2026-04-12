@@ -5976,3 +5976,8 @@ PLA-179: Global API rate limiting middleware
   - pricing: when card.pricingHint is empty/whitespace, treat as "no new info" — keep stored value and skip drift detection for this field.
   - pricing comparison is case-insensitive.
 - Two new tests in `category-scraper-refresh.test.ts`: decimal format drift and empty pricing preservation. Full suite 21 refresh/bulk/selective tests green.
+
+## PLA-1048 final validation (2026-04-12 23:11 UTC)
+- Run 3 (job 1279, post-fix): duration 19.83s, 5573 apps, 0 failures, 0 snapshots_inserted, 0 field_changes — fully idempotent.
+- Three-run table logged in Linear comment on PLA-1048.
+- Final throughput: ~4300× faster than scope=all for Salesforce full-catalog refresh. Real catalog size is 5573 apps (not 13k as estimated).
