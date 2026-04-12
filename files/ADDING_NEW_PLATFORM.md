@@ -1706,6 +1706,12 @@ Prefer using `PLATFORM_IDS.length` instead of hardcoded numbers, but some tests 
 
 **Solution:** Map standard developer fields to the normalized `NormalizedAppDetails.developer` object (`developer.website`, `developer.name`, `developer.url`). Only store truly platform-specific developer info (e.g., `developerPhone`, `developerAddress`) in `platformData`. This reduces the number of platform-keyed extraction maps in `apps/api/src/routes/apps.ts`.
 
+### Pitfall 29: Stale snapshots when the category API already carries tracked fields
+
+**Problem:** By default the category scraper writes an `appSnapshots` row only once per app (seed-only fallback). If your platform's category API already returns rating, ratingCount, pricing, short description, and developer name (Salesforce, HubSpot, Atlassian), those values go stale the moment the first snapshot lands — subsequent category crons never refresh them.
+
+**Solution:** Set `refreshSnapshotFromCategoryCard: true` (and optionally `refreshSnapshotMaxAgeMs`) on your `PlatformConstants`. The category scraper will insert a new snapshot whenever a tracked field in the card differs from the latest snapshot or the latest snapshot is older than `refreshSnapshotMaxAgeMs` (default 20h). `appFieldChanges` rows are emitted for drift so history stays consistent with the app-details path. Leave the flag off for platforms whose category cards lack the tracked fields (Shopify, Canva, Wix).
+
 ---
 
 ## 11. Testing & Verification Checklist
