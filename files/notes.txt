@@ -5950,3 +5950,12 @@ PLA-179: Global API rate limiting middleware
 - `category-scraper.ts` snapshot block refactored into `upsertSnapshotFromCategoryCard`: flag=false keeps seed-once; flag=true compares 5 tracked fields (averageRating/ratingCount/pricing/appIntroduction/developer.name) against latest snapshot. Insert new snapshot when any drift OR snapshot older than maxAgeMs; emit `appFieldChanges` per drifted field.
 - Existing `category-scraper-rankings.test.ts` mock updated (added `orderBy` stub). New `category-scraper-refresh.test.ts` covers 5 cases (flag off seed, flag off existing, flag on change, flag on fresh no-op, flag on stale).
 - `files/ADDING_NEW_PLATFORM.md` Pitfall 29 added.
+
+## PLA-1048: bulk_via_category scope for app_details (2026-04-12)
+- New `AppDetailsScraper.scrapeAllViaCategoryApi`: iterates every category page (seeds + subcategoryLinks up to maxCategoryDepth), dedupes cards (richer card wins on ratingCount), upserts apps, calls shared `upsertSnapshotFromCategoryCard` helper. Tolerates per-category fetch failures; metadata captures categories_fetched/category_failures/snapshots_inserted.
+- Helper extracted to `apps/scraper/src/utils/upsert-snapshot-from-card.ts` — CategoryScraper and the new bulk path both delegate.
+- Routing: scope union widened in `queue.ts`; `process-job.ts` skips BrowserClient for bulk scope and bumps timeout to JOB_TIMEOUT_APP_DETAILS_ALL_MS.
+- Scheduler: `ScraperSchedule.options` field added; `salesforce_app_details_bulk` at `0 3 * * *` runs `app_details` with `scope=bulk_via_category`.
+- Concurrency: `appDetailsConcurrencyBulk` (5) + `concurrentSeedCategories` (5 for Salesforce).
+- Tests: new `app-details-bulk-via-category.test.ts` (5 cases). Full scraper suite 172 files / 2541 tests green.
+- Expected impact: ~13k Salesforce apps refreshed in < 5 min (vs ~24h via scope=all). Trade-off: no fullDescription/highlights/media — those remain in browser-based scope=all (PLA-1051 will make that selective).

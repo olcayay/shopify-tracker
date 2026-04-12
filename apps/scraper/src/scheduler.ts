@@ -5,7 +5,7 @@ import cron from "node-cron";
 import { createLogger, SCRAPER_SCHEDULES, platformFeatureFlagSlug, isPlatformId, type PlatformId } from "@appranks/shared";
 import { createDb, featureFlags } from "@appranks/db";
 import { eq } from "drizzle-orm";
-import { enqueueScraperJob, closeQueue, type ScraperJobType } from "./queue.js";
+import { enqueueScraperJob, closeQueue, type ScraperJobType, type ScraperJobOptions } from "./queue.js";
 import { isCircuitOpen } from "./circuit-breaker.js";
 import { cleanupOldNotifications } from "./notifications/retention-cleanup.js";
 
@@ -64,6 +64,7 @@ for (const schedule of SCRAPER_SCHEDULES) {
         type: schedule.type as ScraperJobType,
         triggeredBy: "scheduler",
         ...("platform" in schedule ? { platform: schedule.platform } : {}),
+        ...(schedule.options ? { options: schedule.options as ScraperJobOptions } : {}),
       });
       log.info("job enqueued", { name: schedule.name, jobId });
     } catch (err) {

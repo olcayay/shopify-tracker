@@ -26,8 +26,10 @@ export interface ScraperJobOptions {
   scrapeReviews?: boolean;
   /** Skip the 12-hour dedup check (for manual re-scrapes) */
   force?: boolean;
-  /** For app_details: "tracked" (default, cron) or "all" (every discovered app) */
-  scope?: "tracked" | "all";
+  /** For app_details: "tracked" (default, cron), "all" (every discovered app via
+   *  browser), or "bulk_via_category" (refresh every app using only the platform's
+   *  category API — HTTP-only, ~1000× faster but omits fullDescription/highlights/media). */
+  scope?: "tracked" | "all" | "bulk_via_category";
 }
 
 export interface ScraperJobData {

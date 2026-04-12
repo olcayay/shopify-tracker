@@ -1712,6 +1712,12 @@ Prefer using `PLATFORM_IDS.length` instead of hardcoded numbers, but some tests 
 
 **Solution:** Set `refreshSnapshotFromCategoryCard: true` (and optionally `refreshSnapshotMaxAgeMs`) on your `PlatformConstants`. The category scraper will insert a new snapshot whenever a tracked field in the card differs from the latest snapshot or the latest snapshot is older than `refreshSnapshotMaxAgeMs` (default 20h). `appFieldChanges` rows are emitted for drift so history stays consistent with the app-details path. Leave the flag off for platforms whose category cards lack the tracked fields (Shopify, Canva, Wix).
 
+### Pitfall 30: Full-catalog app_details via browser is 1000× slower than via category API
+
+**Problem:** For HTTP-only platforms whose category API already returns the tracked fields, triggering `app_details` with `scope=all` forces every app through the per-app fetch path (which for SPA-based platforms opens a Playwright browser ~15–30s per app). At ~13k apps with concurrency 3 this takes a full day and routinely hits the 6h timeout.
+
+**Solution:** Use `scope=bulk_via_category` on `app_details` jobs. The `AppDetailsScraper.scrapeAllViaCategoryApi` method iterates every category page (seeds + subcategoryLinks up to `maxCategoryDepth`), dedupes cards across categories, and upserts apps + snapshots using the same `upsertSnapshotFromCategoryCard` helper as the category scraper. `process-job.ts` skips browser creation for this scope; the job timeout is bumped to `JOB_TIMEOUT_APP_DETAILS_ALL_MS`. Schedule it via a `ScraperSchedule.options` entry (see `salesforce_app_details_bulk`). Trade-off: the bulk path does not populate `fullDescription`, `highlights`, media, or `pricingPlans` — keep the browser-based `scope=all` for selective enrichment of those fields.
+
 ---
 
 ## 11. Testing & Verification Checklist

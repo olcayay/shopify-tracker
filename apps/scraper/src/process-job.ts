@@ -177,9 +177,11 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       platform,
     });
 
-    // Create browser client for platforms that need SPA rendering
+    // Create browser client for platforms that need SPA rendering.
+    // bulk_via_category scope (PLA-1048) is HTTP-only by design — skip the browser.
     let browserClient: BrowserClient | undefined;
-    if (needsBrowser(platform, type)) {
+    const bulkViaCategory = type === "app_details" && opts?.scope === "bulk_via_category";
+    if (needsBrowser(platform, type) && !bulkViaCategory) {
       browserClient = new BrowserClient();
     }
 
@@ -195,7 +197,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     }
 
     // Job-level timeout to prevent hanging indefinitely
-    const timeoutMs = (type === "app_details" && opts?.scope === "all")
+    const timeoutMs = (type === "app_details" && (opts?.scope === "all" || opts?.scope === "bulk_via_category"))
       ? JOB_TIMEOUT_APP_DETAILS_ALL_MS
       : (JOB_TIMEOUT_MAP[type] ?? JOB_TIMEOUT_MAP.default);
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -271,6 +273,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
             }, cascadeOpts);
             log.info("cascaded reviews job", { slug: job.data.slug });
           }
+        } else if (opts?.scope === "bulk_via_category") {
+          await scraper.scrapeAllViaCategoryApi(triggeredBy, queueName, opts?.force ?? false);
         } else if (opts?.scope === "all") {
           await scraper.scrapeAll(triggeredBy, queueName, opts?.force ?? false);
         } else {

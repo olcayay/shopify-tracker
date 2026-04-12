@@ -5,6 +5,8 @@ export interface ScraperSchedule {
   cron: string;
   type: string;
   platform: PlatformId;
+  /** Optional extra job options (e.g. scope) forwarded to enqueueScraperJob. */
+  options?: Record<string, unknown>;
 }
 
 export const SCRAPER_SCHEDULES: ScraperSchedule[] = [
@@ -24,6 +26,8 @@ export const SCRAPER_SCHEDULES: ScraperSchedule[] = [
   { name: "salesforce_app_details", cron: "0 2,14 * * *", type: "app_details", platform: "salesforce" },
   { name: "salesforce_reviews", cron: "0 7 * * *", type: "reviews", platform: "salesforce" },
   { name: "salesforce_compute_app_scores", cron: "15 10 * * *", type: "compute_app_scores", platform: "salesforce" },
+  // bulk_via_category (PLA-1048): HTTP-only refresh of every app via category API — ~5min vs 24h for scope=all.
+  { name: "salesforce_app_details_bulk", cron: "0 3 * * *", type: "app_details", platform: "salesforce", options: { scope: "bulk_via_category" } },
   // ── Canva (browser) ──
   { name: "canva_category", cron: "30 4 * * *", type: "category", platform: "canva" },
   { name: "canva_app_details", cron: "30 2,14 * * *", type: "app_details", platform: "canva" },

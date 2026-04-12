@@ -30,9 +30,10 @@ export function normalizePlan(p: any) {
 }
 import { HttpClient } from "../http-client.js";
 import { parseAppPage, parseSimilarApps } from "../parsers/app-parser.js";
-import type { PlatformModule } from "../platforms/platform-module.js";
+import type { PlatformModule, NormalizedCategoryApp } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
 import { recordItemError } from "../utils/record-item-error.js";
+import { upsertSnapshotFromCategoryCard } from "../utils/upsert-snapshot-from-card.js";
 
 /** Snapshot fields needed for change detection */
 interface PrevSnapshotData {
@@ -488,6 +489,246 @@ export class AppDetailsScraper {
     }
 
     log.info("scraping all complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
+  }
+
+  /**
+   * Bulk refresh every app in the catalog using only the platform's category API,
+   * bypassing the per-app SPA browser fetch. For platforms where the category API
+   * returns the tracked fields (Salesforce), this is ~1000× faster than scope=all.
+   *
+   * Flow:
+   *   1. Fetch every category page (seeds + subcategoryLinks up to maxCategoryDepth).
+   *   2. Parse each page into NormalizedCategoryApp[]; dedupe across categories
+   *      and aggregate which category slugs referenced each app.
+   *   3. For each app: upsert the row in `apps`, then call the shared
+   *      upsertSnapshotFromCategoryCard helper (also used by CategoryScraper)
+   *      so change detection + refresh semantics match PLA-1049.
+   */
+  async scrapeAllViaCategoryApi(triggeredBy?: string, queue?: string, _force?: boolean): Promise<void> {
+    if (!this.platformModule) {
+      throw new Error("scrapeAllViaCategoryApi requires a platform module");
+    }
+    const module = this.platformModule;
+
+    const [run] = await this.db
+      .insert(scrapeRuns)
+      .values({
+        scraperType: "app_details",
+        platform: this.platform,
+        status: "running",
+        createdAt: new Date(),
+        startedAt: new Date(),
+        triggeredBy,
+        queue,
+        jobId: this.jobId ?? null,
+        metadata: { scope: "bulk_via_category" },
+      })
+      .returning();
+
+    const startTime = Date.now();
+    const seeds = module.constants.seedCategories;
+    const maxDepth = Math.max(0, module.constants.maxCategoryDepth ?? 0);
+    const httpConcurrency = this.configValue<number>("concurrentSeedCategories", 5);
+    const refresh = this.configValue<boolean>("refreshSnapshotFromCategoryCard", false);
+    const maxAgeMs = this.configValue<number>("refreshSnapshotMaxAgeMs", 20 * 60 * 60 * 1000);
+
+    const cardBySlug = new Map<string, { card: NormalizedCategoryApp; categories: Set<string> }>();
+    const fetchedCategories = new Set<string>();
+    let categoryFailures = 0;
+
+    async function fetchAndParse(slug: string): Promise<{ apps: NormalizedCategoryApp[]; subLinks: string[] } | null> {
+      try {
+        const raw = await module.fetchCategoryPage(slug);
+        if (!raw) return { apps: [], subLinks: [] };
+        const page = module.parseCategoryPage(raw, slug);
+        const subLinks = (page.subcategoryLinks ?? []).map((l) => l.slug);
+        return { apps: page.apps, subLinks };
+      } catch (err) {
+        categoryFailures++;
+        log.warn("bulk_via_category: failed to fetch category, skipping", {
+          platform: module.platformId,
+          slug,
+          error: String(err),
+        });
+        return null;
+      }
+    }
+
+    function mergeCards(categorySlug: string, cards: NormalizedCategoryApp[]): void {
+      for (const card of cards) {
+        if (!card.slug) continue;
+        const existing = cardBySlug.get(card.slug);
+        if (existing) {
+          existing.categories.add(categorySlug);
+          // Prefer the richer card (one with a higher ratingCount signals a more populated card).
+          if ((card.ratingCount ?? 0) > (existing.card.ratingCount ?? 0)) {
+            existing.card = card;
+          }
+        } else {
+          cardBySlug.set(card.slug, { card, categories: new Set([categorySlug]) });
+        }
+      }
+    }
+
+    // Depth 0 = seeds only. Each additional depth visits the subcategoryLinks
+    // reported by the parser at the previous level.
+    let frontier = [...seeds];
+    for (let depth = 0; depth <= maxDepth; depth++) {
+      const toFetch = frontier.filter((s) => !fetchedCategories.has(s));
+      if (toFetch.length === 0) break;
+      for (const slug of toFetch) fetchedCategories.add(slug);
+
+      const nextFrontier = new Set<string>();
+      await runConcurrent(toFetch, async (slug) => {
+        const result = await fetchAndParse(slug);
+        if (!result) return;
+        mergeCards(slug, result.apps);
+        for (const sub of result.subLinks) {
+          if (!fetchedCategories.has(sub)) nextFrontier.add(sub);
+        }
+      }, httpConcurrency);
+      frontier = [...nextFrontier];
+    }
+
+    const totalApps = cardBySlug.size;
+    log.info("bulk_via_category: discovered apps", {
+      platform: this.platform,
+      totalApps,
+      categoriesFetched: fetchedCategories.size,
+      categoryFailures,
+    });
+
+    const now = new Date();
+    let itemsScraped = 0;
+    let itemsFailed = 0;
+    let snapshotsInserted = 0;
+
+    try {
+      const entries = [...cardBySlug.entries()];
+      await runConcurrent(entries, async ([slug, { card }], index) => {
+        if (index % 500 === 0 || index === entries.length - 1) {
+          await this.db.update(scrapeRuns).set({
+            metadata: {
+              scope: "bulk_via_category",
+              items_scraped: itemsScraped,
+              items_failed: itemsFailed,
+              snapshots_inserted: snapshotsInserted,
+              duration_ms: Date.now() - startTime,
+              current_index: index,
+              total_apps: totalApps,
+              categories_fetched: fetchedCategories.size,
+              category_failures: categoryFailures,
+            },
+          }).where(eq(scrapeRuns.id, run.id));
+        }
+
+        try {
+          const hasRating = typeof card.averageRating === "number" && card.averageRating > 0;
+          const hasCount = typeof card.ratingCount === "number" && card.ratingCount > 0;
+          const extra = card.extra ?? {};
+          const vendorName = (extra.vendorName ?? extra.companyName ?? extra.publisher) as string | undefined;
+          const totalInstalls = (extra.totalInstalls ?? extra.installCount ?? extra.activeInstalls) as number | undefined;
+
+          const [upserted] = await this.db
+            .insert(apps)
+            .values({
+              platform: this.platform,
+              slug,
+              name: card.name,
+              appCardSubtitle: card.shortDescription || undefined,
+              ...(card.logoUrl && { iconUrl: card.logoUrl }),
+              ...(hasRating && { averageRating: String(card.averageRating) }),
+              ...(hasCount && { ratingCount: card.ratingCount }),
+              ...(card.pricingHint && { pricingHint: card.pricingHint }),
+              ...(card.externalId && { externalId: card.externalId }),
+              ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+              ...(card.badges.length > 0 && { badges: card.badges }),
+            })
+            .onConflictDoUpdate({
+              target: [apps.platform, apps.slug],
+              set: {
+                name: card.name,
+                ...(card.shortDescription && { appCardSubtitle: card.shortDescription }),
+                ...(card.logoUrl && { iconUrl: card.logoUrl }),
+                ...(hasRating && { averageRating: String(card.averageRating) }),
+                ...(hasCount && { ratingCount: card.ratingCount }),
+                ...(card.pricingHint && { pricingHint: card.pricingHint }),
+                ...(card.externalId && { externalId: card.externalId }),
+                ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+                ...(card.badges.length > 0 && { badges: card.badges }),
+                delistedAt: null,
+                updatedAt: now,
+              },
+            })
+            .returning({ id: apps.id });
+
+          const result = await upsertSnapshotFromCategoryCard(this.db, upserted.id, card, {
+            refresh,
+            maxAgeMs,
+            now,
+            runId: run.id,
+            vendorName,
+          });
+          if (result.inserted) snapshotsInserted++;
+          itemsScraped++;
+        } catch (err) {
+          itemsFailed++;
+          log.warn("bulk_via_category: upsert failed", { slug, error: String(err) });
+          await recordItemError(this.db, {
+            scrapeRunId: run.id,
+            itemIdentifier: slug,
+            itemType: "app",
+            error: err,
+          });
+        }
+      }, this.configValue<number>("appDetailsConcurrencyBulk", 5));
+
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          metadata: {
+            scope: "bulk_via_category",
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            snapshots_inserted: snapshotsInserted,
+            duration_ms: Date.now() - startTime,
+            total_apps: totalApps,
+            categories_fetched: fetchedCategories.size,
+            category_failures: categoryFailures,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+    } catch (error) {
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "failed",
+          completedAt: new Date(),
+          error: String(error),
+          metadata: {
+            scope: "bulk_via_category",
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            snapshots_inserted: snapshotsInserted,
+            duration_ms: Date.now() - startTime,
+            total_apps: totalApps,
+            categories_fetched: fetchedCategories.size,
+            category_failures: categoryFailures,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      throw error;
+    }
+
+    log.info("bulk_via_category: complete", {
+      platform: this.platform,
+      itemsScraped,
+      itemsFailed,
+      snapshotsInserted,
+      durationMs: Date.now() - startTime,
+    });
   }
 
   /** Scrape a single app by slug */

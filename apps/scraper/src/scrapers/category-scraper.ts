@@ -1,17 +1,16 @@
-import { eq, and, sql, inArray, desc } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
   categories,
   categorySnapshots,
   apps,
-  appSnapshots,
-  appFieldChanges,
   appCategoryRankings,
   featuredAppSightings,
   categoryAdSightings,
   categoryParents,
 } from "@appranks/db";
+import { upsertSnapshotFromCategoryCard } from "../utils/upsert-snapshot-from-card.js";
 import {
   SEED_CATEGORY_SLUGS,
   MAX_CATEGORY_DEPTH,
@@ -1001,130 +1000,15 @@ export class CategoryScraper {
       // per-run refresh via `refreshSnapshotFromCategoryCard` (see Salesforce).
       const hasDescription = !!app.shortDescription;
       if (this.platform !== "shopify" && (hasRating || hasCount || vendorName || hasDescription || app.badges.length > 0 || (totalInstalls != null && totalInstalls > 0))) {
-        await this.upsertSnapshotFromCategoryCard(upsertedApp.id, app, {
-          hasRating,
-          hasCount,
-          vendorName,
+        await upsertSnapshotFromCategoryCard(this.db, upsertedApp.id, app, {
+          refresh: this.configValue<boolean>("refreshSnapshotFromCategoryCard", false),
+          maxAgeMs: this.configValue<number>("refreshSnapshotMaxAgeMs", 20 * 60 * 60 * 1000),
           now,
           runId,
+          vendorName,
         });
       }
     }
-  }
-
-  /**
-   * Insert a fresh appSnapshots row from a category card when appropriate.
-   *
-   * Default behaviour (flag off): insert only if no snapshot exists yet —
-   * the historical "seed-minimal-snapshot" fallback used by most platforms
-   * whose category cards lack the full tracked field set.
-   *
-   * Refresh behaviour (flag on, e.g. Salesforce): insert a new row whenever
-   * a tracked field from the card differs from the latest snapshot or the
-   * latest snapshot is older than `refreshSnapshotMaxAgeMs` (default 20h).
-   * Also emits `appFieldChanges` entries for the drifted fields so history
-   * stays consistent with the app-details path.
-   */
-  private async upsertSnapshotFromCategoryCard(
-    appId: number,
-    app: NormalizedCategoryApp,
-    ctx: { hasRating: boolean; hasCount: boolean; vendorName?: string; now: Date; runId: string },
-  ): Promise<void> {
-    const { hasRating, hasCount, vendorName, now, runId } = ctx;
-    const refresh = this.configValue<boolean>("refreshSnapshotFromCategoryCard", false);
-    const maxAgeMs = this.configValue<number>(
-      "refreshSnapshotMaxAgeMs",
-      20 * 60 * 60 * 1000,
-    );
-
-    const [latestSnap] = await this.db
-      .select({
-        id: appSnapshots.id,
-        scrapedAt: appSnapshots.scrapedAt,
-        averageRating: appSnapshots.averageRating,
-        ratingCount: appSnapshots.ratingCount,
-        pricing: appSnapshots.pricing,
-        appIntroduction: appSnapshots.appIntroduction,
-        developer: appSnapshots.developer,
-      })
-      .from(appSnapshots)
-      .where(eq(appSnapshots.appId, appId))
-      .orderBy(desc(appSnapshots.scrapedAt))
-      .limit(1);
-
-    // Flag off → seed-once (historical behaviour).
-    if (!refresh) {
-      if (latestSnap) return;
-    } else if (latestSnap) {
-      // Flag on → skip only when nothing changed and snapshot is fresh.
-      const ageMs = now.getTime() - new Date(latestSnap.scrapedAt).getTime();
-      const nextRating = hasRating ? String(app.averageRating) : null;
-      const nextCount = hasCount ? app.ratingCount : null;
-      const nextPricing = app.pricingHint || "";
-      const nextIntro = app.shortDescription || "";
-      const nextDeveloperName = vendorName || null;
-      const prevDeveloperName =
-        latestSnap.developer && typeof latestSnap.developer === "object"
-          ? ((latestSnap.developer as { name?: string }).name ?? null)
-          : null;
-
-      const drift: Array<{ field: string; oldValue: string | null; newValue: string | null }> = [];
-      if (nextRating !== latestSnap.averageRating) {
-        drift.push({ field: "averageRating", oldValue: latestSnap.averageRating, newValue: nextRating });
-      }
-      if (nextCount !== latestSnap.ratingCount) {
-        drift.push({
-          field: "ratingCount",
-          oldValue: latestSnap.ratingCount == null ? null : String(latestSnap.ratingCount),
-          newValue: nextCount == null ? null : String(nextCount),
-        });
-      }
-      if (nextPricing !== (latestSnap.pricing ?? "")) {
-        drift.push({ field: "pricing", oldValue: latestSnap.pricing ?? null, newValue: nextPricing });
-      }
-      if (nextIntro !== (latestSnap.appIntroduction ?? "")) {
-        drift.push({ field: "appIntroduction", oldValue: latestSnap.appIntroduction ?? null, newValue: nextIntro });
-      }
-      if (nextDeveloperName !== prevDeveloperName) {
-        drift.push({ field: "developer", oldValue: prevDeveloperName, newValue: nextDeveloperName });
-      }
-
-      const stale = ageMs > maxAgeMs;
-      if (drift.length === 0 && !stale) return;
-
-      if (drift.length > 0) {
-        await this.db.insert(appFieldChanges).values(
-          drift.map((c) => ({
-            appId,
-            field: c.field,
-            oldValue: c.oldValue,
-            newValue: c.newValue,
-            scrapeRunId: runId,
-          })),
-        );
-      }
-    }
-
-    await this.db.insert(appSnapshots).values({
-      appId,
-      scrapeRunId: runId,
-      scrapedAt: now,
-      averageRating: hasRating ? String(app.averageRating) : null,
-      ratingCount: hasCount ? app.ratingCount : null,
-      pricing: app.pricingHint || "",
-      appIntroduction: app.shortDescription || "",
-      appDetails: "",
-      seoTitle: "",
-      seoMetaDescription: "",
-      features: [],
-      developer: vendorName ? { name: vendorName, url: "" } : null,
-      demoStoreUrl: null,
-      languages: [],
-      integrations: [],
-      categories: [],
-      pricingPlans: [],
-      support: null,
-    });
   }
 
   /**
