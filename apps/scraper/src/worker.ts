@@ -82,7 +82,7 @@ const bgWorker = new Worker<ScraperJobData>(
       }
     }
 
-    const lockKey = `platform:${platform}`;
+    const lockKey = `platform:${platform}:${job.data.type}`;
     const release = await redisLock.acquireWithWait(lockKey, PLATFORM_LOCK_TTL_MS, LOCK_POLL_INTERVAL_MS, PLATFORM_LOCK_TIMEOUT_MS);
     if (!release) {
       throw new Error(`Could not acquire lock for platform ${platform} within ${PLATFORM_LOCK_TIMEOUT_MS}ms`);
