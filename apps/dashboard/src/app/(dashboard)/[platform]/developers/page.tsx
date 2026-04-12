@@ -347,7 +347,7 @@ function PlatformDevelopersContent() {
               <TableRow>
                 <TableHead className="w-10"></TableHead>
                 <TableHead>Developer</TableHead>
-                <TableHead className="w-72">My Tracked Apps</TableHead>
+                <TableHead className="w-96">My Tracked Apps</TableHead>
                 <TableHead className="w-36 text-right">
                   <button
                     onClick={() => setTopOrder(topOrder === "desc" ? "asc" : "desc")}
@@ -415,7 +415,7 @@ function PlatformDevelopersContent() {
               <TableRow>
                 <TableHead className="w-10"></TableHead>
                 <TableHead>Developer</TableHead>
-                <TableHead className="w-72">Competitor Apps</TableHead>
+                <TableHead className="w-96">Competitor Apps</TableHead>
                 <TableHead className="w-36 text-right">
                   <button
                     onClick={() => setCompetitorOrder(competitorOrder === "desc" ? "asc" : "desc")}
@@ -494,7 +494,7 @@ function PlatformDevelopersContent() {
                       Developer <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
-                  <TableHead className="w-72">Apps</TableHead>
+                  <TableHead className="w-96">Apps</TableHead>
                   <TableHead className="w-36 text-right">
                     <button
                       onClick={() => toggleSort("apps")}

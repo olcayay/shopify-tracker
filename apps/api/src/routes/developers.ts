@@ -127,7 +127,7 @@ export async function developerRoutes(app: FastifyInstance) {
           SELECT global_developer_id,
             COALESCE(jsonb_agg(jsonb_build_object(
               'icon_url', icon_url, 'name', name, 'slug', slug, 'platform', platform
-            ) ORDER BY name) FILTER (WHERE rn <= 5), '[]'::jsonb) AS top_apps
+            ) ORDER BY name) FILTER (WHERE rn <= 10), '[]'::jsonb) AS top_apps
           FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY global_developer_id ORDER BY name) AS rn
             FROM (SELECT DISTINCT ON (global_developer_id, slug) global_developer_id, icon_url, name, slug, platform FROM dev_apps WHERE icon_url IS NOT NULL) d

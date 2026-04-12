@@ -5924,3 +5924,7 @@ PLA-179: Global API rate limiting middleware
 - Review-specific `getReviewTrendFetchLimit` (min 365 days for custom) is now a 2-line inline helper in the two reviews pages — not worth a shared export.
 - Collapsed two duplicate picker test files into one parameterized `date-range-picker.test.tsx` that runs the same suite for both configs. 10 tests pass (5 per config).
 - All 2262 dashboard tests pass.
+
+## PLA-1039: 10 app icons + widen Apps column (2026-04-12)
+- API: `dev_top_apps` CTE cap raised 5→10 in `/api/developers` (apps/api/src/routes/developers.ts). Dashboard's `maxIcons = 10` now actually receives 10 apps.
+- Dashboard: Apps column in all 3 tables widened w-72 → w-96 so 10 `w-5` icons + `-space-x-1.5` overlap + `+N` overflow badge fit comfortably on one row.
