@@ -5967,3 +5967,12 @@ PLA-179: Global API rate limiting middleware
 - `queue.ts` scope union widened to include `all_with_full_details`.
 - Tests in `app-details-selective.test.ts` (6 cases) cover each predicate independently plus combined breakdown.
 - Kept `scope=all` untouched for backwards compatibility; selective path is opt-in via explicit `scope=all_with_full_details` (no cron yet — can be added as a weekly schedule once tuned in prod).
+
+## PLA-1048 followup: Fix false-positive drift in snapshot diff (2026-04-12)
+- Production run 1 (job 1275) completed in 25.86s, 5573 apps, 0 failures, 5572 snapshots inserted, 2219 field changes.
+- Production run 2 (job 1277, same data) produced 1922 snapshots + 3874 false `averageRating` drifts because Postgres `decimal(3,2)` stores "4.80" while `String(4.8)` produces "4.8".
+- Fix in `apps/scraper/src/utils/upsert-snapshot-from-card.ts`:
+  - averageRating compared as rounded integers (×100) to two decimal tolerance.
+  - pricing: when card.pricingHint is empty/whitespace, treat as "no new info" — keep stored value and skip drift detection for this field.
+  - pricing comparison is case-insensitive.
+- Two new tests in `category-scraper-refresh.test.ts`: decimal format drift and empty pricing preservation. Full suite 21 refresh/bulk/selective tests green.

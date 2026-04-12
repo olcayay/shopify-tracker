@@ -193,6 +193,85 @@ describe("upsertSnapshotFromCategoryCard (PLA-1049)", () => {
     expect(snapshotInserts).toHaveLength(0);
   });
 
+  it("flag=true, decimal rating format ('4.80' vs 4.8): treats as unchanged — no spurious drift (PLA-1048 bugfix)", async () => {
+    const now = new Date();
+    const mockDb = createMockDb({
+      latestSnapshot: {
+        id: 100,
+        scrapedAt: new Date(now.getTime() - 60 * 60 * 1000),
+        averageRating: "4.80", // Postgres decimal(3,2) stringification
+        ratingCount: 10,
+        pricing: "Free",
+        appIntroduction: "desc",
+        developer: null,
+      },
+    });
+    const scraper = new CategoryScraper(mockDb as any, {
+      platformModule: {
+        platformId: "salesforce",
+        constants: {
+          seedCategories: ["sales"],
+          maxCategoryDepth: 1,
+          refreshSnapshotFromCategoryCard: true,
+          refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
+        },
+      } as any,
+    });
+
+    // Card rating 4.8 — same number, different string shape.
+    await (scraper as any).recordNormalizedAppRankings([{ ...sampleApp, averageRating: 4.8 }], "sales", "run-fmt", 0);
+
+    const snapshotInserts = mockDb._insertCalls.filter(
+      (v: any) => v && typeof v === "object" && "appIntroduction" in v,
+    );
+    const fieldChangeInserts = mockDb._insertCalls.filter(
+      (v: any) => Array.isArray(v) && v[0]?.field,
+    );
+    expect(snapshotInserts).toHaveLength(0);
+    expect(fieldChangeInserts).toHaveLength(0);
+  });
+
+  it("flag=true, empty pricing from card when stored non-empty: preserves stored value, no drift (PLA-1048 bugfix)", async () => {
+    const now = new Date();
+    const mockDb = createMockDb({
+      latestSnapshot: {
+        id: 100,
+        scrapedAt: new Date(now.getTime() - 60 * 60 * 1000),
+        averageRating: "4.50",
+        ratingCount: 10,
+        pricing: "Paid",
+        appIntroduction: "desc",
+        developer: null,
+      },
+    });
+    const scraper = new CategoryScraper(mockDb as any, {
+      platformModule: {
+        platformId: "salesforce",
+        constants: {
+          seedCategories: ["sales"],
+          maxCategoryDepth: 1,
+          refreshSnapshotFromCategoryCard: true,
+          refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
+        },
+      } as any,
+    });
+
+    // Card returns no pricing this time (pricingHint undefined).
+    await (scraper as any).recordNormalizedAppRankings(
+      [{ ...sampleApp, pricingHint: undefined }],
+      "sales",
+      "run-price",
+      0,
+    );
+
+    const fieldChangeInserts = mockDb._insertCalls.filter(
+      (v: any) => Array.isArray(v) && v[0]?.field,
+    );
+    // No drift recorded — empty card pricing is treated as no-op.
+    const pricingDrift = fieldChangeInserts.flatMap((arr: any[]) => arr).filter((c: any) => c.field === "pricing");
+    expect(pricingDrift).toHaveLength(0);
+  });
+
   it("flag=true, no change but snapshot stale (>20h): inserts refreshed snapshot, no field changes", async () => {
     const now = new Date();
     const mockDb = createMockDb({

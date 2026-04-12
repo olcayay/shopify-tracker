@@ -65,7 +65,11 @@ export async function upsertSnapshotFromCategoryCard(
         : null;
 
     const drift: Array<{ field: string; oldValue: string | null; newValue: string | null }> = [];
-    if (nextRating !== latestSnap.averageRating) {
+    // averageRating: Postgres stores decimal(3,2) so prev is e.g. "4.80" and
+    // String(4.8) is "4.8". Compare numerically to two decimals.
+    const prevRatingNum = latestSnap.averageRating == null ? null : Math.round(Number(latestSnap.averageRating) * 100);
+    const nextRatingNum = nextRating == null ? null : Math.round(Number(nextRating) * 100);
+    if (prevRatingNum !== nextRatingNum) {
       drift.push({ field: "averageRating", oldValue: latestSnap.averageRating, newValue: nextRating });
     }
     if (nextCount !== latestSnap.ratingCount) {
@@ -75,8 +79,15 @@ export async function upsertSnapshotFromCategoryCard(
         newValue: nextCount == null ? null : String(nextCount),
       });
     }
-    if (nextPricing !== (latestSnap.pricing ?? "")) {
-      drift.push({ field: "pricing", oldValue: latestSnap.pricing ?? null, newValue: nextPricing });
+    // pricing: the category API occasionally omits `pricing` on a card that
+    // had it before. Treat "missing in the new card" as no-op instead of
+    // blowing away the stored value. Case-insensitive compare for the rest.
+    const prevPricing = (latestSnap.pricing ?? "").trim();
+    const nextPricingTrim = nextPricing.trim();
+    const pricingChanged = nextPricingTrim !== ""
+      && prevPricing.toLowerCase() !== nextPricingTrim.toLowerCase();
+    if (pricingChanged) {
+      drift.push({ field: "pricing", oldValue: latestSnap.pricing ?? null, newValue: nextPricingTrim });
     }
     if (nextIntro !== (latestSnap.appIntroduction ?? "")) {
       drift.push({ field: "appIntroduction", oldValue: latestSnap.appIntroduction ?? null, newValue: nextIntro });
@@ -105,13 +116,19 @@ export async function upsertSnapshotFromCategoryCard(
     }
   }
 
+  // Preserve previous pricing when the card is silent on it (the category API
+  // drops `pricing` inconsistently for some apps; don't overwrite with empty).
+  const pricingForInsert = (card.pricingHint && card.pricingHint.trim())
+    ? card.pricingHint
+    : (latestSnap?.pricing ?? "");
+
   await db.insert(appSnapshots).values({
     appId,
     scrapeRunId: runId,
     scrapedAt: now,
     averageRating: hasRating ? String(card.averageRating) : null,
     ratingCount: hasCount ? card.ratingCount : null,
-    pricing: card.pricingHint || "",
+    pricing: pricingForInsert,
     appIntroduction: card.shortDescription || "",
     appDetails: "",
     seoTitle: "",

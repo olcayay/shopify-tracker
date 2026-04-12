@@ -1175,3 +1175,5 @@ category scraper refreshes snapshots when flag set (PLA-1049) ✅
 bulk_via_category scope for Salesforce app_details (PLA-1048) ✅
 
 selective browser enrichment (PLA-1051) ✅
+
+fix false drift in bulk_via_category snapshot diff (PLA-1048 followup) ✅
