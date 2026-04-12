@@ -21,6 +21,7 @@ import * as researchProjectsSchema from "./schema/research-projects.js";
 import * as accountPlatformsSchema from "./schema/account-platforms.js";
 import * as platformVisibilitySchema from "./schema/platform-visibility.js";
 import * as scraperConfigsSchema from "./schema/scraper-configs.js";
+import * as scraperConfigChangesSchema from "./schema/scraper-config-changes.js";
 import * as researchVirtualAppsSchema from "./schema/research-virtual-apps.js";
 import * as aiLogsSchema from "./schema/ai-logs.js";
 import * as categoryParentsSchema from "./schema/category-parents.js";
@@ -56,6 +57,7 @@ export const schema = {
   ...accountPlatformsSchema,
   ...platformVisibilitySchema,
   ...scraperConfigsSchema,
+  ...scraperConfigChangesSchema,
   ...researchVirtualAppsSchema,
   ...aiLogsSchema,
   ...categoryParentsSchema,
@@ -228,6 +230,7 @@ export {
 export { accountPlatforms } from "./schema/account-platforms.js";
 export { platformVisibility } from "./schema/platform-visibility.js";
 export { scraperConfigs, type ScraperConfigRow, type ScraperConfigInsert } from "./schema/scraper-configs.js";
+export { scraperConfigChanges, type ScraperConfigChangeRow, type ScraperConfigChangeInsert } from "./schema/scraper-config-changes.js";
 export { researchVirtualApps } from "./schema/research-virtual-apps.js";
 export { aiLogs } from "./schema/ai-logs.js";
 export { categoryParents } from "./schema/category-parents.js";

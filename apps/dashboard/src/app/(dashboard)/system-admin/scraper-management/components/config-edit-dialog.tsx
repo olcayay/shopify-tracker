@@ -25,6 +25,17 @@ interface SingleConfigResponse {
   schema: Record<string, KnobDef> | null;
 }
 
+interface HistoryEntry {
+  id: string;
+  changedAt: string;
+  changedBy: string | null;
+  previousOverrides: Record<string, unknown> | null;
+  newOverrides: Record<string, unknown> | null;
+  previousEnabled: boolean | null;
+  newEnabled: boolean | null;
+  reason: string | null;
+}
+
 interface Props {
   platform: string;
   scraperType: string;
@@ -44,6 +55,7 @@ export function ConfigEditDialog({ platform, scraperType, onClose, onSaved }: Pr
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[] | null>(null);
 
   useEffect(() => {
     fetchWithAuth(`/api/system-admin/scraper-configs/${platform}/${scraperType}`)
@@ -62,6 +74,14 @@ export function ConfigEditDialog({ platform, scraperType, onClose, onSaved }: Pr
         setDraft(d);
       })
       .catch((err) => setError(String(err)));
+
+    fetchWithAuth(`/api/system-admin/scraper-configs/${platform}/${scraperType}/history?limit=20`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as { history: HistoryEntry[] };
+        setHistory(data.history);
+      })
+      .catch(() => {});
   }, [platform, scraperType, fetchWithAuth]);
 
   async function save() {
@@ -195,6 +215,43 @@ export function ConfigEditDialog({ platform, scraperType, onClose, onSaved }: Pr
               })}
               {error && (
                 <div className="p-2 bg-destructive/10 text-destructive text-sm rounded">{error}</div>
+              )}
+
+              {history !== null && history.length > 0 && (
+                <details className="border rounded">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium bg-muted/50">
+                    Change history ({history.length})
+                  </summary>
+                  <div className="divide-y">
+                    {history.map((h) => (
+                      <div key={h.id} className="p-3 text-xs space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">
+                            {new Date(h.changedAt).toLocaleString()}
+                            {h.changedBy && ` · ${h.changedBy}`}
+                          </span>
+                          {h.reason && (
+                            <span className="text-muted-foreground italic">{h.reason}</span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <div className="text-[10px] text-muted-foreground">before</div>
+                            <pre className="bg-muted p-1 rounded overflow-x-auto">
+                              {JSON.stringify(h.previousOverrides ?? {}, null, 2)}
+                            </pre>
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-[10px] text-muted-foreground">after</div>
+                            <pre className="bg-muted p-1 rounded overflow-x-auto">
+                              {JSON.stringify(h.newOverrides ?? {}, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               )}
             </>
           )}

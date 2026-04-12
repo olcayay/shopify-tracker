@@ -2843,16 +2843,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /api/system-admin/scraper-configs/:platform/:type — update overrides / enabled
   app.patch<{
     Params: { platform: string; type: string };
-    Body: { enabled?: boolean; overrides?: Record<string, unknown> };
+    Body: { enabled?: boolean; overrides?: Record<string, unknown>; reason?: string };
   }>("/scraper-configs/:platform/:type", async (request, reply) => {
     const { platform, type } = request.params;
     if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
-    const { enabled, overrides } = request.body ?? {};
+    const { enabled, overrides, reason } = request.body ?? {};
     if (enabled === undefined && overrides === undefined) {
       return reply.code(400).send({ error: "body must include enabled and/or overrides" });
     }
 
-    const { scraperConfigs } = await import("@appranks/db");
+    const { scraperConfigs, scraperConfigChanges } = await import("@appranks/db");
     const { SCRAPER_CONFIG_SCHEMA } = await import("@appranks/shared");
     const schema = (SCRAPER_CONFIG_SCHEMA as Record<string, any>)[type] ?? null;
 
@@ -2860,6 +2860,14 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       const result = validateOverrides(schema, overrides);
       if (!result.ok) return reply.code(400).send({ error: "validation failed", details: result.errors });
     }
+
+    // PLA-1043: capture previous state for audit log before mutating
+    const prevRows = await db
+      .select()
+      .from(scraperConfigs)
+      .where(and(eq(scraperConfigs.platform, platform), eq(scraperConfigs.scraperType, type)))
+      .limit(1);
+    const prev = prevRows[0];
 
     const userEmail = request.user?.email || "api";
     const updates: Record<string, unknown> = { updatedAt: new Date(), updatedBy: userEmail };
@@ -2881,6 +2889,18 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         set: updates,
       });
 
+    // PLA-1043: audit log entry
+    await db.insert(scraperConfigChanges).values({
+      platform,
+      scraperType: type,
+      changedBy: userEmail,
+      previousOverrides: prev?.overrides ?? null,
+      newOverrides: overrides !== undefined ? overrides : (prev?.overrides ?? null),
+      previousEnabled: prev?.enabled ?? null,
+      newEnabled: enabled !== undefined ? enabled : (prev?.enabled ?? null),
+      reason: reason || null,
+    });
+
     // Return the new state (same shape as GET)
     const rows = await db
       .select()
@@ -2899,18 +2919,185 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // POST /api/system-admin/scraper-configs/:platform/:type/reset — clear all overrides
-  app.post<{ Params: { platform: string; type: string } }>(
-    "/scraper-configs/:platform/:type/reset",
+  app.post<{
+    Params: { platform: string; type: string };
+    Body: { reason?: string };
+  }>("/scraper-configs/:platform/:type/reset", async (request, reply) => {
+    const { platform, type } = request.params;
+    if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+    const { scraperConfigs, scraperConfigChanges } = await import("@appranks/db");
+    const { reason } = request.body ?? {};
+    const userEmail = request.user?.email || "api";
+
+    const prevRows = await db
+      .select()
+      .from(scraperConfigs)
+      .where(and(eq(scraperConfigs.platform, platform), eq(scraperConfigs.scraperType, type)))
+      .limit(1);
+    const prev = prevRows[0];
+
+    await db
+      .update(scraperConfigs)
+      .set({ overrides: {}, updatedAt: new Date(), updatedBy: userEmail })
+      .where(and(eq(scraperConfigs.platform, platform), eq(scraperConfigs.scraperType, type)));
+
+    await db.insert(scraperConfigChanges).values({
+      platform,
+      scraperType: type,
+      changedBy: userEmail,
+      previousOverrides: prev?.overrides ?? null,
+      newOverrides: {},
+      previousEnabled: prev?.enabled ?? null,
+      newEnabled: prev?.enabled ?? null,
+      reason: reason || "Reset all to defaults",
+    });
+
+    return { platform, scraperType: type, overrides: {} };
+  });
+
+  // GET /api/system-admin/scraper-configs/:platform/:type/history — paginated change log
+  app.get<{
+    Params: { platform: string; type: string };
+    Querystring: { limit?: string };
+  }>("/scraper-configs/:platform/:type/history", async (request, reply) => {
+    const { platform, type } = request.params;
+    if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+    const { scraperConfigChanges } = await import("@appranks/db");
+    const { desc } = await import("drizzle-orm");
+    const limit = Math.min(parseInt(request.query?.limit || "20", 10) || 20, 200);
+    const rows = await db
+      .select()
+      .from(scraperConfigChanges)
+      .where(
+        and(
+          eq(scraperConfigChanges.platform, platform),
+          eq(scraperConfigChanges.scraperType, type),
+        ),
+      )
+      .orderBy(desc(scraperConfigChanges.changedAt))
+      .limit(limit);
+    return { history: rows };
+  });
+
+  // GET /api/system-admin/scrape-runs/:id/config-snapshot — snapshot stored on a run + current live config + diff
+  app.get<{ Params: { id: string } }>(
+    "/scrape-runs/:id/config-snapshot",
     async (request, reply) => {
-      const { platform, type } = request.params;
-      if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
-      const { scraperConfigs } = await import("@appranks/db");
+      const { id } = request.params;
+      const { scrapeRuns, scraperConfigs } = await import("@appranks/db");
+      const runs = await db.select().from(scrapeRuns).where(eq(scrapeRuns.id, id)).limit(1);
+      const run = runs[0];
+      if (!run) return reply.code(404).send({ error: "run not found" });
+
+      const meta = (run.metadata as Record<string, unknown> | null) ?? {};
+      const snapshot = (meta.config_snapshot as Record<string, unknown> | undefined) ?? null;
+
+      // Current live config for the same (platform, type)
+      let current: Record<string, unknown> | null = null;
+      if (run.platform && run.scraperType) {
+        const rows = await db
+          .select()
+          .from(scraperConfigs)
+          .where(
+            and(
+              eq(scraperConfigs.platform, run.platform),
+              eq(scraperConfigs.scraperType, run.scraperType),
+            ),
+          )
+          .limit(1);
+        if (rows[0]) {
+          current = {
+            enabled: rows[0].enabled,
+            overrides: rows[0].overrides,
+            updatedAt: rows[0].updatedAt,
+            updatedBy: rows[0].updatedBy,
+          };
+        }
+      }
+
+      // Simple diff: compare snapshot.overrides vs current.overrides keys
+      const snapOverrides =
+        snapshot && typeof snapshot === "object"
+          ? ((snapshot as Record<string, unknown>).overrides as Record<string, unknown> | undefined) ?? {}
+          : {};
+      const currentOverrides =
+        (current?.overrides as Record<string, unknown> | undefined) ?? {};
+      const added: string[] = [];
+      const removed: string[] = [];
+      const changed: string[] = [];
+      for (const k of Object.keys(currentOverrides)) {
+        if (!(k in snapOverrides)) added.push(k);
+        else if (JSON.stringify(currentOverrides[k]) !== JSON.stringify(snapOverrides[k])) changed.push(k);
+      }
+      for (const k of Object.keys(snapOverrides)) {
+        if (!(k in currentOverrides)) removed.push(k);
+      }
+
+      return {
+        runId: id,
+        platform: run.platform,
+        scraperType: run.scraperType,
+        snapshot,
+        current,
+        diff: { added, removed, changed },
+      };
+    }
+  );
+
+  // POST /api/system-admin/scrape-runs/:id/apply-config-snapshot — restore a run's snapshot as current config
+  app.post<{ Params: { id: string } }>(
+    "/scrape-runs/:id/apply-config-snapshot",
+    async (request, reply) => {
+      const { id } = request.params;
+      const { scrapeRuns, scraperConfigs, scraperConfigChanges } = await import("@appranks/db");
+      const runs = await db.select().from(scrapeRuns).where(eq(scrapeRuns.id, id)).limit(1);
+      const run = runs[0];
+      if (!run) return reply.code(404).send({ error: "run not found" });
+      if (!run.platform || !run.scraperType) {
+        return reply.code(400).send({ error: "run has no platform/scraperType" });
+      }
+      const meta = (run.metadata as Record<string, unknown> | null) ?? {};
+      const snapshot = (meta.config_snapshot as Record<string, unknown> | undefined) ?? null;
+      if (!snapshot) return reply.code(400).send({ error: "run has no config_snapshot to apply" });
+
+      const snapOverrides =
+        ((snapshot as Record<string, unknown>).overrides as Record<string, unknown> | undefined) ?? {};
+
+      const prevRows = await db
+        .select()
+        .from(scraperConfigs)
+        .where(and(eq(scraperConfigs.platform, run.platform), eq(scraperConfigs.scraperType, run.scraperType)))
+        .limit(1);
+      const prev = prevRows[0];
       const userEmail = request.user?.email || "api";
+
       await db
-        .update(scraperConfigs)
-        .set({ overrides: {}, updatedAt: new Date(), updatedBy: userEmail })
-        .where(and(eq(scraperConfigs.platform, platform), eq(scraperConfigs.scraperType, type)));
-      return { platform, scraperType: type, overrides: {} };
+        .insert(scraperConfigs)
+        .values({
+          platform: run.platform,
+          scraperType: run.scraperType,
+          enabled: prev?.enabled ?? true,
+          overrides: snapOverrides,
+          updatedAt: new Date(),
+          updatedBy: userEmail,
+        })
+        .onConflictDoUpdate({
+          target: [scraperConfigs.platform, scraperConfigs.scraperType],
+          set: { overrides: snapOverrides, updatedAt: new Date(), updatedBy: userEmail },
+        });
+
+      await db.insert(scraperConfigChanges).values({
+        platform: run.platform,
+        scraperType: run.scraperType,
+        changedBy: userEmail,
+        previousOverrides: prev?.overrides ?? null,
+        newOverrides: snapOverrides,
+        previousEnabled: prev?.enabled ?? null,
+        newEnabled: prev?.enabled ?? null,
+        reason: `Replayed from run ${id}`,
+      });
+
+      return { applied: true, platform: run.platform, scraperType: run.scraperType, overrides: snapOverrides };
     }
   );
 

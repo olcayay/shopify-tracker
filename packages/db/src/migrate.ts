@@ -190,6 +190,20 @@ async function run() {
         )`,
         `CREATE UNIQUE INDEX IF NOT EXISTS scraper_configs_platform_type_uq ON scraper_configs (platform, scraper_type)`,
         `CREATE INDEX IF NOT EXISTS idx_scraper_configs_platform ON scraper_configs (platform)`,
+        // PLA-1043: scraper_config_changes (migration 0143)
+        `CREATE TABLE IF NOT EXISTS scraper_config_changes (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          platform TEXT NOT NULL,
+          scraper_type TEXT NOT NULL,
+          changed_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          changed_by TEXT,
+          previous_overrides JSONB,
+          new_overrides JSONB,
+          previous_enabled BOOLEAN,
+          new_enabled BOOLEAN,
+          reason TEXT
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_scraper_config_changes_lookup ON scraper_config_changes (platform, scraper_type, changed_at DESC)`,
       ];
       for (const stmt of safetyStatements) {
         try {
