@@ -365,9 +365,25 @@ export class AppDetailsScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
     const preFetchedAll = await this.buildPreFetchedData(force);
+    const currentlyProcessing = new Set<string>();
 
     try {
-      await runConcurrent(allApps, async (app) => {
+      await runConcurrent(allApps, async (app, index) => {
+        currentlyProcessing.add(app.slug);
+        if (index % 25 === 0 || index === allApps.length - 1) {
+          await this.db.update(scrapeRuns).set({
+            metadata: {
+              items_scraped: itemsScraped,
+              items_failed: itemsFailed,
+              duration_ms: Date.now() - startTime,
+              currently_processing: [...currentlyProcessing],
+              current_index: index,
+              total_apps: allApps.length,
+              scope: "all",
+            },
+          }).where(eq(scrapeRuns.id, run.id));
+        }
+
         try {
           await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetchedAll);
           itemsScraped++;
@@ -393,6 +409,8 @@ export class AppDetailsScraper {
               error,
             });
           }
+        } finally {
+          currentlyProcessing.delete(app.slug);
         }
       }, this.platformModule?.constants?.appDetailsConcurrency ?? 3);
 
@@ -405,6 +423,8 @@ export class AppDetailsScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             duration_ms: Date.now() - startTime,
+            total_apps: allApps.length,
+            scope: "all",
           },
         })
         .where(eq(scrapeRuns.id, run.id));
@@ -419,6 +439,8 @@ export class AppDetailsScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             duration_ms: Date.now() - startTime,
+            total_apps: allApps.length,
+            scope: "all",
           },
         })
         .where(eq(scrapeRuns.id, run.id));

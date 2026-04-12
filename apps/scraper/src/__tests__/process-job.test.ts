@@ -13,6 +13,7 @@ const mockCategoryScraper = {
 const mockAppDetailsScraper = {
   scrapeApp: vi.fn().mockResolvedValue(undefined),
   scrapeTracked: vi.fn().mockResolvedValue(undefined),
+  scrapeAll: vi.fn().mockResolvedValue(undefined),
   jobId: undefined as string | undefined,
 };
 const mockKeywordScraper = {
@@ -232,6 +233,7 @@ vi.mock("../constants.js", () => ({
   JOB_TIMEOUT_KEYWORD_SEARCH_MS: 60_000,
   JOB_TIMEOUT_REVIEWS_MS: 60_000,
   JOB_TIMEOUT_APP_DETAILS_MS: 60_000,
+  JOB_TIMEOUT_APP_DETAILS_ALL_MS: 60_000,
   JOB_TIMEOUT_KEYWORD_SUGGESTIONS_MS: 60_000,
   JOB_TIMEOUT_COMPUTE_MS: 60_000,
   JOB_TIMEOUT_DAILY_DIGEST_MS: 60_000,
@@ -495,6 +497,29 @@ describe("createProcessJob", () => {
     it("scrapes tracked apps when no slug is provided", async () => {
       await processJob(makeJob({ type: "app_details" }));
       expect(mockAppDetailsScraper.scrapeTracked).toHaveBeenCalled();
+    });
+
+    it("routes to scrapeAll when scope=all", async () => {
+      await processJob(makeJob({
+        type: "app_details",
+        options: { scope: "all", force: false },
+      }));
+      expect(mockAppDetailsScraper.scrapeAll).toHaveBeenCalledWith("test", undefined, false);
+      expect(mockAppDetailsScraper.scrapeTracked).not.toHaveBeenCalled();
+    });
+
+    it("routes to scrapeTracked when scope is unset (default)", async () => {
+      await processJob(makeJob({ type: "app_details" }));
+      expect(mockAppDetailsScraper.scrapeTracked).toHaveBeenCalled();
+      expect(mockAppDetailsScraper.scrapeAll).not.toHaveBeenCalled();
+    });
+
+    it("passes force=true through to scrapeAll when scope=all", async () => {
+      await processJob(makeJob({
+        type: "app_details",
+        options: { scope: "all", force: true },
+      }));
+      expect(mockAppDetailsScraper.scrapeAll).toHaveBeenCalledWith("test", undefined, true);
     });
 
     it("passes force option through to scrapeApp", async () => {

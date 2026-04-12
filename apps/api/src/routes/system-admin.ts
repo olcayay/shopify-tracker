@@ -1758,7 +1758,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       type?: string;
       slug?: string;
       keyword?: string;
-      options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean; force?: boolean };
+      options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean; force?: boolean; scope?: "tracked" | "all" };
       queue?: "interactive" | "background";
       platform?: string;
     };
@@ -1793,7 +1793,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       if (slug) jobData.slug = slug;
       if (keyword) jobData.keyword = keyword;
       if (type === "app_details") {
-        jobData.options = { ...options, force: true };
+        jobData.options = { ...options, force: options?.force ?? true };
       } else if (options) {
         jobData.options = options;
       }

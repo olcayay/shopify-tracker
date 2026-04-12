@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Play, Power } from "lucide-react";
+import { Play, Power, Database } from "lucide-react";
 import { PLATFORM_LABELS, PLATFORM_COLORS, SCRAPER_TYPE_LABELS, HEALTH_SCRAPER_TYPES } from "@/lib/platform-display";
 import { MatrixCell, getCellStatus, STATUS_COLORS, STATUS_RING, type HealthCell } from "./matrix-cell";
 
@@ -31,13 +31,14 @@ interface OperationalMatrixProps {
   healthData: { matrix: HealthCell[]; summary: { healthy: number; failed: number; stale: number; running: number; partial: number; totalScheduled: number } } | null;
   onTrigger: (platform: string, type: string) => void;
   onTriggerAll: (platform: string) => void;
+  onScrapeAllApps?: (platform: string, force: boolean) => void;
   triggering: string | null;
   scraperPlatforms: ScraperPlatformStatus[] | null;
   onToggleScraper: (platform: string) => void;
   togglingPlatform: string | null;
 }
 
-export function OperationalMatrix({ healthData, onTrigger, onTriggerAll, triggering, scraperPlatforms, onToggleScraper, togglingPlatform }: OperationalMatrixProps) {
+export function OperationalMatrix({ healthData, onTrigger, onTriggerAll, onScrapeAllApps, triggering, scraperPlatforms, onToggleScraper, togglingPlatform }: OperationalMatrixProps) {
   if (!healthData) return null;
 
   // Build lookup: platform:scraperType -> cell
@@ -143,6 +144,27 @@ export function OperationalMatrix({ healthData, onTrigger, onTriggerAll, trigger
                         <Play className="h-3 w-3 mr-1" />
                         All
                       </Button>
+                      {onScrapeAllApps && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                          disabled={triggering !== null || !scraperEnabled}
+                          onClick={() => {
+                            const resume = window.confirm(
+                              `Scrape ALL discovered ${PLATFORM_LABELS[platformId]} apps?\n\nOK = Resume mode (skip apps scraped in last 12h) — recommended\nCancel = abort\n\nThis can take 1.5–3 hours for ~13.5k apps.`,
+                            );
+                            if (!resume) return;
+                            const forceReScrape = window.confirm(
+                              `Force re-scrape every app (bypass 12h cache)?\n\nOK = force=true (full re-scrape, slower)\nCancel = force=false (resume-friendly, skip recent)`,
+                            );
+                            onScrapeAllApps(platformId, forceReScrape);
+                          }}
+                          title={`Scrape ALL discovered apps for ${PLATFORM_LABELS[platformId]} (system admin)`}
+                        >
+                          <Database className="h-3 w-3" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

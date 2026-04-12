@@ -23,6 +23,7 @@ import {
   JOB_TIMEOUT_KEYWORD_SEARCH_MS,
   JOB_TIMEOUT_REVIEWS_MS,
   JOB_TIMEOUT_APP_DETAILS_MS,
+  JOB_TIMEOUT_APP_DETAILS_ALL_MS,
   JOB_TIMEOUT_KEYWORD_SUGGESTIONS_MS,
   JOB_TIMEOUT_COMPUTE_MS,
   JOB_TIMEOUT_DAILY_DIGEST_MS,
@@ -183,7 +184,9 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     }
 
     // Job-level timeout to prevent hanging indefinitely
-    const timeoutMs = JOB_TIMEOUT_MAP[type] ?? JOB_TIMEOUT_MAP.default;
+    const timeoutMs = (type === "app_details" && opts?.scope === "all")
+      ? JOB_TIMEOUT_APP_DETAILS_ALL_MS
+      : (JOB_TIMEOUT_MAP[type] ?? JOB_TIMEOUT_MAP.default);
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error(`job timed out after ${timeoutMs / 1000}s`)), timeoutMs);
     });
@@ -255,6 +258,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
             }, cascadeOpts);
             log.info("cascaded reviews job", { slug: job.data.slug });
           }
+        } else if (opts?.scope === "all") {
+          await scraper.scrapeAll(triggeredBy, queueName, opts?.force ?? false);
         } else {
           const isManual = triggeredBy && triggeredBy !== "scheduler";
           await scraper.scrapeTracked(triggeredBy, queueName, isManual || opts?.force);

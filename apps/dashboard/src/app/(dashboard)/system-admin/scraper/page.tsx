@@ -118,6 +118,28 @@ export default function ScraperPage() {
     setMessage(`Triggered all scrapers for ${platform}`);
   }
 
+  async function triggerScrapeAllApps(platform: string, force: boolean) {
+    const key = `${platform}:app_details:all`;
+    setTriggering(key);
+    setMessage("");
+    const res = await fetchWithAuth("/api/system-admin/scraper/trigger", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "app_details",
+        platform,
+        options: { scope: "all", force },
+      }),
+    });
+    if (res.ok) {
+      setMessage(`Triggered "scrape all apps" for ${platform} (force=${force})`);
+      setTimeout(loadData, 2000);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Failed to trigger scrape-all");
+    }
+    setTriggering(null);
+  }
+
   async function triggerUtility(type: string) {
     setTriggering(type);
     setMessage("");
@@ -280,6 +302,7 @@ export default function ScraperPage() {
         healthData={healthData}
         onTrigger={triggerScraper}
         onTriggerAll={triggerAllForPlatform}
+        onScrapeAllApps={triggerScrapeAllApps}
         triggering={triggering}
         scraperPlatforms={scraperPlatforms}
         onToggleScraper={toggleScraper}

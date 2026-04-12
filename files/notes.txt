@@ -1,3 +1,30 @@
+Scrape All Apps from System Admin (2026-04-12)
+====================================
+Why: Cron only processes 36 tracked Shopify apps; 13,538 untracked discovered apps
+have never had details scraped. User wants a manual "scrape all" trigger with resume
+support so partial failures don't waste hours re-scraping fresh apps.
+
+Design:
+- New ScraperJobOptions.scope: "tracked" | "all". Default tracked.
+- process-job.ts: scope=all routes to AppDetailsScraper.scrapeAll() (method existed,
+  wasn't wired). 6h timeout via JOB_TIMEOUT_APP_DETAILS_ALL_MS.
+- Admin API /scraper/trigger: force was hardcoded true → now override-able via
+  options.force. Tracked default keeps force=true; scope=all UI passes force=false
+  to enable 12h cache (resume).
+- scrapeAll() writes scrape_runs metadata every 25 apps (items_scraped, total_apps,
+  currently_processing, scope:"all") for progress visibility.
+- Dashboard: Database icon button in Operational Matrix actions column. Two
+  window.confirm() prompts: resume-or-cancel, then force-vs-resume-mode.
+
+Production baseline (2026-04-12): 13,574 Shopify apps; 36 tracked; 2,349 with ≥1
+snapshot. Tracked run ~1.4-4.5 apps/sec. Expected full scrape: 1.5-3h.
+
+Resume: existing 12h cache in scrapeApp via buildPreFetchedData(force=false). Partial
+run → re-trigger → recent apps skipped.
+
+Trigger: System Admin → Scraper → Operational Matrix → per-platform Database icon →
+confirm resume mode → confirm force=false → job enqueued.
+
 Intel Changes Page UX (2026-04-11)
 ====================================
 

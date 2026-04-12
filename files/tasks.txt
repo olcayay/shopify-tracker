@@ -1,3 +1,12 @@
+Scrape All Apps from System Admin (2026-04-12)
+  - Add ScraperJobOptions.scope ("tracked" | "all") ✅
+  - Add JOB_TIMEOUT_APP_DETAILS_ALL_MS (6h) ✅
+  - process-job.ts routes scope=all → scrapeAll() with dynamic timeout ✅
+  - system-admin trigger API: force override-able (default still true for tracked) ✅
+  - scrapeAll(): periodic scrape_runs metadata updates (every 25 apps) ✅
+  - Dashboard: "Scrape All Apps" (Database icon) button per platform w/ confirm dialog ✅
+  - Tests for scope routing (3 new tests) ✅
+
 Intel Changes Page UX (2026-04-11)
   PLA-1007: Expand by default, clickable app names, pagination ✅
   PLA-1008: Unify changes page — port v2 UnifiedChangeLog to v1 ✅
