@@ -615,6 +615,7 @@ export class AppDetailsScraper {
 
     const now = new Date();
     let itemsScraped = 0;
+    let itemsSkippedNoDrift = 0;
     let itemsFailed = 0;
     let snapshotsInserted = 0;
     const upsertStart = Date.now();
@@ -634,6 +635,7 @@ export class AppDetailsScraper {
             index,
             totalApps,
             itemsScraped,
+            itemsSkippedNoDrift,
             itemsFailed,
             snapshotsInserted,
             elapsedMs: elapsed,
@@ -643,7 +645,9 @@ export class AppDetailsScraper {
             metadata: {
               scope: "bulk_via_category",
               items_scraped: itemsScraped,
+              items_skipped_nodrift: itemsSkippedNoDrift,
               items_failed: itemsFailed,
+              total_processed: itemsScraped + itemsSkippedNoDrift + itemsFailed,
               snapshots_inserted: snapshotsInserted,
               duration_ms: Date.now() - startTime,
               current_index: index,
@@ -701,8 +705,12 @@ export class AppDetailsScraper {
             runId: run.id,
             vendorName,
           });
-          if (result.inserted) snapshotsInserted++;
-          itemsScraped++;
+          if (result.inserted) {
+            snapshotsInserted++;
+            itemsScraped++;
+          } else {
+            itemsSkippedNoDrift++;
+          }
         } catch (err) {
           itemsFailed++;
           log.warn("bulk_via_category: upsert failed", { slug, error: String(err) });
@@ -723,7 +731,9 @@ export class AppDetailsScraper {
           metadata: {
             scope: "bulk_via_category",
             items_scraped: itemsScraped,
+            items_skipped_nodrift: itemsSkippedNoDrift,
             items_failed: itemsFailed,
+            total_processed: itemsScraped + itemsSkippedNoDrift + itemsFailed,
             snapshots_inserted: snapshotsInserted,
             duration_ms: Date.now() - startTime,
             total_apps: totalApps,
@@ -742,7 +752,9 @@ export class AppDetailsScraper {
           metadata: {
             scope: "bulk_via_category",
             items_scraped: itemsScraped,
+            items_skipped_nodrift: itemsSkippedNoDrift,
             items_failed: itemsFailed,
+            total_processed: itemsScraped + itemsSkippedNoDrift + itemsFailed,
             snapshots_inserted: snapshotsInserted,
             duration_ms: Date.now() - startTime,
             total_apps: totalApps,
@@ -757,6 +769,7 @@ export class AppDetailsScraper {
     log.info("bulk_via_category: complete", {
       platform: this.platform,
       itemsScraped,
+      itemsSkippedNoDrift,
       itemsFailed,
       snapshotsInserted,
       durationMs: Date.now() - startTime,

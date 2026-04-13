@@ -349,6 +349,11 @@ export function RunHistoryTable({
                             · {run.metadata.items_skipped_fresh} skipped
                           </span>
                         )}
+                        {run.metadata.items_skipped_nodrift > 0 && (
+                          <span className="text-muted-foreground ml-1">
+                            · {run.metadata.items_skipped_nodrift} no-drift
+                          </span>
+                        )}
                         {run.metadata.items_failed > 0 && (
                           <span className="text-destructive ml-1">
                             ({run.metadata.items_failed} failed)

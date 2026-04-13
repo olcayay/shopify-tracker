@@ -6048,3 +6048,8 @@ PLA-179: Global API rate limiting middleware
 - Dashboard `run-history-table.tsx` renders `N scraped · M skipped · (F failed)`. Legacy rows (no `items_skipped_fresh`) still render unchanged; the `· M skipped` suffix only appears when `items_skipped_fresh > 0`.
 - Tests: `apps/scraper/src/__tests__/app-details-outcomes.test.ts` pins the 3-counter aggregation logic — 6 cases incl. all-skipped-5709 (the ticket's prod sample) and mixed 842/4867.
 - Not touched (intentional, scoped as follow-up): `scrapeAllViaCategoryApi` bulk path — different skip semantics (snapshot drift detection rather than 12h freshness). Ticket suggests `items_skipped_nodrift` for that path; leaving to separate ticket to avoid conflating two skip reasons in one commit.
+
+## PLA-1062 follow-up — bulk_via_category skip counter (2026-04-13)
+- `scrapeAllViaCategoryApi` now splits its counter: `items_scraped` counts apps where `upsertSnapshotFromCategoryCard` inserted a new snapshot (drift detected); `items_skipped_nodrift` counts apps where no drift was found and no snapshot was written. `items_failed` unchanged.
+- Metadata now includes `items_skipped_nodrift`, `total_processed`. `bulk_via_category: progress` and `bulk_via_category: complete` logs also emit `itemsSkippedNoDrift`.
+- Dashboard renderer: when `items_skipped_nodrift > 0`, renders muted `· N no-drift` suffix next to the existing scraped / skipped counts. Non-bulk runs unaffected; legacy rows unchanged.
