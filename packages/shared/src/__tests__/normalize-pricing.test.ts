@@ -25,21 +25,23 @@ describe("normalizePricingModel", () => {
     expect(normalizePricingModel(raw)).toBe(expected);
   });
 
-  // --- Free trial ---
+  // --- Free Trial ---
   it.each([
-    ["Free trial", "Free trial"],
-    ["Free trial available", "Free trial"],
-    ["free_trial", "Free trial"],
-    ["FREE TRIAL", "Free trial"],
-  ])('maps "%s" to "Free trial"', (raw, expected) => {
+    ["Free trial", "Free Trial"],
+    ["Free Trial", "Free Trial"],
+    ["Free trial available", "Free Trial"],
+    ["free_trial", "Free Trial"],
+    ["FREE TRIAL", "Free Trial"],
+  ])('maps "%s" to "Free Trial"', (raw, expected) => {
     expect(normalizePricingModel(raw)).toBe(expected);
   });
 
-  // --- Free to install ---
+  // --- Free To Install ---
   it.each([
-    ["Free to install", "Free to install"],
-    ["free to install", "Free to install"],
-  ])('maps "%s" to "Free to install"', (raw, expected) => {
+    ["Free to install", "Free To Install"],
+    ["Free To Install", "Free To Install"],
+    ["free to install", "Free To Install"],
+  ])('maps "%s" to "Free To Install"', (raw, expected) => {
     expect(normalizePricingModel(raw)).toBe(expected);
   });
 
@@ -52,6 +54,9 @@ describe("normalizePricingModel", () => {
     ["MONTHLY", "Paid"],
     ["annual", "Paid"],
     ["annually", "Paid"],
+    ["subscription", "Paid"],
+    ["Subscription", "Paid"],
+    ["Paid plan", "Paid"],
   ])('maps "%s" to "Paid"', (raw, expected) => {
     expect(normalizePricingModel(raw)).toBe(expected);
   });
@@ -97,8 +102,8 @@ describe("PRICING_MODELS", () => {
   it("has all expected values", () => {
     expect(PRICING_MODELS.FREE).toBe("Free");
     expect(PRICING_MODELS.FREEMIUM).toBe("Freemium");
-    expect(PRICING_MODELS.FREE_TRIAL).toBe("Free trial");
-    expect(PRICING_MODELS.FREE_TO_INSTALL).toBe("Free to install");
+    expect(PRICING_MODELS.FREE_TRIAL).toBe("Free Trial");
+    expect(PRICING_MODELS.FREE_TO_INSTALL).toBe("Free To Install");
     expect(PRICING_MODELS.PAID).toBe("Paid");
   });
 });

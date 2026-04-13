@@ -1227,3 +1227,5 @@ enrich developers list with avgReviewCount/avgRating/firstLaunch/lastLaunch + so
 fix App Count always 0 in My/Competitor Developers sections — total_apps now computed on the fly via correlated subquery (PLA-1080) ✅
 
 show loading shimmer (not empty-state flash) while My/Competitor Developers sections load on /[platform]/developers (PLA-1079) ✅
+
+consolidate & Title-Case canonical pricing model labels across platforms (core rename + normalize-pricing + migration) (PLA-1077) ✅

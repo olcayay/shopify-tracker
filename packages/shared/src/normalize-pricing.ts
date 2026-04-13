@@ -5,8 +5,8 @@
 export const PRICING_MODELS = {
   FREE: "Free",
   FREEMIUM: "Freemium",
-  FREE_TRIAL: "Free trial",
-  FREE_TO_INSTALL: "Free to install",
+  FREE_TRIAL: "Free Trial",
+  FREE_TO_INSTALL: "Free To Install",
   PAID: "Paid",
 } as const;
 
@@ -24,19 +24,21 @@ const PRICING_MAP: Record<string, PricingModel> = {
   "free_plan_available": "Freemium",
   "free with paid features": "Freemium",
 
-  // Free trial
-  "free trial": "Free trial",
-  "free trial available": "Free trial",
-  "free_trial": "Free trial",
+  // Free Trial
+  "free trial": "Free Trial",
+  "free trial available": "Free Trial",
+  "free_trial": "Free Trial",
 
-  // Free to install (Shopify-specific: free install, usage-based charges)
-  "free to install": "Free to install",
+  // Free To Install (Shopify-specific: free install, usage-based charges)
+  "free to install": "Free To Install",
 
   // Paid
   paid: "Paid",
   monthly: "Paid",
   annual: "Paid",
   annually: "Paid",
+  subscription: "Paid",
+  "paid plan": "Paid",
 };
 
 /**
@@ -63,7 +65,7 @@ export function normalizePricingModel(raw: string | null | undefined): PricingMo
   // Pattern matching for dynamic pricing strings
   if (/^from\s+\$/.test(normalized) || /^\$\d/.test(normalized)) return "Paid";
   if (/\/mo(?:nth)?$/i.test(normalized) || /\/yr$/i.test(normalized)) return "Paid";
-  if (/free\s*trial/i.test(normalized)) return "Free trial";
+  if (/free\s*trial/i.test(normalized)) return "Free Trial";
   if (/free\s*plan/i.test(normalized)) return "Freemium";
   if (/^free$/i.test(normalized)) return "Free";
 

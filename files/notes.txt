@@ -6219,3 +6219,18 @@ PLA-1079 — Loading shimmer on /[platform]/developers
 - Fix: added dedicated `trackedLoading` / `competitorLoading` flags (both default true). Split the single combined fetch useEffect into two independent IIFEs so each section clears its own flag in its own `finally`. Each section renders `TableSkeleton rows=3 cols=4` while pending, falls back to the existing empty CTA or populated table after resolution.
 - Edge cases covered: fetch failure clears the flag (empty state shows instead of permanent shimmer); `?name=X` redirect path is untouched (whole page returns `null` before render).
 - Tests: new `apps/dashboard/src/__tests__/app/platform-developers-loading.test.tsx` with 4 cases — pending → skeleton (CTAs absent), resolved-empty → empty CTA, resolved-with-data → populated row, fetch-failure → empty state recovery. Full dashboard suite: 222 files / 2302 tests pass.
+
+PLA-1077 — Canonical pricing model labels Title-Cased
+- Renamed canonical values in `packages/shared/src/normalize-pricing.ts`:
+  - `"Free trial"` → `"Free Trial"`
+  - `"Free to install"` → `"Free To Install"`
+  - Added two new raw-variant mappings → "Paid": `"subscription"`, `"paid plan"`.
+- Updated the regex-fallback to match the new casing.
+- Updated `normalize-pricing.test.ts` expected values; added cases for the new `Subscription` / `Paid plan` → `Paid` mappings and for already-Title-Cased inputs.
+- Added migration `0146_pricing_model_title_case.sql` + journal entry (idx 146):
+  - UPDATE `apps` SET pricing_model = 'Free Trial' WHERE pricing_model = 'Free trial'
+  - UPDATE `apps` SET pricing_model = 'Free To Install' WHERE pricing_model = 'Free to install'
+  - UPDATE to 'Paid' for rows with previously-NULL pricing_model whose pricing_hint is 'subscription' / 'paid plan'.
+- Parser functions in `apps/scraper/src/parsers/{category,search}-parser.ts` intentionally left alone — they return *raw* pricing_hint values (e.g. "Free trial available", "Free to install"), not the normalized model. The raw strings are the INPUT to `normalizePricingModel()`; the lookup map already handles them case-insensitively.
+- Not in scope for this PR: replacing UI reads of `pricingHint` with `pricingModel` across all ~10 dashboard components — that's a larger surface change since the API responses would also need to surface `pricingModel` in app/competitor/snapshot shapes. Core canonical rename is in; UI swap is a tracked follow-up.
+- Tests: 5 packages green — 180 scraper files / 2614 tests, 222 dashboard / 2302, API 102 / 1321, shared (incl. new normalize-pricing cases) all pass.
