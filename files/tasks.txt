@@ -1185,3 +1185,5 @@ system-admin UI: Salesforce Scrape ALL uses bulk_via_category (PLA-1048 followup
 route scope=all to bulk_via_category for Salesforce (shopify parity) ✅
 
 ranking chart tooltip: tier groups + day-over-day change (PLA-1045) ✅
+
+add upsert-phase progress logs to scrape_runs bulk_via_category path (observability) ✅

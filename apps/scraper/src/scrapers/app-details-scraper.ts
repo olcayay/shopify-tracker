@@ -602,11 +602,28 @@ export class AppDetailsScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
     let snapshotsInserted = 0;
+    const upsertStart = Date.now();
+    log.info("bulk_via_category: upsert phase started", {
+      platform: this.platform,
+      totalApps,
+      concurrency: this.configValue<number>("appDetailsConcurrencyBulk", 5),
+    });
 
     try {
       const entries = [...cardBySlug.entries()];
       await runConcurrent(entries, async ([slug, { card }], index) => {
         if (index % 500 === 0 || index === entries.length - 1) {
+          const elapsed = Date.now() - upsertStart;
+          log.info("bulk_via_category: progress", {
+            platform: this.platform,
+            index,
+            totalApps,
+            itemsScraped,
+            itemsFailed,
+            snapshotsInserted,
+            elapsedMs: elapsed,
+            avgMsPerItem: itemsScraped > 0 ? Math.round(elapsed / itemsScraped) : 0,
+          });
           await this.db.update(scrapeRuns).set({
             metadata: {
               scope: "bulk_via_category",

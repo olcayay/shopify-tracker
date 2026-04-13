@@ -5998,3 +5998,11 @@ PLA-179: Global API rate limiting middleware
 - Pure helpers `tierFor`, `changeFor`, `buildTooltipGroups` exported for tests. 15 unit tests in `ranking-chart-tooltip.test.tsx` cover tier boundaries, change semantics, hidden-label filtering, tie-breaking, collapse defaults, and expand-on-click.
 - Full dashboard suite 217 files / 2277 tests green.
 - Reused existing `labels`, `colorMap`, `pivoted`, and `hidden` state from `ranking-chart.tsx` — no new data pipeline.
+
+## PLA-1048 validation loop (2026-04-13)
+- 3-run prod validation of scope=all → bulk_via_category routing.
+- Run 1 (job 24): 22.9s, 5573 apps, 5 snapshots inserted (real drift vs prior).
+- Run 2 (job 26): 717s (12 min, 30× slow), 0 snapshots, 0 failures — full catalog completed, but no log activity during upsert phase made it indistinguishable from a hang for 10+ min.
+- Run 3 (job 28): 20.1s, 0 snapshots — warm-run baseline restored.
+- Root cause of run-2 slowdown: probably transient DB contention (cascades from run 1 still finishing, autovacuum, Cloud SQL micro-instance). Isolated, not reproducible in run 3.
+- Process improvement: `scrapeAllViaCategoryApi` now emits "upsert phase started" + "progress" logs every 500 items with itemsScraped/itemsFailed/snapshotsInserted/elapsedMs/avgMsPerItem. Removes the blind spot that had me mark run 2 as "stuck" prematurely — future slow runs will show actual progress instead of silence. No behavior change, observability only.
