@@ -38,6 +38,43 @@ export interface CleanupResult {
   running: number;
   pending: number;
   retried: number;
+  superseded: number;
+}
+
+/**
+ * PLA-1081: if two `running` scrape_runs rows share the same (queue, jobId)
+ * — which can happen when BullMQ recycles an id while an orphaned row was
+ * never flipped to failed — flip all but the newest row to `failed`. This
+ * directly resolves the "two running rows with the same bullmq:N id" UI
+ * complaint. The older row's worker is by definition either dead or its
+ * jobId has been reassigned, so there's no risk of flipping an in-flight
+ * job — BullMQ cannot have two live jobs with the same id in the same
+ * queue at once.
+ */
+export async function supersedeDuplicateRunningRuns(db: Database): Promise<number> {
+  const result = await db.execute(sql`
+    UPDATE scrape_runs SET
+      status = 'failed',
+      completed_at = now(),
+      error = 'orphaned: superseded by newer run with the same bullmq job id (PLA-1081)'
+    WHERE id IN (
+      SELECT older.id FROM scrape_runs older
+      JOIN scrape_runs newer
+        ON newer.queue = older.queue
+       AND newer.job_id = older.job_id
+       AND newer.id <> older.id
+       AND newer.started_at > older.started_at
+      WHERE older.status = 'running'
+        AND newer.status = 'running'
+        AND older.job_id IS NOT NULL
+        AND older.queue IS NOT NULL
+    )
+  `);
+  const count = (result as any).rowCount ?? 0;
+  if (count > 0) {
+    log.warn("superseded duplicate running scrape_runs (recycled bullmq ids)", { count });
+  }
+  return count;
 }
 
 /**
@@ -174,9 +211,13 @@ export async function cleanupStaleRuns(db: Database): Promise<CleanupResult> {
     }
   }
 
-  if (runningCount > 0 || pendingCount > 0 || retried > 0) {
-    log.info("cleaned up stale scrape_runs", { running: runningCount, pending: pendingCount, retried });
+  // PLA-1081: supersede any duplicate `running` rows that share a (queue, jobId)
+  // pair. Runs after the time-based cleanup so newly-failed rows are excluded.
+  const superseded = await supersedeDuplicateRunningRuns(db);
+
+  if (runningCount > 0 || pendingCount > 0 || retried > 0 || superseded > 0) {
+    log.info("cleaned up stale scrape_runs", { running: runningCount, pending: pendingCount, retried, superseded });
   }
 
-  return { running: runningCount, pending: pendingCount, retried };
+  return { running: runningCount, pending: pendingCount, retried, superseded };
 }

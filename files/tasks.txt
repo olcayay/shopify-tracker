@@ -1231,3 +1231,5 @@ show loading shimmer (not empty-state flash) while My/Competitor Developers sect
 consolidate & Title-Case canonical pricing model labels across platforms (core rename + normalize-pricing + migration) (PLA-1077) ✅
 
 short-TTL cache for /api/auth/me + PATCH /me invalidation to guard against Cloudflare 524 under heavy category-page load (PLA-1078) ✅
+
+supersede duplicate `running` scrape_runs rows sharing the same (queue, jobId) on every cleanup cycle (PLA-1081) ✅

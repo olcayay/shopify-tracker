@@ -6242,3 +6242,18 @@ PLA-1078 — /api/auth/me 524 on heavy Shopify category pages
 - Invalidation: `invalidateAuthMe(userId)` wired into `PATCH /api/auth/me`. Follow-ups will wire it into: tracked-app/keyword/competitor/feature/user/research-project mutations and account-level limits changes (usage counts move on those). 30s TTL bounds the staleness window for any site that's not yet wired.
 - Side effect: the `lastSeenAt` bump runs inside the cached fetcher — so on a cache HIT it doesn't run for that 30s window. Previously it was throttled to 5min anyway, so the effective update frequency is unchanged.
 - Tests: 2 new tests in `auth.test.ts` — cache-key shape + `invalidateAuthMe` fail-open under disabled Redis. 71 total auth tests pass. Full suite green.
+
+PLA-1081 — Duplicate bullmq:jobId rows in scrape_runs history
+- UI-visible symptom: two `running` rows for Shopify app_details both labelled `bullmq:1361` (at 21:11 and 23:01 on 2026-04-13). BullMQ cannot have two live jobs with the same id in one queue simultaneously, so one is orphaned and the id got recycled.
+- Root-cause investigation note: the existing `cleanupStaleRuns` job already flips `running` rows after a per-type timeout (3h for app_details). The 21:11 run was only 1h 46m old when observed, inside the threshold, so it hadn't been cleaned yet — meanwhile BullMQ recycled jobId 1361 for the new 23:01 run, producing the duplicate appearance.
+- Fix: added `supersedeDuplicateRunningRuns(db)` helper in `apps/scraper/src/jobs/cleanup-stale-runs.ts`. Single UPDATE via raw SQL that flips all but the newest `running` row in any `(queue, jobId)` group to `failed` with `error = 'orphaned: superseded by newer run with the same bullmq job id (PLA-1081)'`. Wired at the end of `cleanupStaleRuns()` so it piggybacks on the existing scheduler (worker startup + every 15 min).
+- Safety: the older row's worker is by definition dead or the jobId has been reassigned, so the flip can never cancel a live job.
+- `CleanupResult` type extended with `superseded: number`; info-log now surfaces the count.
+- Tests:
+  - `apps/scraper/src/jobs/__tests__/cleanup-stale-runs.test.ts`: 3 new cases (supersede one execute call, rowCount=undefined → 0, cleanup aggregates superseded count). Existing `expect(result).toEqual(...)` updated to include `superseded: 0` field.
+  - `apps/scraper/src/__tests__/jobs/cleanup-stale-runs.test.ts`: mock DB extended with `execute` method; existing assertions updated.
+  - 14 cleanup tests pass; all 5 packages green.
+- Not in this PR (follow-ups):
+  - Heartbeat column on `scrape_runs` + BullMQ cross-check (`getActive()`) to let us flip orphans faster than the 2-4h time-based threshold.
+  - Parametrised worker-platform-lock audit test for background worker × all platforms × app_details (AC#3).
+  - Sentry breadcrumb emission on each flip (AC#2 partial).

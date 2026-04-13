@@ -49,6 +49,8 @@ function createMockDb(
   return {
     update: vi.fn().mockReturnValue(mockUpdateChain),
     select: vi.fn().mockReturnValue(mockSelectChain),
+    // PLA-1081: supersedeDuplicateRunningRuns uses raw SQL via db.execute()
+    execute: vi.fn().mockResolvedValue({ rowCount: 0 }),
     _updateChain: mockUpdateChain,
     _selectChain: mockSelectChain,
   } as any;
@@ -63,7 +65,7 @@ describe("cleanupStaleRuns", () => {
     const db = createMockDb(3, 1);
     const result = await cleanupStaleRuns(db);
 
-    expect(result).toEqual({ running: 3, pending: 1, retried: 0 });
+    expect(result).toEqual({ running: 3, pending: 1, retried: 0, superseded: 0 });
     expect(db.update).toHaveBeenCalledTimes(3);
   });
 
@@ -71,7 +73,7 @@ describe("cleanupStaleRuns", () => {
     const db = createMockDb(0, 0);
     const result = await cleanupStaleRuns(db);
 
-    expect(result).toEqual({ running: 0, pending: 0, retried: 0 });
+    expect(result).toEqual({ running: 0, pending: 0, retried: 0, superseded: 0 });
   });
 
   it("sets status to failed with error message", async () => {
