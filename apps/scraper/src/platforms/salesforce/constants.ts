@@ -31,6 +31,11 @@ export const SALESFORCE_CONSTANTS: PlatformConstants = {
   ],
   rateLimit: { minDelayMs: 200, maxDelayMs: 500 },
   concurrentSeedCategories: 5, // HTTP-only API with adaptive backoff as safety net
+  // HTTP detail endpoint is fast (~200-500 ms/app) and already covered by
+  // HttpClient's adaptive backoff. Bumped from the 3 default (tuned for the
+  // old browser path) — browser fallback only fires on 404/5xx, so the
+  // concurrency is safe to raise.
+  appDetailsConcurrency: 12,
   // Salesforce category API returns every tracked field in the card JSON,
   // so we can refresh snapshots daily for the whole catalog at zero cost.
   refreshSnapshotFromCategoryCard: true,

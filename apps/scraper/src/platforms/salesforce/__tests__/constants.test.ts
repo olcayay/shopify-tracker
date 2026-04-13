@@ -33,6 +33,10 @@ describe("SALESFORCE_CONSTANTS", () => {
   it("uses HTTP as primary app-detail fetch mode (PLA-1054)", () => {
     expect(SALESFORCE_CONSTANTS.appDetailFetchMode).toBe("http");
   });
+
+  it("uses 12-way per-app concurrency for HTTP detail (PLA-1057)", () => {
+    expect(SALESFORCE_CONSTANTS.appDetailsConcurrency).toBe(12);
+  });
 });
 
 describe("salesforceUrls.listingDetailApi", () => {
