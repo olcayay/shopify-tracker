@@ -5,6 +5,8 @@ import {
   platformDevelopers,
   apps,
   appSnapshots,
+  appCategoryRankings,
+  categories,
   accountStarredDevelopers,
   accountPlatforms,
   platformVisibility,
@@ -327,6 +329,72 @@ export async function developerRoutes(app: FastifyInstance) {
     };
   });
 
+  /**
+   * Latest category ranking per (app_id, category_slug) for the given app ids,
+   * joined with the category title. Returns a Map keyed by appId with:
+   *   { categorySlug, categoryName, position, totalApps, percentile }[]
+   *
+   * totalApps = distinct apps ranked in that category's latest scrape window
+   * (approximation: distinct app_ids with any ranking per platform+slug). Good
+   * enough for the "Top X%" tier display; exact cohort sizing isn't needed
+   * for this UI.
+   */
+  async function fetchCategoryRankingsForApps(
+    appIds: number[],
+  ): Promise<Map<number, { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }[]>> {
+    if (appIds.length === 0) return new Map();
+    const rows = (await db.execute(sql`
+      WITH latest_app_cat AS (
+        SELECT DISTINCT ON (r.app_id, r.category_slug)
+          r.app_id,
+          r.category_slug,
+          r.position,
+          a.platform
+        FROM ${appCategoryRankings} r
+        JOIN ${apps} a ON a.id = r.app_id
+        WHERE r.app_id = ANY(${sqlArray(appIds)})
+        ORDER BY r.app_id, r.category_slug, r.scraped_at DESC
+      ),
+      cat_totals AS (
+        SELECT r.category_slug, a.platform, COUNT(DISTINCT r.app_id)::int AS total_apps
+        FROM ${appCategoryRankings} r
+        JOIN ${apps} a ON a.id = r.app_id
+        GROUP BY r.category_slug, a.platform
+      )
+      SELECT
+        l.app_id,
+        l.category_slug,
+        l.position,
+        l.platform,
+        COALESCE(t.total_apps, 0) AS total_apps,
+        c.title AS category_title
+      FROM latest_app_cat l
+      LEFT JOIN cat_totals t
+        ON t.category_slug = l.category_slug AND t.platform = l.platform
+      LEFT JOIN ${categories} c
+        ON c.platform = l.platform AND c.slug = l.category_slug
+      ORDER BY l.app_id, l.position ASC
+    `)) as any;
+    const data: any[] = rows.rows ?? rows;
+    const out = new Map<number, { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }[]>();
+    for (const r of data) {
+      const total = Number(r.total_apps) || 0;
+      const position = Number(r.position) || 0;
+      const percentile = total > 0 ? Math.ceil((position / total) * 100) : 0;
+      const entry = {
+        categorySlug: r.category_slug,
+        categoryName: r.category_title || r.category_slug,
+        position,
+        totalApps: total,
+        percentile,
+      };
+      const list = out.get(r.app_id);
+      if (list) list.push(entry);
+      else out.set(r.app_id, [entry]);
+    }
+    return out;
+  }
+
   // GET /api/developers/:slug — developer profile + all apps across platforms
   app.get(
     "/:slug",
@@ -387,6 +455,14 @@ export async function developerRoutes(app: FastifyInstance) {
         pricingHint: string | null;
         isTracked: boolean;
         activeInstalls: number | null;
+        launchedDate: string | null;
+        categoryRankings: {
+          categorySlug: string;
+          categoryName: string;
+          position: number;
+          totalApps: number;
+          percentile: number;
+        }[];
       }[] = [];
 
       // Batch-fetch apps for all platform developers in a single query
@@ -403,7 +479,8 @@ export async function developerRoutes(app: FastifyInstance) {
             a.rating_count,
             a.pricing_hint,
             a.is_tracked,
-            a.active_installs
+            a.active_installs,
+            a.launched_date
           FROM ${apps} a
           JOIN ${appSnapshots} s ON s.app_id = a.id
           JOIN ${platformDevelopers} pd ON pd.global_developer_id = ${developer.id}
@@ -418,6 +495,14 @@ export async function developerRoutes(app: FastifyInstance) {
           ORDER BY a.id
         `);
         const appData: any[] = (allAppRows as any).rows ?? allAppRows;
+        const appIds: number[] = [];
+        for (const row of appData) {
+          if (!devPlatforms.includes(row.platform)) continue;
+          if (typeof row.id === "number") appIds.push(row.id);
+        }
+        const rankingsByAppId = appIds.length > 0
+          ? await fetchCategoryRankingsForApps(appIds)
+          : new Map();
         for (const row of appData) {
           if (!devPlatforms.includes(row.platform)) continue;
           developerApps.push({
@@ -431,6 +516,10 @@ export async function developerRoutes(app: FastifyInstance) {
             pricingHint: row.pricing_hint,
             isTracked: row.is_tracked,
             activeInstalls: row.active_installs,
+            launchedDate: row.launched_date
+              ? new Date(row.launched_date).toISOString()
+              : null,
+            categoryRankings: rankingsByAppId.get(row.id) ?? [],
           });
         }
       }

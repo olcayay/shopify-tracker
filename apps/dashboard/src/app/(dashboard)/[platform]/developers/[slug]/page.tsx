@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Globe, Star, Bookmark, ArrowRight } from "lucide-react";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatMonthYear } from "@/lib/format-utils";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 import { SortableHeader } from "@/components/ui/sortable-header";
@@ -47,6 +47,14 @@ interface DeveloperProfile {
     pricingHint: string | null;
     isTracked: boolean;
     activeInstalls: number | null;
+    launchedDate: string | null;
+    categoryRankings: {
+      categorySlug: string;
+      categoryName: string;
+      position: number;
+      totalApps: number;
+      percentile: number;
+    }[];
   }[];
   totalApps: number;
 }
@@ -127,13 +135,22 @@ export default function PlatformDeveloperPage() {
     [visibleData, platform]
   );
 
-  const [sortKey, setSortKey] = useState<"rating" | "reviews" | null>(null);
+  const [sortKey, setSortKey] = useState<"rating" | "reviews" | "launched" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const sortedPlatformApps = useMemo(() => {
     if (!sortKey) return platformApps;
-    const field = sortKey === "rating" ? "averageRating" : "ratingCount";
     return [...platformApps].sort((a, b) => {
+      // Nulls always last regardless of sort direction.
+      if (sortKey === "launched") {
+        const av = a.launchedDate ? Date.parse(a.launchedDate) : NaN;
+        const bv = b.launchedDate ? Date.parse(b.launchedDate) : NaN;
+        if (Number.isNaN(av) && Number.isNaN(bv)) return 0;
+        if (Number.isNaN(av)) return 1;
+        if (Number.isNaN(bv)) return -1;
+        return sortDir === "asc" ? av - bv : bv - av;
+      }
+      const field = sortKey === "rating" ? "averageRating" : "ratingCount";
       const av = a[field];
       const bv = b[field];
       if (av == null && bv == null) return 0;
@@ -144,7 +161,7 @@ export default function PlatformDeveloperPage() {
   }, [platformApps, sortKey, sortDir]);
 
   const handleSort = (key: string) => {
-    const typedKey = key as "rating" | "reviews";
+    const typedKey = key as "rating" | "reviews" | "launched";
     if (sortKey === typedKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
       setSortKey(typedKey);
@@ -306,6 +323,16 @@ export default function PlatformDeveloperPage() {
                       />
                     </div>
                   </TableHead>
+                  <TableHead className="w-[110px]">
+                    <SortableHeader
+                      label="Launched"
+                      sortKey="launched"
+                      currentSort={sortKey ?? ""}
+                      currentDir={sortDir}
+                      onSort={handleSort}
+                    />
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell min-w-[180px]">Category Rank</TableHead>
                   <TableHead className="w-[160px]">Pricing</TableHead>
                   {hasInstalls && (
                     <TableHead className="text-right w-[100px]">Installs</TableHead>
@@ -344,6 +371,41 @@ export default function PlatformDeveloperPage() {
                       {app.ratingCount != null
                         ? formatNumber(app.ratingCount)
                         : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell className="w-[110px] text-sm text-muted-foreground">
+                      {app.launchedDate
+                        ? formatMonthYear(app.launchedDate)
+                        : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell min-w-[180px]">
+                      {(app.categoryRankings ?? []).length === 0 ? (
+                        <span className="text-muted-foreground">-</span>
+                      ) : (
+                        <ul className="space-y-0.5 text-xs">
+                          {(app.categoryRankings ?? []).slice(0, 3).map((r) => (
+                            <li key={r.categorySlug} className="flex items-center gap-2">
+                              <span className="font-semibold tabular-nums">#{r.position}</span>
+                              <Link
+                                href={`/${app.platform}/categories/${r.categorySlug}`}
+                                className="truncate max-w-[140px] hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {r.categoryName}
+                              </Link>
+                              {r.totalApps >= 10 && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Top {r.percentile}%
+                                </Badge>
+                              )}
+                            </li>
+                          ))}
+                          {(app.categoryRankings ?? []).length > 3 && (
+                            <li className="text-[11px] text-muted-foreground">
+                              +{(app.categoryRankings ?? []).length - 3} more
+                            </li>
+                          )}
+                        </ul>
+                      )}
                     </TableCell>
                     <TableCell className="w-[160px] text-muted-foreground text-sm truncate max-w-[160px]">
                       {app.pricingHint || "-"}

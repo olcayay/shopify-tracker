@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { getPublicDeveloper } from "@/lib/api";
 import { BreadcrumbJsonLd } from "@/components/seo/json-ld";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatMonthYear } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformId } from "@appranks/shared";
@@ -71,6 +71,8 @@ export default async function PublicDeveloperPage({ params }: PageProps) {
     averageRating?: number;
     ratingCount?: number;
     pricingHint?: string;
+    launchedDate?: string | null;
+    categoryRankings?: { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }[];
   }[];
 
   const breadcrumbItems = [
@@ -166,7 +168,7 @@ export default async function PublicDeveloperPage({ params }: PageProps) {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{app.name}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
                         {app.averageRating != null && (
                           <span className="flex items-center gap-0.5">
                             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -178,6 +180,29 @@ export default async function PublicDeveloperPage({ params }: PageProps) {
                           <span className="flex items-center gap-0.5">
                             <Tag className="h-3 w-3" />
                             {app.pricingHint}
+                          </span>
+                        )}
+                        {app.launchedDate && (
+                          <span className="text-[11px] bg-muted px-1.5 py-0.5 rounded">
+                            {formatMonthYear(app.launchedDate)}
+                          </span>
+                        )}
+                        {Array.isArray(app.categoryRankings) && app.categoryRankings.length > 0 && (
+                          <span className="flex items-center gap-1 flex-wrap">
+                            {app.categoryRankings.slice(0, 2).map((r: { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }) => (
+                              <span
+                                key={r.categorySlug}
+                                className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded"
+                              >
+                                #{r.position} {r.categoryName}
+                                {r.totalApps >= 10 ? ` · Top ${r.percentile}%` : ""}
+                              </span>
+                            ))}
+                            {app.categoryRankings.length > 2 && (
+                              <span className="text-[11px] text-muted-foreground">
+                                +{app.categoryRankings.length - 2}
+                              </span>
+                            )}
                           </span>
                         )}
                         <span className="text-xs bg-muted px-1.5 py-0.5 rounded">

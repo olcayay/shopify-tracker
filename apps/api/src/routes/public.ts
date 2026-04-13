@@ -20,6 +20,65 @@ const PUBLIC_CACHE_TTL = 3600; // 1 hour
 export const publicRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
 
+  /** Latest category ranking per (app_id, category_slug) + per-category totals.
+   *  Shared between /public/developers/:platform/:slug (PLA-1047) and any
+   *  future public endpoint that needs the same shape. */
+  async function fetchCategoryRankingsForAppsPublic(
+    appIds: number[],
+  ): Promise<Map<number, { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }[]>> {
+    if (appIds.length === 0) return new Map();
+    const rows = (await db.execute(sql`
+      WITH latest_app_cat AS (
+        SELECT DISTINCT ON (r.app_id, r.category_slug)
+          r.app_id,
+          r.category_slug,
+          r.position,
+          a.platform
+        FROM ${appCategoryRankings} r
+        JOIN ${apps} a ON a.id = r.app_id
+        WHERE r.app_id = ANY(${sqlArray(appIds)})
+        ORDER BY r.app_id, r.category_slug, r.scraped_at DESC
+      ),
+      cat_totals AS (
+        SELECT r.category_slug, a.platform, COUNT(DISTINCT r.app_id)::int AS total_apps
+        FROM ${appCategoryRankings} r
+        JOIN ${apps} a ON a.id = r.app_id
+        GROUP BY r.category_slug, a.platform
+      )
+      SELECT
+        l.app_id,
+        l.category_slug,
+        l.position,
+        l.platform,
+        COALESCE(t.total_apps, 0) AS total_apps,
+        c.title AS category_title
+      FROM latest_app_cat l
+      LEFT JOIN cat_totals t
+        ON t.category_slug = l.category_slug AND t.platform = l.platform
+      LEFT JOIN ${categories} c
+        ON c.platform = l.platform AND c.slug = l.category_slug
+      ORDER BY l.app_id, l.position ASC
+    `)) as any;
+    const data: any[] = rows.rows ?? rows;
+    const out = new Map<number, { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }[]>();
+    for (const r of data) {
+      const total = Number(r.total_apps) || 0;
+      const position = Number(r.position) || 0;
+      const percentile = total > 0 ? Math.ceil((position / total) * 100) : 0;
+      const entry = {
+        categorySlug: r.category_slug,
+        categoryName: r.category_title || r.category_slug,
+        position,
+        totalApps: total,
+        percentile,
+      };
+      const list = out.get(r.app_id);
+      if (list) list.push(entry);
+      else out.set(r.app_id, [entry]);
+    }
+    return out;
+  }
+
   // GET /public/apps/:platform/:slug — public app profile
   app.get<{ Params: { platform: string; slug: string } }>(
     "/apps/:platform/:slug",
@@ -236,8 +295,8 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
         const devNames = platformDevs.map((pd) => pd.name);
         if (devNames.length > 0) {
           const appRows = await db.execute(sql`
-            SELECT DISTINCT ON (a.id) a.slug, a.name, a.icon_url, a.platform,
-                   a.average_rating, a.rating_count, a.pricing_hint
+            SELECT DISTINCT ON (a.id) a.id, a.slug, a.name, a.icon_url, a.platform,
+                   a.average_rating, a.rating_count, a.pricing_hint, a.launched_date
             FROM apps a
             JOIN (
               SELECT DISTINCT ON (app_id) app_id, developer
@@ -247,7 +306,13 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
               ${isPlatformId(platform) ? sql`AND a.platform = ${platform}` : sql``}
             ORDER BY a.id
           `);
-          appList = ((appRows as any).rows ?? appRows).map((r: any) => ({
+          const rawRows: any[] = (appRows as any).rows ?? appRows;
+          const visibleRows = rawRows.filter((r: any) => visiblePlatforms.includes(r.platform));
+          const appIds = visibleRows
+            .map((r: any) => r.id)
+            .filter((id: unknown): id is number => typeof id === "number");
+          const rankingsByAppId = await fetchCategoryRankingsForAppsPublic(appIds);
+          appList = visibleRows.map((r: any) => ({
             slug: r.slug,
             name: r.name,
             iconUrl: r.icon_url,
@@ -255,8 +320,9 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
             averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
             ratingCount: r.rating_count,
             pricingHint: r.pricing_hint,
-          }))
-            .filter((app: { platform: string }) => visiblePlatforms.includes(app.platform));
+            launchedDate: r.launched_date ? new Date(r.launched_date).toISOString() : null,
+            categoryRankings: rankingsByAppId.get(r.id) ?? [],
+          }));
         }
 
         return { ...dev, platforms: platformDevs, apps: appList };
