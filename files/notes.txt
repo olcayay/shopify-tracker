@@ -6186,3 +6186,23 @@ PLA-179: Global API rate limiting middleware
 - Tests:
   - `apps/dashboard/src/__tests__/components/activity-log.test.tsx`: added a `truncateAppName helper` block (4 cases: short names unchanged, > 20 truncates with `…`, empty string, custom max), plus a `Details column — app name rendering` block (2 integration cases: renders `appName` with `title` + truncated text, falls back to truncated slug when `appName` missing). 21 tests total in this file, all green.
 - Not touched: the cell-level `max-w-[250px] truncate` stays as a second line of defence (per the ticket's suggestion). Legacy rows without `appName` in metadata still render correctly via the slug fallback — no backfill needed.
+
+## PLA-1074 — Developers list: per-developer quality + tenure aggregates (2026-04-13)
+- `apps/api/src/routes/developers.ts` (`GET /api/developers`): extended the main lateral-join CTE pipeline to compute 4 new aggregates per `global_developer`:
+  - `avg_review_count` — `AVG(apps.rating_count)` (includes unreviewed apps as 0, per the task's example of "10 apps that average 5 reviews").
+  - `avg_rating` — `AVG(apps.average_rating)` but **filtered to apps with `rating_count > 0`** so unreviewed apps don't drag the mean to 0. Documented in the SQL comment; the column header tooltip surfaces this to users.
+  - `first_launch_date` — `MIN(apps.launched_date)`; nulls naturally excluded by MIN.
+  - `last_launch_date` — `MAX(apps.launched_date)`.
+  - Wrapped in a `dev_apps` → `DISTINCT ON (dev, app_id)` subquery so apps counted in multiple platforms (future-proofing) don't get double-weighted.
+- Sort support: `avgRating`, `avgReviews`, `firstLaunch`, `lastLaunch` added to `VALID_SORTS`; order clause now appends `NULLS LAST` so developers with missing stats don't pollute the top of DESC sorts on the new columns.
+- Response shape: `avgReviewCount`, `avgRating`, `firstAppLaunchDate` (ISO), `lastAppLaunchDate` (ISO) added to each developer row in the JSON response. All are nullable.
+- Dashboard (`apps/dashboard/src/app/(dashboard)/[platform]/developers/page.tsx`): 4 new sortable columns added to the "All" tab table. Rendering:
+  - Avg Reviews → `formatNumber(round(avgReviewCount), {compact:true})` → e.g. `1.2K`, `—` if null.
+  - Avg Rating → `4.3 ★` (1 decimal) or `—`.
+  - First Launch / Last Launch → `formatMonthYear(iso)` → e.g. `Mar 2019`, `—` if null.
+  - Column header tooltips explain the metric. Cells use `tabular-nums` for aligned right-aligned values.
+  - Empty-state `colSpan` updated from 4 to 8.
+  - The Tracked / Competitor tabs retain their existing 4-col layout — the new columns only apply to the main "All" table as scoped in the ticket.
+- Tests:
+  - `apps/api/src/__tests__/routes/developers.test.ts`: +4 cases (sort=avgRating, sort=avgReviews, sort=firstLaunch, sort=lastLaunch) and a `per-developer aggregate fields` block (2 cases: populated values round-trip correctly with `avgReviewCount`/`avgRating` parsed as numbers + dates as ISO; null aggregates surface as `null` not `0`). 29 total in the file, all green.
+- Not done: no dedicated backfill migration — `apps.launched_date`, `apps.rating_count`, `apps.average_rating` are already populated by each platform's scraper pipeline. If a given platform leaves them null (documented on a per-platform basis elsewhere), the aggregates naturally fall back to `—`. Also deferred: a materialized view / denormalized columns — not needed at current data volumes and `db-f1-micro` throughput; the CTE chain reuses the same lateral lookup that already backs the existing `appCount` column, so the marginal cost is one extra GROUP BY.

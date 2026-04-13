@@ -64,6 +64,36 @@ describe("Developer routes", () => {
       expect(body.pagination).toHaveProperty("totalPages");
     });
 
+    it("accepts sort=avgRating and sort=avgReviews without error", async () => {
+      const r1 = await app.inject({
+        method: "GET",
+        url: "/api/developers?sort=avgRating&order=desc",
+        headers: authHeaders(userToken()),
+      });
+      expect(r1.statusCode).toBe(200);
+      const r2 = await app.inject({
+        method: "GET",
+        url: "/api/developers?sort=avgReviews&order=asc",
+        headers: authHeaders(userToken()),
+      });
+      expect(r2.statusCode).toBe(200);
+    });
+
+    it("accepts sort=firstLaunch and sort=lastLaunch without error", async () => {
+      const r1 = await app.inject({
+        method: "GET",
+        url: "/api/developers?sort=firstLaunch&order=asc",
+        headers: authHeaders(userToken()),
+      });
+      expect(r1.statusCode).toBe(200);
+      const r2 = await app.inject({
+        method: "GET",
+        url: "/api/developers?sort=lastLaunch&order=desc",
+        headers: authHeaders(userToken()),
+      });
+      expect(r2.statusCode).toBe(200);
+    });
+
     it("returns topApps, appCount, and isStarred fields for each developer", async () => {
       const res = await app.inject({
         method: "GET",
@@ -341,6 +371,99 @@ describe("Developer routes", () => {
   // -----------------------------------------------------------------------
   // Admin endpoints
   // -----------------------------------------------------------------------
+  describe("GET /api/developers — per-developer aggregate fields (PLA-1074)", () => {
+    let appWithRows: FastifyInstance;
+
+    beforeAll(async () => {
+      appWithRows = await buildTestApp({
+        routes: developerRoutes,
+        prefix: "/api/developers",
+        db: {
+          // Both db.execute() calls (count + main) return this same array.
+          // The count query will read `.count` off the first row (undefined → 0),
+          // and the main query will map over rows with the aggregate columns.
+          executeResult: [
+            {
+              id: 1,
+              slug: "acme",
+              name: "Acme Inc",
+              website: null,
+              platform_count: 1,
+              link_count: 1,
+              platforms: ["shopify"],
+              top_apps: [],
+              app_count: 3,
+              avg_review_count: "1234.50",
+              avg_rating: "4.25",
+              first_launch_date: "2019-03-15T00:00:00Z",
+              last_launch_date: "2025-11-01T00:00:00Z",
+              is_starred: false,
+            },
+          ],
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await appWithRows.close();
+    });
+
+    it("surfaces avgReviewCount, avgRating, firstAppLaunchDate, lastAppLaunchDate", async () => {
+      const res = await appWithRows.inject({
+        method: "GET",
+        url: "/api/developers",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.developers.length).toBeGreaterThan(0);
+      const dev = body.developers[0];
+      expect(dev.avgReviewCount).toBeCloseTo(1234.5, 2);
+      expect(dev.avgRating).toBeCloseTo(4.25, 2);
+      expect(dev.firstAppLaunchDate).toBe("2019-03-15T00:00:00.000Z");
+      expect(dev.lastAppLaunchDate).toBe("2025-11-01T00:00:00.000Z");
+    });
+
+    it("returns null for missing aggregates", async () => {
+      const emptyApp = await buildTestApp({
+        routes: developerRoutes,
+        prefix: "/api/developers",
+        db: {
+          executeResult: [
+            {
+              id: 2,
+              slug: "solo",
+              name: "Solo Dev",
+              website: null,
+              platform_count: 1,
+              link_count: 1,
+              platforms: ["shopify"],
+              top_apps: [],
+              app_count: 1,
+              avg_review_count: null,
+              avg_rating: null,
+              first_launch_date: null,
+              last_launch_date: null,
+              is_starred: false,
+            },
+          ],
+        },
+      });
+      const res = await emptyApp.inject({
+        method: "GET",
+        url: "/api/developers",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const dev = res.json().developers[0];
+      expect(dev.avgReviewCount).toBeNull();
+      expect(dev.avgRating).toBeNull();
+      expect(dev.firstAppLaunchDate).toBeNull();
+      expect(dev.lastAppLaunchDate).toBeNull();
+      await emptyApp.close();
+    });
+  });
+
   describe("Admin endpoints", () => {
     it("GET /admin/list returns 403 for non-admin", async () => {
       const res = await app.inject({

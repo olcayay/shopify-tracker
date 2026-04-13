@@ -1221,3 +1221,5 @@ cache /api/account/platform-stats + optional ?platform= filter (PLA-1075) ✅
 distinguish transient backend error from "not indexed" on category detail page + per-call timings (PLA-1073) ✅
 
 activity log: show app name (truncated to 20 chars) instead of slug in Details column (PLA-1076) ✅
+
+enrich developers list with avgReviewCount/avgRating/firstLaunch/lastLaunch + sortable columns (PLA-1074) ✅

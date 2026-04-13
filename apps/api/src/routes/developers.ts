@@ -40,7 +40,15 @@ export async function developerRoutes(app: FastifyInstance) {
       const limit = Math.min(PAGINATION_MAX_LIMIT_SMALL, Math.max(1, parseInt(request.query.limit || String(PAGINATION_DEFAULT_LIMIT), 10)));
       const offset = (page - 1) * limit;
       const search = request.query.search?.trim() || "";
-      const VALID_SORTS = new Set(["name", "apps", "platforms"]);
+      const VALID_SORTS = new Set([
+        "name",
+        "apps",
+        "platforms",
+        "avgRating",
+        "avgReviews",
+        "firstLaunch",
+        "lastLaunch",
+      ]);
       const sort = VALID_SORTS.has(request.query.sort || "") ? request.query.sort! : "name";
       const order = request.query.order === "desc" ? "desc" : "asc";
       const platformsParam = request.query.platforms?.trim() || "";
@@ -93,8 +101,23 @@ export async function developerRoutes(app: FastifyInstance) {
 
       // Use sql.raw() for column references — sql`app_count` would parameterize
       // the identifier as a string value instead of a column reference
-      const orderColumn = sort === "apps" ? "app_count" : sort === "platforms" ? "platform_count" : "g.name";
-      const orderSQL = sql.raw(`(asd.id IS NOT NULL) DESC, ${orderColumn} ${order === "desc" ? "DESC" : "ASC"}`);
+      const orderColumn =
+        sort === "apps"
+          ? "app_count"
+          : sort === "platforms"
+            ? "platform_count"
+            : sort === "avgRating"
+              ? "avg_rating"
+              : sort === "avgReviews"
+                ? "avg_review_count"
+                : sort === "firstLaunch"
+                  ? "first_launch_date"
+                  : sort === "lastLaunch"
+                    ? "last_launch_date"
+                    : "g.name";
+      // NULLS LAST so developers with missing stats don't pollute the top of
+      // DESC sorts on the new aggregate columns.
+      const orderSQL = sql.raw(`(asd.id IS NOT NULL) DESC, ${orderColumn} ${order === "desc" ? "DESC" : "ASC"} NULLS LAST`);
 
       const platformJoinFilter = platforms.length > 0
         ? sql`AND pd.platform = ANY(${sqlArray(platforms)})`
@@ -109,7 +132,8 @@ export async function developerRoutes(app: FastifyInstance) {
       // that exceeded the 30s statement timeout on the micro DB instance.
       const rows: any[] = await db.execute(sql`
         WITH dev_apps AS (
-          SELECT pd.global_developer_id, a.id AS app_id, a.slug, a.name, a.icon_url, a.platform
+          SELECT pd.global_developer_id, a.id AS app_id, a.slug, a.name, a.icon_url, a.platform,
+                 a.average_rating, a.rating_count, a.launched_date
           FROM apps a
           JOIN LATERAL (
             SELECT s.developer->>'name' AS dev_name
@@ -124,6 +148,24 @@ export async function developerRoutes(app: FastifyInstance) {
         dev_app_counts AS (
           SELECT global_developer_id, COUNT(DISTINCT app_id) AS app_count
           FROM dev_apps
+          GROUP BY global_developer_id
+        ),
+        dev_stats AS (
+          -- One row per (developer, app) so apps with ratings but no reviews (or
+          -- vice-versa) still contribute to both aggregates where they apply.
+          -- avg_rating excludes apps with 0 or null rating_count (unreviewed
+          -- apps shouldn't drag the average down to 0 / N/A).
+          SELECT
+            global_developer_id,
+            AVG(rating_count)::numeric(12,2) AS avg_review_count,
+            AVG(average_rating) FILTER (WHERE rating_count IS NOT NULL AND rating_count > 0)::numeric(3,2) AS avg_rating,
+            MIN(launched_date) AS first_launch_date,
+            MAX(launched_date) AS last_launch_date
+          FROM (
+            SELECT DISTINCT ON (global_developer_id, app_id)
+              global_developer_id, app_id, average_rating, rating_count, launched_date
+            FROM dev_apps
+          ) d
           GROUP BY global_developer_id
         ),
         dev_top_apps AS (
@@ -144,15 +186,21 @@ export async function developerRoutes(app: FastifyInstance) {
           ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
           COALESCE(dta.top_apps, '[]'::jsonb) AS top_apps,
           COALESCE(dac.app_count, 0) AS app_count,
+          ds.avg_review_count,
+          ds.avg_rating,
+          ds.first_launch_date,
+          ds.last_launch_date,
           CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id ${platformJoinFilter}
         LEFT JOIN dev_app_counts dac ON dac.global_developer_id = g.id
         LEFT JOIN dev_top_apps dta ON dta.global_developer_id = g.id
+        LEFT JOIN dev_stats ds ON ds.global_developer_id = g.id
         LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id
           AND asd.account_id = ${accountId}
         ${whereClause}
-        GROUP BY g.id, asd.id, dac.app_count, dta.top_apps
+        GROUP BY g.id, asd.id, dac.app_count, dta.top_apps,
+                 ds.avg_review_count, ds.avg_rating, ds.first_launch_date, ds.last_launch_date
         ORDER BY ${orderSQL}
         LIMIT ${limit} OFFSET ${offset}
       `);
@@ -173,6 +221,10 @@ export async function developerRoutes(app: FastifyInstance) {
             slug: a.slug,
             platform: a.platform,
           })),
+          avgReviewCount: r.avg_review_count != null ? Number(r.avg_review_count) : null,
+          avgRating: r.avg_rating != null ? Number(r.avg_rating) : null,
+          firstAppLaunchDate: r.first_launch_date ? new Date(r.first_launch_date).toISOString() : null,
+          lastAppLaunchDate: r.last_launch_date ? new Date(r.last_launch_date).toISOString() : null,
           isStarred: r.is_starred === true || r.is_starred === "true",
         })),
         pagination: {

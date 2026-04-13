@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { TableSkeleton } from "@/components/skeletons";
 import { developerNameToSlug } from "@appranks/shared";
+import { formatNumber, formatMonthYear } from "@/lib/format-utils";
 
 interface TopApp {
   iconUrl: string;
@@ -49,6 +50,10 @@ interface Developer {
   appCount: number;
   platforms: string[];
   topApps: TopApp[];
+  avgReviewCount: number | null;
+  avgRating: number | null;
+  firstAppLaunchDate: string | null;
+  lastAppLaunchDate: string | null;
   isStarred: boolean;
 }
 
@@ -495,12 +500,48 @@ function PlatformDevelopersContent() {
                     </button>
                   </TableHead>
                   <TableHead className="w-96">Apps</TableHead>
-                  <TableHead className="w-36 text-right">
+                  <TableHead className="w-24 text-right">
                     <button
                       onClick={() => toggleSort("apps")}
-                      className="flex items-center gap-1 justify-end hover:text-foreground"
+                      className="flex items-center gap-1 justify-end hover:text-foreground w-full"
                     >
                       App Count <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-24 text-right">
+                    <button
+                      onClick={() => toggleSort("avgReviews")}
+                      title="Average review count across this developer's apps"
+                      className="flex items-center gap-1 justify-end hover:text-foreground w-full"
+                    >
+                      Avg Reviews <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-24 text-right">
+                    <button
+                      onClick={() => toggleSort("avgRating")}
+                      title="Average rating across this developer's apps (excludes apps with no reviews)"
+                      className="flex items-center gap-1 justify-end hover:text-foreground w-full"
+                    >
+                      Avg Rating <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-28 text-right">
+                    <button
+                      onClick={() => toggleSort("firstLaunch")}
+                      title="First app launch (earliest launched_date across this developer's apps)"
+                      className="flex items-center gap-1 justify-end hover:text-foreground w-full"
+                    >
+                      First Launch <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-28 text-right">
+                    <button
+                      onClick={() => toggleSort("lastLaunch")}
+                      title="Most recent app launch"
+                      className="flex items-center gap-1 justify-end hover:text-foreground w-full"
+                    >
+                      Last Launch <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
                 </TableRow>
@@ -509,7 +550,7 @@ function PlatformDevelopersContent() {
                 {developers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={8}
                       className="text-center text-muted-foreground py-8"
                     >
                       {emptyMessage}
@@ -548,6 +589,26 @@ function PlatformDevelopersContent() {
                       <TableCell>{renderAppsCell(dev)}</TableCell>
                       <TableCell className="text-muted-foreground text-right">
                         {dev.appCount}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right tabular-nums">
+                        {dev.avgReviewCount != null
+                          ? formatNumber(Math.round(dev.avgReviewCount), { compact: true })
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right tabular-nums">
+                        {dev.avgRating != null
+                          ? `${dev.avgRating.toFixed(1)} ★`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right tabular-nums">
+                        {dev.firstAppLaunchDate
+                          ? formatMonthYear(dev.firstAppLaunchDate)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right tabular-nums">
+                        {dev.lastAppLaunchDate
+                          ? formatMonthYear(dev.lastAppLaunchDate)
+                          : "—"}
                       </TableCell>
                     </TableRow>
                   ))
