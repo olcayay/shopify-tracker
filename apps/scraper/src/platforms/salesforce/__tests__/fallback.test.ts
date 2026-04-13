@@ -21,30 +21,45 @@ describe("SalesforceModule fallback", () => {
   });
 
   describe("fetchAppPage", () => {
-    it("uses browser primary when it succeeds", async () => {
-      vi.spyOn(browserClient, "fetchPage").mockResolvedValue("<html>salesforce SPA</html>");
-      vi.spyOn(httpClient, "fetchPage").mockResolvedValue('{"items":[]}');
+    it("uses HTTP detail primary when it succeeds (PLA-1056)", async () => {
+      // HTTP primary returns a listing JSON; parser wraps it in _fromJsonApi envelope.
+      vi.spyOn(httpClient, "fetchPage").mockResolvedValue(JSON.stringify({
+        id: "listing-uuid",
+        appExchangeId: "a0N4V00000JTeWyUAL",
+        name: "HTTP App",
+        publisher: { name: "P" },
+        pricing: {},
+        reviewsSummary: { averageRating: 4.2, totalReviewCount: 10 },
+      }));
+      vi.spyOn(browserClient, "fetchPage").mockResolvedValue("<html>should not be used</html>");
 
       const result = await mod.fetchAppPage("a0N4V00000JTeWyUAL");
-      expect(result).toBe("<html>salesforce SPA</html>");
-      expect(httpClient.fetchPage).not.toHaveBeenCalled();
+      const envelope = JSON.parse(result);
+      expect(envelope._fromJsonApi).toBe(true);
+      expect(envelope._parsed.name).toBe("HTTP App");
+      expect(browserClient.fetchPage).not.toHaveBeenCalled();
     });
 
-    it("falls back to search API when browser fails", async () => {
+    it("falls back to search API when HTTP and browser both fail", async () => {
+      const http = vi.spyOn(httpClient, "fetchPage");
+      // partners/experience fails, then search-api succeeds.
+      http.mockImplementation(async (url: string) => {
+        if (url.includes("partners/experience")) throw new Error("partners down");
+        return JSON.stringify({
+          items: [{
+            oafId: "a0N4V00000JTeWyUAL",
+            title: "Test App",
+            publisher: "Test Publisher",
+            averageRating: 4.5,
+            reviewsAmount: 100,
+            pricing: "Free",
+            description: "A test app",
+            listingCategories: ["sales"],
+            logos: [{ mediaId: "https://example.com/logo.png", logoType: "Logo" }],
+          }],
+        });
+      });
       vi.spyOn(browserClient, "fetchPage").mockRejectedValue(new Error("SPA timeout"));
-      vi.spyOn(httpClient, "fetchPage").mockResolvedValue(JSON.stringify({
-        items: [{
-          oafId: "a0N4V00000JTeWyUAL",
-          title: "Test App",
-          publisher: "Test Publisher",
-          averageRating: 4.5,
-          reviewsAmount: 100,
-          pricing: "Free",
-          description: "A test app",
-          listingCategories: ["sales"],
-          logos: [{ mediaId: "https://example.com/logo.png", logoType: "Logo" }],
-        }],
-      }));
 
       const result = await mod.fetchAppPage("a0N4V00000JTeWyUAL");
       const envelope = JSON.parse(result);
@@ -73,31 +88,11 @@ describe("SalesforceModule fallback", () => {
       expect(details.platformData.source).toBe("search-api");
     });
 
-    it("throws primary error when both fail", async () => {
-      vi.spyOn(browserClient, "fetchPage").mockRejectedValue(new Error("SPA broken"));
+    it("throws primary (HTTP) error when all attempts fail", async () => {
       vi.spyOn(httpClient, "fetchPage").mockRejectedValue(new Error("API down"));
+      vi.spyOn(browserClient, "fetchPage").mockRejectedValue(new Error("SPA broken"));
 
-      await expect(mod.fetchAppPage("a0N4V00000JTeWyUAL")).rejects.toThrow("SPA broken");
-    });
-
-    it("skips primary in FORCE_FALLBACK mode", async () => {
-      process.env.FORCE_FALLBACK = "true";
-      vi.spyOn(browserClient, "fetchPage").mockResolvedValue("<html>primary</html>");
-      vi.spyOn(httpClient, "fetchPage").mockResolvedValue(JSON.stringify({
-        items: [{
-          oafId: "test-id",
-          title: "Forced Fallback App",
-          publisher: "Publisher",
-          averageRating: 3.0,
-          reviewsAmount: 5,
-          logos: [],
-        }],
-      }));
-
-      const result = await mod.fetchAppPage("test-id");
-      expect(browserClient.fetchPage).not.toHaveBeenCalled();
-      const envelope = JSON.parse(result);
-      expect(envelope._fromSearch).toBe(true);
+      await expect(mod.fetchAppPage("a0N4V00000JTeWyUAL")).rejects.toThrow("API down");
     });
   });
 

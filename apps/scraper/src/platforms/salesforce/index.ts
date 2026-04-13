@@ -16,7 +16,7 @@ import { salesforceUrls } from "./urls.js";
 import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING, SALESFORCE_API_HEADERS, SALESFORCE_CATEGORY_CHILDREN } from "./constants.js";
 import { parseSalesforceSearchPage } from "./parsers/search-parser.js";
 import { parseSalesforceCategoryPage } from "./parsers/category-parser.js";
-import { parseSalesforceAppPage } from "./parsers/app-parser.js";
+import { parseSalesforceAppPage, parseListingJson } from "./parsers/app-parser.js";
 import { parseSalesforceReviewPage } from "./parsers/review-parser.js";
 import { parseAppFromSearchResult } from "./parsers/search-app-parser.js";
 import { createLogger } from "@appranks/shared";
@@ -70,27 +70,52 @@ export class SalesforceModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
+    const mode = SALESFORCE_CONSTANTS.appDetailFetchMode ?? "http";
+
+    const httpAttempt = async (): Promise<string> => {
+      log.info("fetching app detail via API", { slug });
+      const raw = await this.httpClient.fetchPage(
+        salesforceUrls.listingDetailApi(slug),
+        { ...SALESFORCE_API_HEADERS },
+      );
+      const obj = JSON.parse(raw);
+      // Treat any response that doesn't look like a listing (e.g. 404 HTML, error
+      // envelope) as a failure so the fallback kicks in.
+      if (!obj || typeof obj !== "object" || (!obj.id && !obj.appExchangeId)) {
+        throw new Error(`salesforce http detail: unexpected payload for ${slug}`);
+      }
+      const parsed = parseListingJson(obj, slug);
+      return JSON.stringify({ _fromJsonApi: true, _parsed: parsed });
+    };
+
+    const browserAttempt = async (): Promise<string> => {
+      if (!this.browserClient) throw new Error("BrowserClient required for Salesforce app pages (SPA)");
+      log.info("fetching app page via browser", { slug });
+      return this.browserClient.fetchPage(salesforceUrls.app(slug));
+    };
+
+    const searchAttempt = async (): Promise<string> => {
+      log.info("fetching app via search API (last-resort fallback)", { slug });
+      const json = await this.httpClient.fetchPage(
+        salesforceUrls.searchApi(slug, 1),
+        { ...SALESFORCE_API_HEADERS },
+      );
+      const data = JSON.parse(json);
+      const items = data.items || data.results || [];
+      const card = items.find((item: any) => item.oafId === slug) || items[0];
+      if (!card) throw new Error(`Salesforce app not found via search API: ${slug}`);
+      const parsed = parseAppFromSearchResult(card, slug);
+      return JSON.stringify({ _fromSearch: true, _parsed: parsed });
+    };
+
+    const [primary, secondary] = mode === "browser"
+      ? [browserAttempt, httpAttempt]
+      : [httpAttempt, browserAttempt];
+
     return withFallback(
-      async () => {
-        if (!this.browserClient) throw new Error("BrowserClient required for Salesforce app pages (SPA)");
-        log.info("fetching app page via browser", { slug });
-        return this.browserClient.fetchPage(salesforceUrls.app(slug));
-      },
-      async () => {
-        // Fallback: search API with the slug as keyword to find the card
-        log.info("fetching app via search API (fallback)", { slug });
-        const json = await this.httpClient.fetchPage(
-          salesforceUrls.searchApi(slug, 1),
-          { ...SALESFORCE_API_HEADERS },
-        );
-        const data = JSON.parse(json);
-        const items = data.items || data.results || [];
-        const card = items.find((item: any) => item.oafId === slug) || items[0];
-        if (!card) throw new Error(`Salesforce app not found via search API: ${slug}`);
-        const parsed = parseAppFromSearchResult(card, slug);
-        return JSON.stringify({ _fromSearch: true, _parsed: parsed });
-      },
-      `salesforce/fetchAppPage/${slug}`,
+      () => withFallback(primary, secondary, `salesforce/fetchAppPage/${slug}/primary`, this.tracker),
+      searchAttempt,
+      `salesforce/fetchAppPage/${slug}/tail`,
       this.tracker,
     );
   }
@@ -142,9 +167,12 @@ export class SalesforceModule implements PlatformModule {
   // --- Parse ---
 
   parseAppDetails(html: string, slug: string): NormalizedAppDetails {
-    // Check if this is a pre-parsed search API fallback envelope
+    // fetchAppPage wraps pre-parsed results (HTTP API path, search API fallback)
+    // in an envelope so we don't reparse here. HTML from the browser path is
+    // handled by parseSalesforceAppPage.
     try {
       const envelope = JSON.parse(html);
+      if (envelope._fromJsonApi && envelope._parsed) return envelope._parsed;
       if (envelope._fromSearch && envelope._parsed) return envelope._parsed;
     } catch {
       // Not JSON — it's HTML, proceed with normal parsing
