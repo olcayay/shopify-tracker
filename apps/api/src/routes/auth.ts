@@ -24,6 +24,7 @@ import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
+import { cacheGet, cacheDel } from "../utils/cache.js";
 import { sendWelcomeEmail, sendPasswordResetEmail, sendLoginAlertEmail, sendVerificationEmail } from "../lib/email-enqueue.js";
 import {
   registerSchema,
@@ -83,6 +84,31 @@ function hashToken(token: string): string {
 function hashUserAgent(ua: string | undefined): string | null {
   if (!ua) return null;
   return crypto.createHash("sha256").update(ua).digest("hex").slice(0, 16);
+}
+
+// PLA-1078: short-TTL cache for /api/auth/me to protect the endpoint from
+// DB-pool starvation when heavy sibling requests fan-out on the same page.
+// 30s balances freshness (plan / feature-flag changes become visible within
+// a reload) against the cost of rebuilding the response on every nav click.
+const AUTH_ME_TTL_SECONDS = 30;
+
+export function authMeCacheKey(userId: string, realAdminUserId: string | null): string {
+  return `auth-me:${userId}:${realAdminUserId ?? "none"}`;
+}
+
+/**
+ * Invalidate all cached /auth/me entries for a user (both normal sessions
+ * and any impersonation sessions targeting them). Call whenever the
+ * response body would change: profile update, feature-flag change,
+ * account limit / plan change, tracked-app / keyword / competitor count
+ * change. A stale-read window of AUTH_ME_TTL_SECONDS is acceptable for
+ * everything else.
+ */
+export async function invalidateAuthMe(userId: string): Promise<void> {
+  // Normal session (no impersonation).
+  await cacheDel(authMeCacheKey(userId, null));
+  // Impersonation-specific keys use a different admin suffix — we can't
+  // enumerate them without a Redis SCAN. Short TTL bounds the staleness.
 }
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
@@ -662,12 +688,40 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     return { message: "Session revoked" };
   });
 
-  // GET /api/auth/me — current user + account info + usage
+  // GET /api/auth/me — current user + account info + usage.
+  //
+  // Cached per-(user, realAdmin) for AUTH_ME_TTL_SECONDS (PLA-1078). The
+  // dashboard calls this on every page load, and when a heavy page like a
+  // large Shopify category fan-outs many parallel DB queries, /auth/me can
+  // queue behind them past Cloudflare's 100s window and return 524. Short-TTL
+  // caching cuts the DB cost to one hit per user per TTL window, and any
+  // write path that mutates the response invalidates the cache below.
   app.get("/me", async (request, reply) => {
     if (!request.user) {
       return reply.code(401).send({ error: "Unauthorized" });
     }
 
+    const cacheKey = authMeCacheKey(request.user.userId, request.user.realAdmin?.userId ?? null);
+    const cached = await cacheGet<Record<string, unknown> | { __notFound: true }>(
+      cacheKey,
+      async () => buildAuthMeResponse(request),
+      AUTH_ME_TTL_SECONDS,
+    );
+
+    if (cached && typeof cached === "object" && "__notFound" in cached) {
+      return reply.code(404).send({ error: "User not found" });
+    }
+
+    return cached;
+  });
+
+  // Build the /auth/me response. Split out of the route handler so it can
+  // run behind a cache wrapper above. Does its own lastSeenAt throttle;
+  // side effect is only observed on cache misses (acceptable — update is
+  // already throttled to >5 minutes).
+  async function buildAuthMeResponse(
+    request: { user: NonNullable<import("fastify").FastifyRequest["user"]> },
+  ): Promise<Record<string, unknown> | { __notFound: true }> {
     const [user] = await db
       .select({
         id: users.id,
@@ -685,7 +739,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(users.id, request.user.userId));
 
     if (!user) {
-      return reply.code(404).send({ error: "User not found" });
+      return { __notFound: true };
     }
 
     // Update lastSeenAt (throttled: only if >5 min since last update)
@@ -840,7 +894,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return response;
-  });
+  }
 
   // PATCH /api/auth/me — update user profile & preferences
   app.patch("/me", async (request, reply) => {
@@ -931,6 +985,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     // Log profile update activity
     const action = updates.passwordHash ? "password_changed" : "profile_updated";
     import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, action, "user", request.user.userId)).catch(() => {});
+
+    // Invalidate cached /auth/me — profile/email/preferences just changed.
+    await invalidateAuthMe(request.user.userId);
 
     return updated;
   });

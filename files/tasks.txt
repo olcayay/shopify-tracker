@@ -1229,3 +1229,5 @@ fix App Count always 0 in My/Competitor Developers sections — total_apps now c
 show loading shimmer (not empty-state flash) while My/Competitor Developers sections load on /[platform]/developers (PLA-1079) ✅
 
 consolidate & Title-Case canonical pricing model labels across platforms (core rename + normalize-pricing + migration) (PLA-1077) ✅
+
+short-TTL cache for /api/auth/me + PATCH /me invalidation to guard against Cloudflare 524 under heavy category-page load (PLA-1078) ✅

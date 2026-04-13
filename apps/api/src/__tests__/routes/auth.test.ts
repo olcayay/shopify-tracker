@@ -14,7 +14,7 @@ import {
   impersonationToken,
   authHeaders,
 } from "../helpers/test-app.js";
-import { authRoutes, loginLimiter, registerLimiter, passwordResetLimiter } from "../../routes/auth.js";
+import { authRoutes, loginLimiter, registerLimiter, passwordResetLimiter, authMeCacheKey, invalidateAuthMe } from "../../routes/auth.js";
 import type { FastifyInstance } from "fastify";
 
 // Reset rate limiters before each test suite to avoid cross-test contamination
@@ -1593,5 +1593,25 @@ describe("DELETE /api/auth/me", () => {
     });
     expect(res.statusCode).toBe(403);
     await app.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PLA-1078: /auth/me caching helpers
+// ---------------------------------------------------------------------------
+describe("/auth/me cache helpers (PLA-1078)", () => {
+  it("authMeCacheKey namespaces by userId and impersonating adminId", () => {
+    expect(authMeCacheKey("user-1", null)).toBe("auth-me:user-1:none");
+    expect(authMeCacheKey("user-1", "admin-9")).toBe("auth-me:user-1:admin-9");
+    // Distinct keys for same user under different impersonation contexts,
+    // so an admin impersonating a user doesn't poison the user's own cache.
+    expect(authMeCacheKey("user-1", null)).not.toBe(authMeCacheKey("user-1", "admin-9"));
+  });
+
+  it("invalidateAuthMe is safe when Redis is unavailable (fail-open)", async () => {
+    const { _resetCacheRedis } = await import("../../utils/cache.js");
+    _resetCacheRedis(null); // disable Redis
+    // Should not throw even though Redis is disabled.
+    await expect(invalidateAuthMe("user-xyz")).resolves.toBeUndefined();
   });
 });

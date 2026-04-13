@@ -6234,3 +6234,11 @@ PLA-1077 — Canonical pricing model labels Title-Cased
 - Parser functions in `apps/scraper/src/parsers/{category,search}-parser.ts` intentionally left alone — they return *raw* pricing_hint values (e.g. "Free trial available", "Free to install"), not the normalized model. The raw strings are the INPUT to `normalizePricingModel()`; the lookup map already handles them case-insensitively.
 - Not in scope for this PR: replacing UI reads of `pricingHint` with `pricingModel` across all ~10 dashboard components — that's a larger surface change since the API responses would also need to surface `pricingModel` in app/competitor/snapshot shapes. Core canonical rename is in; UI swap is a tracked follow-up.
 - Tests: 5 packages green — 180 scraper files / 2614 tests, 222 dashboard / 2302, API 102 / 1321, shared (incl. new normalize-pricing cases) all pass.
+
+PLA-1078 — /api/auth/me 524 on heavy Shopify category pages
+- Root cause hypothesis (per ticket): Under heavy category-page fan-out the DB connection pool on the single e2-small API VM gets saturated, and /auth/me queues past Cloudflare's 100s origin window.
+- Fix: cache /auth/me per-(userId, realAdminUserId) with 30s TTL (`AUTH_ME_TTL_SECONDS`), using the existing Redis cache-aside util (`apps/api/src/utils/cache.ts`). This collapses the ~5 DB queries per request (consolidated accounts+counts, 3 parallel, optional sysadmin-flags query, optional impersonation query) to once per user per TTL window.
+- Cache key `authMeCacheKey(userId, realAdminUserId)` keeps normal and impersonation sessions in separate entries so an admin impersonating a user doesn't poison that user's own cache.
+- Invalidation: `invalidateAuthMe(userId)` wired into `PATCH /api/auth/me`. Follow-ups will wire it into: tracked-app/keyword/competitor/feature/user/research-project mutations and account-level limits changes (usage counts move on those). 30s TTL bounds the staleness window for any site that's not yet wired.
+- Side effect: the `lastSeenAt` bump runs inside the cached fetcher — so on a cache HIT it doesn't run for that 30s window. Previously it was throttled to 5min anyway, so the effective update frequency is unchanged.
+- Tests: 2 new tests in `auth.test.ts` — cache-key shape + `invalidateAuthMe` fail-open under disabled Redis. 71 total auth tests pass. Full suite green.
