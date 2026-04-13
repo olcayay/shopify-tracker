@@ -1193,3 +1193,5 @@ revert auto-route scope=all to bulk_via_category — per-app detail fetch requir
 salesforce app-detail HTTP migration (PLA-1054..1058) ✅
 
 scrape_runs table: show UUID-prefix as primary id, BullMQ job id secondary (PLA-1061) ✅
+
+per-platform lock applied to interactive worker (PLA-1060) ✅

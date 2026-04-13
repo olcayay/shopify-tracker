@@ -12,9 +12,8 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { Worker, type Job } from "bullmq";
-import { createLogger, validateEnv, SCRAPER_REQUIRED_ENV, platformFeatureFlagSlug, isPlatformId, type PlatformId } from "@appranks/shared";
-import { deadLetterJobs, featureFlags } from "@appranks/db";
-import { eq } from "drizzle-orm";
+import { createLogger, validateEnv, SCRAPER_REQUIRED_ENV } from "@appranks/shared";
+import { deadLetterJobs } from "@appranks/db";
 import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
@@ -23,6 +22,7 @@ import { serializeError, getErrorMessage } from "./utils/serialize-error.js";
 import { createGracefulShutdown } from "./graceful-shutdown.js";
 import { browserPool } from "./browser-pool.js";
 import { RedisLock } from "./redis-lock.js";
+import { withPlatformLock } from "./worker-platform-lock.js";
 import {
   PLATFORM_LOCK_TTL_MS,
   PLATFORM_LOCK_TIMEOUT_MS,
@@ -54,45 +54,18 @@ const redisLock = new RedisLock(getRedisConnection() as { host?: string; port?: 
 const bgProcessJobFn = createProcessJob(db, "background");
 const intProcessJob = createProcessJob(db, "interactive");
 
-/** Job types that don't need per-platform serialization (no scraping involved) */
-const NON_PLATFORM_JOBS = new Set(["daily_digest", "weekly_summary", "data_cleanup"]);
+const platformLockDeps = {
+  db,
+  redisLock,
+  log,
+  lockTtlMs: PLATFORM_LOCK_TTL_MS,
+  lockPollMs: LOCK_POLL_INTERVAL_MS,
+  lockTimeoutMs: PLATFORM_LOCK_TIMEOUT_MS,
+};
 
 const bgWorker = new Worker<ScraperJobData>(
   BACKGROUND_QUEUE_NAME,
-  async (job) => {
-    // Non-scraping jobs bypass the platform lock entirely
-    if (NON_PLATFORM_JOBS.has(job.data.type)) {
-      await bgProcessJobFn(job);
-      return;
-    }
-
-    const platform = job.data.platform || "shopify";
-
-    // Early check: skip if platform feature flag is disabled (before acquiring lock)
-    if (isPlatformId(platform)) {
-      try {
-        const flagSlug = platformFeatureFlagSlug(platform as PlatformId);
-        const [flag] = await db.select({ isEnabled: featureFlags.isEnabled }).from(featureFlags).where(eq(featureFlags.slug, flagSlug)).limit(1);
-        if (flag && !flag.isEnabled) {
-          log.warn("platform feature flag disabled, skipping job", { jobId: job.id, platform, type: job.data.type });
-          return;
-        }
-      } catch {
-        // Fail-open: continue processing if flag check fails
-      }
-    }
-
-    const lockKey = `platform:${platform}:${job.data.type}`;
-    const release = await redisLock.acquireWithWait(lockKey, PLATFORM_LOCK_TTL_MS, LOCK_POLL_INTERVAL_MS, PLATFORM_LOCK_TIMEOUT_MS);
-    if (!release) {
-      throw new Error(`Could not acquire lock for platform ${platform} within ${PLATFORM_LOCK_TIMEOUT_MS}ms`);
-    }
-    try {
-      await bgProcessJobFn(job);
-    } finally {
-      await release();
-    }
-  },
+  withPlatformLock(bgProcessJobFn, platformLockDeps),
   {
     connection: getRedisConnection(),
     concurrency: BACKGROUND_WORKER_CONCURRENCY,
@@ -104,7 +77,7 @@ const bgWorker = new Worker<ScraperJobData>(
 
 const intWorker = new Worker<ScraperJobData>(
   INTERACTIVE_QUEUE_NAME,
-  intProcessJob,
+  withPlatformLock(intProcessJob, platformLockDeps),
   {
     connection: getRedisConnection(),
     concurrency: 1,

@@ -6025,3 +6025,10 @@ PLA-179: Global API rate limiting middleware
 - `run-history-table.tsx`: column header "Job ID" → "Run". Cell now renders `run.id.slice(0,8)` (short UUID) as primary, with `bullmq:{jobId}` below in muted small text. Header carries a tooltip explaining the recycling behaviour.
 - React keys were already UUID, so DOM was correct; this fix makes the user-visible identifier unambiguous.
 - Investigation note for identical `items_scraped` on jobs 32/33 (1998/1998): root cause is missing per-platform lock on the interactive worker (`worker.ts:105` — intWorker has no `redisLock.acquireWithWait`). Two concurrent interactive workers can run Salesforce `app_details` at the same time and advance in lockstep on the same candidate list. Handed off to PLA-1060.
+
+## PLA-1060 — Interactive worker per-platform lock (2026-04-13)
+- Root cause of the "1998 scraped" twinning on jobs 32/33: `intWorker` in `worker.ts` had no `redisLock.acquireWithWait`. Two interactive-worker containers both popped Salesforce `app_details` jobs off BullMQ and ran them in parallel against the same catalog; the shared rate-limited `HttpClient` made their progress counters advance in lockstep.
+- Extracted the wrapper used by `bgWorker` into `apps/scraper/src/worker-platform-lock.ts` (pure function, fully DI'd) and applied it to BOTH workers. `withPlatformLock(processFn, deps)` now serializes any scraping job per `(platform, scraperType)`, regardless of which queue picked it up.
+- Feature-flag short-circuit + `NON_PLATFORM_JOBS` bypass behaviour unchanged.
+- Regression test: `apps/scraper/src/__tests__/worker-platform-lock.test.ts` — 7 cases incl. a concurrency assertion that `maxActive === 1` when two Salesforce `app_details` jobs race.
+- Follow-up deferred: the unique-index / `parent_run_id` migration (Option A of PLA-1053/1060 description) still open; the lock alone is sufficient to stop the double-scrape symptom, but stall-retry collisions on the same jobId remain theoretically possible. Treat as follow-up ticket.
