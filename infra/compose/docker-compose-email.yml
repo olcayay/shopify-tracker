@@ -2,7 +2,10 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy volatile-lru --bind 0.0.0.0 --protected-mode no
+    # PLA-1065: noeviction is required by BullMQ to keep its monotonic job-id
+    # counter (`bull:<queue>:id`) safe from eviction. volatile-lru caused the
+    # 2026-04 jobId recycling that produced ambiguous scrape_runs rows.
+    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy noeviction --bind 0.0.0.0 --protected-mode no
     volumes:
       - redis_data:/data
     ports:
