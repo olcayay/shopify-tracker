@@ -6175,3 +6175,14 @@ PLA-179: Global API rate limiting middleware
 - Also softened `getCategoryHistory` to a non-fatal `.catch(() => { snapshots: [], total: 0 })` — previously a flaky history call would take the whole page down via the outer try/catch, which was the other silent failure mode flagged in the ticket.
 - Tests: `apps/dashboard/src/__tests__/app/category-detail.test.tsx` — added two cases: transient error → "Temporarily unavailable", explicit 404 → "Category not indexed yet". Existing cases still pass (13 total in the file).
 - Not done (intentional, larger refactor): `<Suspense>` streaming around heavy sections, per-call AbortSignal timeouts, backend aggregation profiling on Salesforce hub categories. These are follow-ups — the diagnostic logging added here should pinpoint the slow call first so the backend work is scoped, rather than speculatively rewriting the page into streaming. Leaving a note in the Linear comment.
+
+## PLA-1076 — Activity Log: truncated app name in Details column (2026-04-13)
+- `apps/dashboard/src/components/activity-log.tsx`: added exported `truncateAppName(value, max=20)` helper and wired it into `AppLink`. Link text = `truncateAppName(name || slug)`; a `title={fullName}` attribute preserves the full value on hover; `href` keeps the full slug (only the visible text is truncated). This applies transitively to every activity type that renders via `AppLink` (`app_tracked`, `app_untracked`, `keyword_tracked`, `competitor_added`, `competitor_removed`).
+- API-side: `apps/api/src/routes/account-tracking.ts` now populates name metadata on the writer side too, so new rows don't need the slug fallback. Changes:
+  - `POST /tracked-apps`: `appName: existingApp.name` added to `app_tracked` metadata. The existing `apps` lookup was extended to also select `name`.
+  - `DELETE /tracked-apps/:slug`: the app lookup now selects `name`; `appName: appRow.name` added to `app_untracked` metadata.
+  - Both `POST /competitors` and `POST /tracked-apps/:slug/competitors`: the app lookup selects `name`; `competitorName: existingApp.name` added to `competitor_added` metadata.
+  - Every `.select({ id, slug, platform })` on `apps` in this file (3 sites) now also pulls `name` — harmless overhead, centralises the pattern.
+- Tests:
+  - `apps/dashboard/src/__tests__/components/activity-log.test.tsx`: added a `truncateAppName helper` block (4 cases: short names unchanged, > 20 truncates with `…`, empty string, custom max), plus a `Details column — app name rendering` block (2 integration cases: renders `appName` with `title` + truncated text, falls back to truncated slug when `appName` missing). 21 tests total in this file, all green.
+- Not touched: the cell-level `max-w-[250px] truncate` stays as a second line of defence (per the ticket's suggestion). Legacy rows without `appName` in metadata still render correctly via the slug fallback — no backfill needed.

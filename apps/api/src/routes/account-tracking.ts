@@ -292,7 +292,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists in global table
       const [existingApp] = await db
-        .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
+        .select({ id: apps.id, slug: apps.slug, platform: apps.platform, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
@@ -323,7 +323,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
       await invalidatePlatformStats(accountId, platform);
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_tracked", "app", slug, { platform, slug })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_tracked", "app", slug, { platform, slug, appName: existingApp.name })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );
@@ -339,7 +339,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Look up app ID from slug
       const [appRow] = await db
-        .select({ id: apps.id })
+        .select({ id: apps.id, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
@@ -424,7 +424,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await invalidatePlatformStats(accountId, platform);
       // Activity log (fire-and-forget)
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_untracked", "app", slug, { platform, slug })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_untracked", "app", slug, { platform, slug, appName: appRow.name })).catch(() => {});
       return { message: "App removed from tracking" };
     }
   );
@@ -990,7 +990,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists in global table
       const [existingApp] = await db
-        .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
+        .select({ id: apps.id, slug: apps.slug, platform: apps.platform, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
@@ -1034,7 +1034,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug, competitorName: existingApp.name })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );
@@ -1628,7 +1628,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists
       const [existingApp] = await db
-        .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
+        .select({ id: apps.id, slug: apps.slug, platform: apps.platform, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, competitorSlug), eq(apps.platform, platform)))
         .limit(1);
@@ -1677,7 +1677,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug, existingApp.platform, request.id);
 
       await invalidatePlatformStats(accountId, platform);
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", competitorSlug, { competitorSlug, platform, trackedAppSlug })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", competitorSlug, { competitorSlug, platform, trackedAppSlug, competitorName: existingApp.name })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );

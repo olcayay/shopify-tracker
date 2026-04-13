@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import React from "react";
-import { ActivityLog, ACTION_LABELS } from "@/components/activity-log";
+import { ActivityLog, ACTION_LABELS, truncateAppName } from "@/components/activity-log";
 
 // Mock auth context
 const mockFetchWithAuth = vi.fn();
@@ -264,5 +264,98 @@ describe("ActivityLog", () => {
       expect(ACTION_LABELS[action]).toBeDefined();
       expect(typeof ACTION_LABELS[action]).toBe("string");
     }
+  });
+
+  describe("truncateAppName helper", () => {
+    it("returns names ≤ 20 chars unchanged", () => {
+      expect(truncateAppName("Short App")).toBe("Short App");
+      expect(truncateAppName("Exactly twenty chars")).toBe("Exactly twenty chars");
+      expect(truncateAppName("Exactly twenty chars".slice(0, 20))).toHaveLength(20);
+    });
+
+    it("truncates names > 20 chars with a single ellipsis char", () => {
+      const long = "A Very Long Application Name That Goes On";
+      const out = truncateAppName(long);
+      expect(out).toBe("A Very Long Applicat…");
+      expect(out.length).toBe(21); // 20 chars + ellipsis
+      expect(out.endsWith("…")).toBe(true);
+    });
+
+    it("handles empty string without blowing up", () => {
+      expect(truncateAppName("")).toBe("");
+    });
+
+    it("honours a custom max argument", () => {
+      expect(truncateAppName("abcdefghij", 5)).toBe("abcde…");
+    });
+  });
+
+  describe("Details column — app name rendering", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("renders the appName from metadata (not the slug) and sets title to full name", async () => {
+      mockFetchWithAuth.mockResolvedValue(
+        mockApiResponse(
+          [
+            {
+              id: 10,
+              action: "app_tracked",
+              entityType: "app",
+              entityId: "my-cool-app-builder-pro",
+              metadata: {
+                platform: "shopify",
+                slug: "my-cool-app-builder-pro",
+                appName: "My Cool App Builder Pro",
+              },
+              createdAt: new Date().toISOString(),
+              user: { id: "u1", name: "John", email: "john@test.com" },
+            },
+          ],
+          1
+        )
+      );
+      render(<ActivityLog />);
+      await waitFor(() => expect(mockFetchWithAuth).toHaveBeenCalled());
+      const link = await screen.findByRole("link", {
+        name: /My Cool App Builder/,
+      });
+      // Truncated display (20 chars + single ellipsis char)
+      expect(link.textContent).toBe("My Cool App Builder …");
+      // Full name preserved in title attribute
+      expect(link.getAttribute("title")).toBe("My Cool App Builder Pro");
+      // href still uses full slug
+      expect(link.getAttribute("href")).toBe("/shopify/apps/my-cool-app-builder-pro");
+    });
+
+    it("falls back to (truncated) slug when appName missing from metadata", async () => {
+      mockFetchWithAuth.mockResolvedValue(
+        mockApiResponse(
+          [
+            {
+              id: 11,
+              action: "app_tracked",
+              entityType: "app",
+              entityId: "my-cool-app-builder-pro",
+              metadata: {
+                platform: "shopify",
+                slug: "my-cool-app-builder-pro",
+              },
+              createdAt: new Date().toISOString(),
+              user: { id: "u1", name: "John", email: "john@test.com" },
+            },
+          ],
+          1
+        )
+      );
+      render(<ActivityLog />);
+      await waitFor(() => expect(mockFetchWithAuth).toHaveBeenCalled());
+      const link = await screen.findByRole("link", {
+        name: /my-cool-app-builder/,
+      });
+      expect(link.getAttribute("title")).toBe("my-cool-app-builder-pro");
+      expect(link.textContent).toBe("my-cool-app-builder-…");
+    });
   });
 });

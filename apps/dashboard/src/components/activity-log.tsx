@@ -125,17 +125,30 @@ function formatSlug(slug: string): string {
   return slug;
 }
 
+/** Truncate a name with an ellipsis when longer than `max` characters. */
+const APP_NAME_MAX_CHARS = 20;
+export function truncateAppName(value: string, max: number = APP_NAME_MAX_CHARS): string {
+  if (!value) return value;
+  return value.length > max ? value.slice(0, max) + "…" : value;
+}
+
 /** Get platform display name */
 function platformName(key: string): string {
   return PLATFORM_DISPLAY[key as keyof typeof PLATFORM_DISPLAY]?.label ?? key;
 }
 
-/** Build an app link */
+/** Build an app link. `name` is shown (truncated) when present; otherwise the (truncated) slug is. */
 function AppLink({ platform, slug, name }: { platform?: string; slug: string; name?: string }) {
   const href = platform ? `/${platform}/apps/${slug}` : "#";
+  const full = name || formatSlug(slug);
+  const display = truncateAppName(full);
   return (
-    <Link href={href} className="font-medium text-foreground hover:underline">
-      {name || formatSlug(slug)}
+    <Link
+      href={href}
+      title={full}
+      className="font-medium text-foreground hover:underline"
+    >
+      {display}
     </Link>
   );
 }
