@@ -1758,7 +1758,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       type?: string;
       slug?: string;
       keyword?: string;
-      options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean; force?: boolean; scope?: "tracked" | "all" };
+      options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean; force?: boolean; scope?: "tracked" | "all" | "bulk_via_category" | "all_with_full_details" };
       queue?: "interactive" | "background";
       platform?: string;
     };

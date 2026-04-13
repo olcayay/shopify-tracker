@@ -278,7 +278,19 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         } else if (opts?.scope === "all_with_full_details") {
           await scraper.scrapeAllWithFullDetails(triggeredBy, queueName, opts?.force ?? false);
         } else if (opts?.scope === "all") {
-          await scraper.scrapeAll(triggeredBy, queueName, opts?.force ?? false);
+          // Platforms whose category API already carries every tracked field
+          // get the HTTP-only bulk path for scope=all, so the system-admin
+          // "Scrape ALL" button is fast (~20s) instead of hitting the 6h timeout
+          // for browser-based SPA fetches. Shopify etc. still use the per-app
+          // HTTP loop since their category cards are too sparse.
+          const platformConstants = platformModule?.constants;
+          const canUseBulk = platformConstants?.refreshSnapshotFromCategoryCard === true;
+          if (canUseBulk) {
+            log.info("routing scope=all to bulk_via_category", { platform });
+            await scraper.scrapeAllViaCategoryApi(triggeredBy, queueName, opts?.force ?? false);
+          } else {
+            await scraper.scrapeAll(triggeredBy, queueName, opts?.force ?? false);
+          }
         } else {
           const isManual = triggeredBy && triggeredBy !== "scheduler";
           await scraper.scrapeTracked(triggeredBy, queueName, isManual || opts?.force);

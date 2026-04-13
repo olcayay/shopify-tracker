@@ -1179,3 +1179,7 @@ selective browser enrichment (PLA-1051) ✅
 fix false drift in bulk_via_category snapshot diff (PLA-1048 followup) ✅
 
 validation run 3: 19.83s, 5573 apps, 0 drift (PLA-1048 validated end-to-end) ✅
+
+system-admin UI: Salesforce Scrape ALL uses bulk_via_category (PLA-1048 followup) ✅
+
+route scope=all to bulk_via_category for Salesforce (shopify parity) ✅

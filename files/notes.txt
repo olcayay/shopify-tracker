@@ -5981,3 +5981,13 @@ PLA-179: Global API rate limiting middleware
 - Run 3 (job 1279, post-fix): duration 19.83s, 5573 apps, 0 failures, 0 snapshots_inserted, 0 field_changes — fully idempotent.
 - Three-run table logged in Linear comment on PLA-1048.
 - Final throughput: ~4300× faster than scope=all for Salesforce full-catalog refresh. Real catalog size is 5573 apps (not 13k as estimated).
+
+## System-admin UI tweak (2026-04-12)
+- `apps/dashboard/.../system-admin/scraper/page.tsx#triggerScrapeAllApps`: Salesforce "Scrape ALL" button now posts `scope=bulk_via_category` instead of `scope=all`. Other platforms unchanged.
+- `operational-matrix.tsx`: Salesforce confirm dialog now says "HTTP-only bulk refresh, ~20-60 seconds" and skips the force/resume prompt (bulk path is idempotent, 12h cache doesn't apply).
+- `bulkViaCategoryPlatforms` set is the single source of truth — add more platforms here as their category APIs gain parity with tracked fields.
+
+## scope=all parity with Shopify (2026-04-12 late)
+- `process-job.ts` — when scope=all, if the platform module's `refreshSnapshotFromCategoryCard === true`, route to `scrapeAllViaCategoryApi` instead of `scrapeAll`. Shopify path unchanged (no flag → stays on per-app HTTP loop, already fast).
+- Result: System-admin "Scrape ALL" button now works identically for Shopify and Salesforce without any UI change. Under the hood Salesforce uses the bulk HTTP path; Shopify uses its per-app HTTP path. Both complete well under the timeout.
+- Email snapshot tests (6) regenerated — they were failing because stored snapshots contained "Apr 12" and the test clock crossed midnight UTC; unrelated to this change.
