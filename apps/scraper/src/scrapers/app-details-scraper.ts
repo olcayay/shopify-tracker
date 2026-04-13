@@ -281,6 +281,7 @@ export class AppDetailsScraper {
 
     const startTime = Date.now();
     let itemsScraped = 0;
+    let itemsSkippedFresh = 0;
     let itemsFailed = 0;
 
     const currentlyProcessing = new Set<string>();
@@ -294,6 +295,7 @@ export class AppDetailsScraper {
           await this.db.update(scrapeRuns).set({
             metadata: {
               items_scraped: itemsScraped,
+              items_skipped_fresh: itemsSkippedFresh,
               items_failed: itemsFailed,
               duration_ms: Date.now() - startTime,
               currently_processing: [...currentlyProcessing],
@@ -304,8 +306,9 @@ export class AppDetailsScraper {
         }
 
         try {
-          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetched);
-          itemsScraped++;
+          const outcome = await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetched);
+          if (outcome === "skipped_fresh") itemsSkippedFresh++;
+          else itemsScraped++;
         } catch (error) {
           if (error instanceof AppNotFoundError) {
             // App was delisted/removed from the marketplace — not a scrape failure
@@ -338,7 +341,9 @@ export class AppDetailsScraper {
           completedAt: new Date(),
           metadata: {
             items_scraped: itemsScraped,
+            items_skipped_fresh: itemsSkippedFresh,
             items_failed: itemsFailed,
+            total_processed: itemsScraped + itemsSkippedFresh + itemsFailed,
             duration_ms: Date.now() - startTime,
           },
         })
@@ -352,7 +357,9 @@ export class AppDetailsScraper {
           error: String(error),
           metadata: {
             items_scraped: itemsScraped,
+            items_skipped_fresh: itemsSkippedFresh,
             items_failed: itemsFailed,
+            total_processed: itemsScraped + itemsSkippedFresh + itemsFailed,
             duration_ms: Date.now() - startTime,
           },
         })
@@ -365,7 +372,7 @@ export class AppDetailsScraper {
       }
     }
 
-    log.info("scraping complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
+    log.info("scraping complete", { itemsScraped, itemsSkippedFresh, itemsFailed, durationMs: Date.now() - startTime });
   }
 
   /** Scrape details for ALL discovered apps (not just tracked) */
@@ -401,6 +408,7 @@ export class AppDetailsScraper {
 
     const startTime = Date.now();
     let itemsScraped = 0;
+    let itemsSkippedFresh = 0;
     let itemsFailed = 0;
     const preFetchedAll = await this.buildPreFetchedData(force);
     const currentlyProcessing = new Set<string>();
@@ -412,6 +420,7 @@ export class AppDetailsScraper {
           await this.db.update(scrapeRuns).set({
             metadata: {
               items_scraped: itemsScraped,
+              items_skipped_fresh: itemsSkippedFresh,
               items_failed: itemsFailed,
               duration_ms: Date.now() - startTime,
               currently_processing: [...currentlyProcessing],
@@ -423,10 +432,12 @@ export class AppDetailsScraper {
         }
 
         try {
-          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetchedAll);
-          itemsScraped++;
-          if (itemsScraped % 50 === 0) {
-            log.info("progress", { scraped: itemsScraped, failed: itemsFailed, total: allApps.length });
+          const outcome = await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetchedAll);
+          if (outcome === "skipped_fresh") itemsSkippedFresh++;
+          else itemsScraped++;
+          const processed = itemsScraped + itemsSkippedFresh;
+          if (processed % 50 === 0) {
+            log.info("progress", { scraped: itemsScraped, skipped: itemsSkippedFresh, failed: itemsFailed, total: allApps.length });
           }
         } catch (error) {
           if (error instanceof AppNotFoundError) {
@@ -462,7 +473,9 @@ export class AppDetailsScraper {
           completedAt: new Date(),
           metadata: {
             items_scraped: itemsScraped,
+            items_skipped_fresh: itemsSkippedFresh,
             items_failed: itemsFailed,
+            total_processed: itemsScraped + itemsSkippedFresh + itemsFailed,
             duration_ms: Date.now() - startTime,
             total_apps: allApps.length,
             scope: "all",
@@ -478,7 +491,9 @@ export class AppDetailsScraper {
           error: String(error),
           metadata: {
             items_scraped: itemsScraped,
+            items_skipped_fresh: itemsSkippedFresh,
             items_failed: itemsFailed,
+            total_processed: itemsScraped + itemsSkippedFresh + itemsFailed,
             duration_ms: Date.now() - startTime,
             total_apps: allApps.length,
             scope: "all",
@@ -802,6 +817,7 @@ export class AppDetailsScraper {
 
     const startTime = Date.now();
     let itemsScraped = 0;
+    let itemsSkippedFresh = 0;
     let itemsFailed = 0;
     const preFetched = await this.buildPreFetchedData(force);
     const selectedSlugs = selection.rows.map((r) => r.slug);
@@ -814,6 +830,7 @@ export class AppDetailsScraper {
               scope: "all_with_full_details",
               selection_breakdown: selection.breakdown,
               items_scraped: itemsScraped,
+              items_skipped_fresh: itemsSkippedFresh,
               items_failed: itemsFailed,
               duration_ms: Date.now() - startTime,
               current_index: index,
@@ -822,8 +839,9 @@ export class AppDetailsScraper {
           }).where(eq(scrapeRuns.id, run.id));
         }
         try {
-          await this.scrapeApp(slug, run.id, triggeredBy, undefined, force, preFetched);
-          itemsScraped++;
+          const outcome = await this.scrapeApp(slug, run.id, triggeredBy, undefined, force, preFetched);
+          if (outcome === "skipped_fresh") itemsSkippedFresh++;
+          else itemsScraped++;
         } catch (err) {
           if (err instanceof AppNotFoundError) {
             itemsScraped++;
@@ -849,7 +867,9 @@ export class AppDetailsScraper {
           scope: "all_with_full_details",
           selection_breakdown: selection.breakdown,
           items_scraped: itemsScraped,
+          items_skipped_fresh: itemsSkippedFresh,
           items_failed: itemsFailed,
+          total_processed: itemsScraped + itemsSkippedFresh + itemsFailed,
           duration_ms: Date.now() - startTime,
           total_apps: total,
         },
@@ -863,7 +883,9 @@ export class AppDetailsScraper {
           scope: "all_with_full_details",
           selection_breakdown: selection.breakdown,
           items_scraped: itemsScraped,
+          items_skipped_fresh: itemsSkippedFresh,
           items_failed: itemsFailed,
+          total_processed: itemsScraped + itemsSkippedFresh + itemsFailed,
           duration_ms: Date.now() - startTime,
           total_apps: total,
         },
@@ -932,7 +954,7 @@ export class AppDetailsScraper {
   }
 
   /** Scrape a single app by slug */
-  async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string, force?: boolean, preFetched?: PreFetchedData): Promise<void> {
+  async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string, force?: boolean, preFetched?: PreFetchedData): Promise<"scraped" | "skipped_fresh"> {
     log.info("scraping app", { slug, force });
 
     // Look up the app's integer ID — use pre-fetched data if available
@@ -953,7 +975,7 @@ export class AppDetailsScraper {
           const hoursSince = (Date.now() - recentDate.getTime()) / (1000 * 60 * 60);
           if (hoursSince < 12) {
             log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
-            return;
+            return "skipped_fresh";
           }
         }
       } else {
@@ -968,7 +990,7 @@ export class AppDetailsScraper {
           const hoursSince = (Date.now() - recentSnapshot.scrapedAt.getTime()) / (1000 * 60 * 60);
           if (hoursSince < 12) {
             log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
-            return;
+            return "skipped_fresh";
           }
         }
       }
@@ -1746,6 +1768,8 @@ export class AppDetailsScraper {
       }
       throw error;
     }
+
+    return "scraped";
   }
 }
 

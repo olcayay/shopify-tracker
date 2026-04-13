@@ -6041,3 +6041,10 @@ PLA-179: Global API rate limiting middleware
 - Not done (intentionally deferred, noted in Linear comment):
   - The prod Redis config flip itself (infra change on VM3 — owner action).
   - `scrape_runs` unique-index / `jobKey` column migration (Option A). Option B is effectively satisfied by the PLA-1061 UI change (operators no longer key off jobId) and the PLA-1060 interactive lock (no more concurrent same-platform runs).
+
+## PLA-1062 — scraped vs skipped_fresh counters (2026-04-13)
+- `scrapeApp` return type: `void` → `"scraped" | "skipped_fresh"`. Two 12h-freshness early-return paths now return `"skipped_fresh"`; success path returns `"scraped"`. Errors still throw.
+- Updated 3 call sites: `scrapeTracked`, `scrapeAll`, `scrapeAllWithFullDetails`. Each tracks `itemsSkippedFresh` alongside `itemsScraped` / `itemsFailed` and writes `items_skipped_fresh` + `total_processed` to `scrape_runs.metadata`. Progress log bumped to emit `skipped` too.
+- Dashboard `run-history-table.tsx` renders `N scraped · M skipped · (F failed)`. Legacy rows (no `items_skipped_fresh`) still render unchanged; the `· M skipped` suffix only appears when `items_skipped_fresh > 0`.
+- Tests: `apps/scraper/src/__tests__/app-details-outcomes.test.ts` pins the 3-counter aggregation logic — 6 cases incl. all-skipped-5709 (the ticket's prod sample) and mixed 842/4867.
+- Not touched (intentional, scoped as follow-up): `scrapeAllViaCategoryApi` bulk path — different skip semantics (snapshot drift detection rather than 12h freshness). Ticket suggests `items_skipped_nodrift` for that path; leaving to separate ticket to avoid conflating two skip reasons in one commit.

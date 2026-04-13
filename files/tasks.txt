@@ -1197,3 +1197,5 @@ scrape_runs table: show UUID-prefix as primary id, BullMQ job id secondary (PLA-
 per-platform lock applied to interactive worker (PLA-1060) ✅
 
 Redis noeviction startup check + docs (PLA-1053) ✅
+
+distinguish scraped vs skipped_fresh in app_details metadata (PLA-1062) ✅
