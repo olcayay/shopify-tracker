@@ -12,6 +12,7 @@ import {
   sqlArray,
 } from "@appranks/db";
 import { cacheGet } from "../utils/cache.js";
+import { getCategoryTotalsForPlatform } from "../utils/category-totals.js";
 import { PLATFORMS, PLATFORM_IDS, isPlatformId, computeAudit } from "@appranks/shared";
 import { filterGloballyVisiblePlatforms } from "../utils/platform-visibility.js";
 
@@ -20,49 +21,36 @@ const PUBLIC_CACHE_TTL = 3600; // 1 hour
 export const publicRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
 
-  /** Latest category ranking per (app_id, category_slug) + per-category totals.
-   *  Shared between /public/developers/:platform/:slug (PLA-1047) and any
-   *  future public endpoint that needs the same shape. */
+  /** Latest category ranking per (app_id, category_slug) + per-platform totals
+   *  from the cached helper (PLA-1063). Mirrors the developer-route helper. */
   async function fetchCategoryRankingsForAppsPublic(
     appIds: number[],
   ): Promise<Map<number, { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }[]>> {
     if (appIds.length === 0) return new Map();
     const rows = (await db.execute(sql`
-      WITH latest_app_cat AS (
-        SELECT DISTINCT ON (r.app_id, r.category_slug)
-          r.app_id,
-          r.category_slug,
-          r.position,
-          a.platform
-        FROM ${appCategoryRankings} r
-        JOIN ${apps} a ON a.id = r.app_id
-        WHERE r.app_id = ANY(${sqlArray(appIds)})
-        ORDER BY r.app_id, r.category_slug, r.scraped_at DESC
-      ),
-      cat_totals AS (
-        SELECT r.category_slug, a.platform, COUNT(DISTINCT r.app_id)::int AS total_apps
-        FROM ${appCategoryRankings} r
-        JOIN ${apps} a ON a.id = r.app_id
-        GROUP BY r.category_slug, a.platform
-      )
-      SELECT
-        l.app_id,
-        l.category_slug,
-        l.position,
-        l.platform,
-        COALESCE(t.total_apps, 0) AS total_apps,
+      SELECT DISTINCT ON (r.app_id, r.category_slug)
+        r.app_id,
+        r.category_slug,
+        r.position,
+        a.platform,
         c.title AS category_title
-      FROM latest_app_cat l
-      LEFT JOIN cat_totals t
-        ON t.category_slug = l.category_slug AND t.platform = l.platform
+      FROM ${appCategoryRankings} r
+      JOIN ${apps} a ON a.id = r.app_id
       LEFT JOIN ${categories} c
-        ON c.platform = l.platform AND c.slug = l.category_slug
-      ORDER BY l.app_id, l.position ASC
+        ON c.platform = a.platform AND c.slug = r.category_slug
+      WHERE r.app_id = ANY(${sqlArray(appIds)})
+      ORDER BY r.app_id, r.category_slug, r.scraped_at DESC
     `)) as any;
     const data: any[] = rows.rows ?? rows;
+    const platforms = [...new Set(data.map((r) => r.platform).filter(Boolean))] as string[];
+    const totalsByPlatform = new Map<string, Record<string, number>>();
+    await Promise.all(platforms.map(async (p) => {
+      totalsByPlatform.set(p, await getCategoryTotalsForPlatform(db, p));
+    }));
     const out = new Map<number, { categorySlug: string; categoryName: string; position: number; totalApps: number; percentile: number }[]>();
     for (const r of data) {
-      const total = Number(r.total_apps) || 0;
+      const totals = totalsByPlatform.get(r.platform) ?? {};
+      const total = totals[r.category_slug] ?? 0;
       const position = Number(r.position) || 0;
       const percentile = total > 0 ? Math.ceil((position / total) * 100) : 0;
       const entry = {
@@ -76,6 +64,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       if (list) list.push(entry);
       else out.set(r.app_id, [entry]);
     }
+    for (const list of out.values()) list.sort((a, b) => a.position - b.position);
     return out;
   }
 
