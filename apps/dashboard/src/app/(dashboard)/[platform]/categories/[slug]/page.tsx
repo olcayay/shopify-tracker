@@ -36,23 +36,44 @@ export default async function CategoryDetailPage({
   let featuredData: any;
   let categoryAdData: any;
   let categoryScoresData: any;
+  let categoryFetchError: "not_found" | "transient" | null = null;
 
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const showAds = await shouldShowAds(caps);
 
+  // Tag each Phase 1 promise with a timer so slow calls are identifiable in prod logs.
+  const timed = <T,>(label: string, p: Promise<T>): Promise<T> => {
+    const start = Date.now();
+    return p
+      .then((v) => {
+        const ms = Date.now() - start;
+        if (ms > 1500) console.warn(`[category/${slug}] slow ${label}: ${ms}ms`);
+        return v;
+      })
+      .catch((err) => {
+        console.warn(`[category/${slug}] failed ${label} in ${Date.now() - start}ms: ${err?.message ?? err}`);
+        throw err;
+      });
+  };
+
   try {
     // Flatten waterfall: fetch slug-only dependencies in Phase 1
     [category, history, competitors, trackedApps, starredCategories, featuredData, categoryAdData, categoryScoresData] = await Promise.all([
-      getCategory(slug, platform as PlatformId),
-      getCategoryHistory(slug, 10, platform as PlatformId),
-      getAccountCompetitors(platform as PlatformId).catch(() => []),
-      getAccountTrackedApps(platform as PlatformId).catch(() => []),
-      getAccountStarredCategories(platform as PlatformId).catch(() => []),
-      getFeaturedApps(30, "category", slug, undefined, platform as PlatformId).catch(() => ({ sightings: [], trackedSlugs: [], competitorSlugs: [] })),
-      showAds ? getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })) : Promise.resolve({ adSightings: [] }),
-      getCategoryScores(slug, 50, platform as PlatformId).catch(() => ({ scores: [], computedAt: null })),
+      timed("getCategory", getCategory(slug, platform as PlatformId)),
+      timed("getCategoryHistory", getCategoryHistory(slug, 10, platform as PlatformId)).catch(() => ({ snapshots: [], total: 0 })),
+      timed("getAccountCompetitors", getAccountCompetitors(platform as PlatformId)).catch(() => []),
+      timed("getAccountTrackedApps", getAccountTrackedApps(platform as PlatformId)).catch(() => []),
+      timed("getAccountStarredCategories", getAccountStarredCategories(platform as PlatformId)).catch(() => []),
+      timed("getFeaturedApps", getFeaturedApps(30, "category", slug, undefined, platform as PlatformId)).catch(() => ({ sightings: [], trackedSlugs: [], competitorSlugs: [] })),
+      showAds ? timed("getCategoryAds", getCategoryAds(slug, 30, platform as PlatformId)).catch(() => ({ adSightings: [] })) : Promise.resolve({ adSightings: [] }),
+      timed("getCategoryScores", getCategoryScores(slug, 50, platform as PlatformId)).catch(() => ({ scores: [], computedAt: null })),
     ]);
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message.toLowerCase() : "";
+    // 404 from API surfaces as "API error: 404" or an explicit "not found" body. Anything
+    // else (network error, 5xx, timeout) is transient and should tell the user so —
+    // otherwise a flaky backend masquerades as "Category not indexed yet".
+    categoryFetchError = msg.includes("404") || msg.includes("not found") ? "not_found" : "transient";
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between">
@@ -77,10 +98,21 @@ export default async function CategoryDetailPage({
           </div>
         </div>
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <h2 className="text-lg font-semibold mb-2">Category not indexed yet</h2>
-          <p className="text-muted-foreground mb-4">
-            This category hasn&apos;t been discovered by the crawler yet. It may appear after the next scrape cycle.
-          </p>
+          {categoryFetchError === "transient" ? (
+            <>
+              <h2 className="text-lg font-semibold mb-2">Temporarily unavailable</h2>
+              <p className="text-muted-foreground mb-4">
+                We couldn&apos;t load this category right now. The backend returned an error or timed out — try refreshing in a moment.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold mb-2">Category not indexed yet</h2>
+              <p className="text-muted-foreground mb-4">
+                This category hasn&apos;t been discovered by the crawler yet. It may appear after the next scrape cycle.
+              </p>
+            </>
+          )}
           <Link
             href={`/${platform}/categories`}
             className="text-sm text-primary hover:underline"

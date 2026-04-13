@@ -272,6 +272,38 @@ describe("CategoryDetailPage", () => {
     expect(screen.getByText("History (2 snapshots)")).toBeInTheDocument();
   });
 
+  it("shows 'Temporarily unavailable' when getCategory throws a transient error", async () => {
+    mockGetCategory.mockRejectedValue(
+      new Error("Service temporarily unavailable. Please try again in a moment.")
+    );
+    mockGetCategoryHistory.mockRejectedValue(new Error("Service temporarily unavailable"));
+    mockGetAccountCompetitors.mockResolvedValue([]);
+    mockGetAccountTrackedApps.mockResolvedValue([]);
+    mockGetAccountStarredCategories.mockResolvedValue([]);
+
+    const page = await CategoryDetailPage({
+      params: Promise.resolve({ platform: "salesforce", slug: "dataManagement" }),
+    });
+    render(page);
+    expect(screen.getByText("Temporarily unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("Category not indexed yet")).not.toBeInTheDocument();
+  });
+
+  it("shows 'Category not indexed yet' when getCategory 404s", async () => {
+    mockGetCategory.mockRejectedValue(new Error("API error: 404"));
+    mockGetCategoryHistory.mockRejectedValue(new Error("Not found"));
+    mockGetAccountCompetitors.mockResolvedValue([]);
+    mockGetAccountTrackedApps.mockResolvedValue([]);
+    mockGetAccountStarredCategories.mockResolvedValue([]);
+
+    const page = await CategoryDetailPage({
+      params: Promise.resolve({ platform: "shopify", slug: "nope" }),
+    });
+    render(page);
+    expect(screen.getByText("Category not indexed yet")).toBeInTheDocument();
+    expect(screen.queryByText("Temporarily unavailable")).not.toBeInTheDocument();
+  });
+
   it("shows 'Browse all categories' link when category not found", async () => {
     mockGetCategory.mockRejectedValue(new Error("Not found"));
     mockGetCategoryHistory.mockRejectedValue(new Error("Not found"));

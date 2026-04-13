@@ -1217,3 +1217,5 @@ distinguish scraped vs skipped_fresh in app_details metadata (PLA-1062) ✅
 items_skipped_nodrift counter for bulk_via_category path (PLA-1062 follow-up) ✅
 
 cache /api/account/platform-stats + optional ?platform= filter (PLA-1075) ✅
+
+distinguish transient backend error from "not indexed" on category detail page + per-call timings (PLA-1073) ✅
