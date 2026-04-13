@@ -142,6 +142,8 @@ function PlatformDevelopersContent() {
   const [data, setData] = useState<DeveloperResponse | null>(null);
   const [trackedDevs, setTrackedDevs] = useState<TrackedDeveloper[]>([]);
   const [competitorDevs, setCompetitorDevs] = useState<CompetitorDeveloper[]>([]);
+  const [trackedLoading, setTrackedLoading] = useState(true);
+  const [competitorLoading, setCompetitorLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -173,28 +175,39 @@ function PlatformDevelopersContent() {
     if (!developerName) loadData();
   }, [loadData, developerName]);
 
-  // Fetch tracked + competitor developers for this platform
+  // Fetch tracked + competitor developers for this platform.
+  // Separate loading flags per section (PLA-1079): without them, the empty-state
+  // UI flashed on every page load before the fetch resolved, misleading users
+  // with real data. Flags reset per-response in finally branches so a failure
+  // resolves to the empty state rather than a permanent shimmer.
   useEffect(() => {
     if (developerName) return;
+    setTrackedLoading(true);
+    setCompetitorLoading(true);
     (async () => {
       try {
-        const [trackedRes, competitorRes] = await Promise.all([
-          fetchWithAuth("/api/developers/tracked"),
-          fetchWithAuth(`/api/developers/competitors?platform=${platform}`),
-        ]);
+        const trackedRes = await fetchWithAuth("/api/developers/tracked");
         if (trackedRes.ok) {
           const body = await trackedRes.json();
-          // Filter to only devs with apps on this platform
           const filtered = (body.developers ?? []).filter((d: TrackedDeveloper) =>
             d.platforms.includes(String(platform))
           );
           setTrackedDevs(filtered);
         }
+      } catch { /* ignore */ } finally {
+        setTrackedLoading(false);
+      }
+    })();
+    (async () => {
+      try {
+        const competitorRes = await fetchWithAuth(`/api/developers/competitors?platform=${platform}`);
         if (competitorRes.ok) {
           const body = await competitorRes.json();
           setCompetitorDevs(body.developers ?? []);
         }
-      } catch { /* ignore */ }
+      } catch { /* ignore */ } finally {
+        setCompetitorLoading(false);
+      }
     })();
   }, [fetchWithAuth, platform, developerName]);
 
@@ -338,7 +351,9 @@ function PlatformDevelopersContent() {
           <h2 className="font-semibold text-sm">My Developers</h2>
           <span className="text-xs text-muted-foreground">Developers of your tracked apps</span>
         </div>
-        {trackedDevs.length === 0 ? (
+        {trackedLoading ? (
+          <TableSkeleton rows={3} cols={4} />
+        ) : trackedDevs.length === 0 ? (
           <DeveloperSectionEmpty
             icon={Users}
             title={`No tracked developers on this platform`}
@@ -406,7 +421,9 @@ function PlatformDevelopersContent() {
           <h2 className="font-semibold text-sm">Competitor Developers</h2>
           <span className="text-xs text-muted-foreground">Developers behind your competitors&apos; apps</span>
         </div>
-        {competitorDevs.length === 0 ? (
+        {competitorLoading ? (
+          <TableSkeleton rows={3} cols={4} />
+        ) : competitorDevs.length === 0 ? (
           <DeveloperSectionEmpty
             icon={Swords}
             title={`No competitor developers on this platform`}

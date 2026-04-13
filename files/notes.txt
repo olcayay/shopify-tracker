@@ -6213,3 +6213,9 @@ PLA-1080 — App Count always 0 in My/Competitor Developers sections
 - Output row set is tiny (tens of tracked/competitor developers per account), so a per-row subquery is cheaper than a full CTE over all developers.
 - Tests: 2 new regression tests in `developers.test.ts` + a static guard that fails if `g.total_apps` ever reappears in the routes file. 34 total pass.
 - Follow-up candidate (not done here): drop `global_developers.total_apps` (and the other dormant enrichment columns `total_reviews`, `avg_rating`, `platforms_active`) in a standalone migration once confirmed unused.
+
+PLA-1079 — Loading shimmer on /[platform]/developers
+- Problem: `trackedDevs` and `competitorDevs` initialize to `[]` and the UI gated empty-state purely on `length === 0`, so the "No tracked developers" / "No competitor developers" CTAs flashed for a few hundred ms on every page load before the fetches resolved.
+- Fix: added dedicated `trackedLoading` / `competitorLoading` flags (both default true). Split the single combined fetch useEffect into two independent IIFEs so each section clears its own flag in its own `finally`. Each section renders `TableSkeleton rows=3 cols=4` while pending, falls back to the existing empty CTA or populated table after resolution.
+- Edge cases covered: fetch failure clears the flag (empty state shows instead of permanent shimmer); `?name=X` redirect path is untouched (whole page returns `null` before render).
+- Tests: new `apps/dashboard/src/__tests__/app/platform-developers-loading.test.tsx` with 4 cases — pending → skeleton (CTAs absent), resolved-empty → empty CTA, resolved-with-data → populated row, fetch-failure → empty state recovery. Full dashboard suite: 222 files / 2302 tests pass.

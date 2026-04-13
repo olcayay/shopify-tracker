@@ -1225,3 +1225,5 @@ activity log: show app name (truncated to 20 chars) instead of slug in Details c
 enrich developers list with avgReviewCount/avgRating/firstLaunch/lastLaunch + sortable columns (PLA-1074) ✅
 
 fix App Count always 0 in My/Competitor Developers sections — total_apps now computed on the fly via correlated subquery (PLA-1080) ✅
+
+show loading shimmer (not empty-state flash) while My/Competitor Developers sections load on /[platform]/developers (PLA-1079) ✅
