@@ -6019,3 +6019,9 @@ PLA-179: Global API rate limiting middleware
 - `fetchAppPage` dispatches HTTP → browser → search-API (or reversed if mode=browser). Both primary paths share the `normalizeListing` helper so no mapping drift.
 - Concurrency raised from 3 → 12; HttpClient adaptive backoff still applies.
 - Expected prod duration: 5709 apps @ ~300 ms with concurrency 12 ≈ **2–5 minutes** (vs ~6 h browser baseline observed on job 32 / 2026-04-13).
+
+## Scrape run identifier display (PLA-1061, 2026-04-13)
+- BullMQ job IDs recycle after Redis eviction / removeOnComplete / worker restart. Two scrape_runs rows can share the same `jobId` even though their UUID `id` is unique.
+- `run-history-table.tsx`: column header "Job ID" → "Run". Cell now renders `run.id.slice(0,8)` (short UUID) as primary, with `bullmq:{jobId}` below in muted small text. Header carries a tooltip explaining the recycling behaviour.
+- React keys were already UUID, so DOM was correct; this fix makes the user-visible identifier unambiguous.
+- Investigation note for identical `items_scraped` on jobs 32/33 (1998/1998): root cause is missing per-platform lock on the interactive worker (`worker.ts:105` — intWorker has no `redisLock.acquireWithWait`). Two concurrent interactive workers can run Salesforce `app_details` at the same time and advance in lockstep on the same candidate list. Handed off to PLA-1060.

@@ -211,7 +211,9 @@ export function RunHistoryTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-8" />
-              <TableHead>Job ID</TableHead>
+              <TableHead title="Canonical scrape_runs.id (UUID); BullMQ job id shown below recycles after Redis eviction or restart.">
+                Run
+              </TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Platform</TableHead>
               <TableHead>Status</TableHead>
@@ -244,7 +246,10 @@ export function RunHistoryTable({
                       ))}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {run.jobId || <span className="text-muted-foreground">{"\u2014"}</span>}
+                    <div title={run.id}>{String(run.id).slice(0, 8)}</div>
+                    {run.jobId ? (
+                      <div className="text-[10px] text-muted-foreground">bullmq:{run.jobId}</div>
+                    ) : null}
                   </TableCell>
                   <TableCell className="font-mono text-sm">
                     {run.scraperType}
