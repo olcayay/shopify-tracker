@@ -1,3 +1,35 @@
+Salesforce Developer Preservation (PLA-1070, 2026-04-13)
+====================================
+Why: After the HTTP-primary dispatch (PLA-1054/1055/1056), some Salesforce
+apps showed no developer info on the dashboard. Cause was twofold: (1) the
+HTTP `partners/experience/listings/{id}` payload occasionally lacks a
+populated `publisher` and the parser silently returned `developer: null`,
+(2) the snapshot insert wrote that null over the previous correct value.
+Search-API fallback amplifies (1) since it only ever has `card.publisher`.
+
+Fix:
+- apps/scraper/src/platforms/salesforce/parsers/app-parser.ts:
+  - normalizeListing now extracts `publisherName` first, logs a warning
+    when it's missing/empty (along with hasPublisherObject + publisher_id
+    so the lossy paths are observable), and only constructs the developer
+    object when there's a real name. Empty-name objects → `developer: null`.
+- apps/scraper/src/scrapers/app-details-scraper.ts:
+  - PrevSnapshotData and the prefetch SQL + per-app fallback select now
+    carry `developer` from the previous snapshot.
+  - New exported pure helper `resolveDeveloperForSnapshot(incoming, previous)`:
+    keeps `incoming` when its name is non-empty; otherwise falls back to
+    `previous`. Also coerces the result to AppDeveloper-shape (name, url
+    required strings) to match the schema's NOT NULL semantics.
+  - Snapshot insert uses the resolver and logs a warn when it preserved
+    the previous value.
+
+Tests (10 new):
+- app-parser-json: 4 cases (publisher absent / empty object / string /
+  empty-name object) — all return correct developer.
+- app-details-scraper: 6 cases for `resolveDeveloperForSnapshot` covering
+  populated-incoming, null-incoming, empty-name, whitespace-only,
+  both-empty, previous-without-name.
+
 Card-Refresh False Drift Fix (PLA-1072, 2026-04-13)
 ====================================
 Why: /system-admin/app-updates was polluted by `app_field_changes` rows where

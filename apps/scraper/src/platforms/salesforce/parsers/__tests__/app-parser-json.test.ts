@@ -95,6 +95,33 @@ describe("parseListingJson (partners/experience response)", () => {
     expect(out.platformData).toEqual({});
   });
 
+  // PLA-1070: hardening against publisher shape drift on the HTTP path.
+  describe("publisher missing/empty (PLA-1070)", () => {
+    it("returns developer null when publisher is absent", () => {
+      const stripped = { ...listingJson, publisher: undefined };
+      const out = parseListingJson(stripped, SLUG);
+      expect(out.developer).toBeNull();
+    });
+
+    it("returns developer null when publisher is an empty object", () => {
+      const stripped = { ...listingJson, publisher: {} };
+      const out = parseListingJson(stripped, SLUG);
+      expect(out.developer).toBeNull();
+    });
+
+    it("returns developer name when publisher is a string", () => {
+      const stripped = { ...listingJson, publisher: "Acme Corp" };
+      const out = parseListingJson(stripped, SLUG);
+      expect(out.developer?.name).toBe("Acme Corp");
+    });
+
+    it("returns developer null when publisher object has empty name", () => {
+      const stripped = { ...listingJson, publisher: { name: "", website: "x" } };
+      const out = parseListingJson(stripped, SLUG);
+      expect(out.developer).toBeNull();
+    });
+  });
+
   it("matches parseSalesforceAppPage output when given the same listing via HTML", () => {
     const htmlEmbed = `<html><body><script>window.stores = ${JSON.stringify({ LISTING: { listing: listingJson } })};</script></body></html>`;
     const fromJson = parseListingJson(listingJson, SLUG);

@@ -14,6 +14,23 @@ export function is404Error(err: unknown): boolean {
   return /\bHTTP 404\b/.test(msg);
 }
 
+/**
+ * PLA-1070: when the current scrape returns no developer name (parser drift,
+ * Salesforce search-API fallback) but the previous snapshot had one, keep the
+ * previous value so attribution doesn't get silently wiped on every refresh
+ * that hits the lossy fallback path. A real publisher removal should arrive
+ * via an explicit signal — for now, missing != removed.
+ */
+export function resolveDeveloperForSnapshot(
+  incoming: { name?: string; url?: string } | null | undefined,
+  previous: { name?: string; url?: string } | null | undefined,
+): { name?: string; url?: string } | null {
+  const incomingName = incoming?.name?.trim();
+  if (incomingName) return incoming as { name?: string; url?: string };
+  if (previous?.name) return previous;
+  return (incoming as { name?: string; url?: string } | null) ?? null;
+}
+
 /** Normalize a pricing plan object to a canonical key order for stable JSON comparison */
 export function normalizePlan(p: any) {
   return {
@@ -44,6 +61,11 @@ interface PrevSnapshotData {
   seoTitle: string;
   seoMetaDescription: string;
   pricingPlans: any[];
+  // PLA-1070: read previous developer so the snapshot insert can preserve it
+  // when the current scrape returns null/empty (parser drift, search-API
+  // fallback). Without this we silently wipe attribution on every Salesforce
+  // refresh that hits the lossy fallback path.
+  developer: { name?: string; url?: string } | null;
 }
 
 /** Pre-fetched data maps to avoid per-app DB queries in batch scraping */
@@ -209,8 +231,9 @@ export class AppDetailsScraper {
           seo_title: string;
           seo_meta_description: string;
           pricing_plans: any[];
+          developer: { name?: string; url?: string } | null;
         }>(sql`
-          SELECT DISTINCT ON (app_id) app_id, app_introduction, app_details, features, seo_title, seo_meta_description, pricing_plans
+          SELECT DISTINCT ON (app_id) app_id, app_introduction, app_details, features, seo_title, seo_meta_description, pricing_plans, developer
           FROM app_snapshots
           WHERE app_id IN (${sql.join(chunk.map((id) => sql`${id}`), sql`, `)})
           ORDER BY app_id, scraped_at DESC
@@ -223,6 +246,7 @@ export class AppDetailsScraper {
             seoTitle: snap.seo_title,
             seoMetaDescription: snap.seo_meta_description,
             pricingPlans: snap.pricing_plans,
+            developer: snap.developer,
           });
         }
       }
@@ -1306,6 +1330,7 @@ export class AppDetailsScraper {
                 seoTitle: appSnapshots.seoTitle,
                 seoMetaDescription: appSnapshots.seoMetaDescription,
                 pricingPlans: appSnapshots.pricingPlans,
+                developer: appSnapshots.developer,
               })
               .from(appSnapshots)
               .where(eq(appSnapshots.appId, existingApp.id))
@@ -1516,6 +1541,24 @@ export class AppDetailsScraper {
             .filter((url: string | null): url is string => typeof url === "string" && url.startsWith("http"))
         : [];
 
+      // PLA-1070: see resolveDeveloperForSnapshot() for the rule.
+      const resolvedDeveloper = resolveDeveloperForSnapshot(
+        details.developer as { name?: string; url?: string } | null | undefined,
+        prevSnapshot?.developer ?? null,
+      );
+      const developerForSnapshot = resolvedDeveloper
+        ? ({
+            name: resolvedDeveloper.name ?? "",
+            url: resolvedDeveloper.url ?? "",
+          } as import("@appranks/shared").AppDeveloper)
+        : null;
+      if (!details.developer?.name?.trim() && prevSnapshot?.developer?.name) {
+        log.warn("preserving previous developer (incoming was empty)", {
+          slug,
+          previousDeveloper: prevSnapshot.developer.name,
+        });
+      }
+
       // Insert snapshot
       await this.db.insert(appSnapshots).values({
         appId,
@@ -1529,7 +1572,7 @@ export class AppDetailsScraper {
         pricing: details.pricing,
         averageRating: validRating?.toString() ?? null,
         ratingCount: validRatingCount,
-        developer: details.developer,
+        developer: developerForSnapshot,
         demoStoreUrl: details.demo_store_url,
         languages: details.languages,
         integrations: details.integrations,

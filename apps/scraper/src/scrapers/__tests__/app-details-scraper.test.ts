@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizePlan, is404Error } from "../app-details-scraper.js";
+import { normalizePlan, is404Error, resolveDeveloperForSnapshot } from "../app-details-scraper.js";
 import { AppNotFoundError } from "../../utils/app-not-found-error.js";
 
 /**
@@ -682,5 +682,43 @@ describe("is404Error", () => {
     expect(is404Error(undefined)).toBe(false);
     expect(is404Error("HTTP 404: Not Found")).toBe(true);
     expect(is404Error("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveDeveloperForSnapshot — PLA-1070
+// ---------------------------------------------------------------------------
+describe("resolveDeveloperForSnapshot (PLA-1070)", () => {
+  it("returns the incoming developer when name is populated", () => {
+    const result = resolveDeveloperForSnapshot(
+      { name: "Acme", url: "https://acme.example" },
+      { name: "Old Acme", url: "https://old.example" },
+    );
+    expect(result).toEqual({ name: "Acme", url: "https://acme.example" });
+  });
+
+  it("preserves previous developer when incoming is null", () => {
+    const result = resolveDeveloperForSnapshot(null, { name: "Acme" });
+    expect(result).toEqual({ name: "Acme" });
+  });
+
+  it("preserves previous developer when incoming has empty name", () => {
+    const result = resolveDeveloperForSnapshot({ name: "", url: "" }, { name: "Acme" });
+    expect(result).toEqual({ name: "Acme" });
+  });
+
+  it("preserves previous developer when incoming name is whitespace only", () => {
+    const result = resolveDeveloperForSnapshot({ name: "   " }, { name: "Acme" });
+    expect(result).toEqual({ name: "Acme" });
+  });
+
+  it("returns null when both incoming and previous are empty (no historical data)", () => {
+    expect(resolveDeveloperForSnapshot(null, null)).toBeNull();
+    expect(resolveDeveloperForSnapshot({ name: "" }, null)).toEqual({ name: "" });
+  });
+
+  it("returns incoming when previous has no usable name", () => {
+    const result = resolveDeveloperForSnapshot({ name: "Acme" }, { name: "" });
+    expect(result).toEqual({ name: "Acme" });
   });
 });

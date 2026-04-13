@@ -5,6 +5,9 @@ Card-Refresh False Drift Fix (2026-04-13)
   PLA-1072 Part A: guard appIntroduction/developer + preserve detail-only fields ✅
   PLA-1072 Part B: deferred — label backfill + bulk-dismiss UI (follow-up)
 
+Salesforce Developer Preservation (2026-04-13)
+  PLA-1070: parser warning on missing publisher + non-overwrite snapshot rule ✅
+
 Scrape All Apps from System Admin (2026-04-12)
   - Add ScraperJobOptions.scope ("tracked" | "all") ✅
   - Add JOB_TIMEOUT_APP_DETAILS_ALL_MS (6h) ✅

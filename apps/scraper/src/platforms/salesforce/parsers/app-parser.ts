@@ -45,6 +45,21 @@ function normalizeListing(listing: Record<string, any>, slug: string): Normalize
   const pricing = listing.pricing || {};
   const publisher = listing.publisher;
 
+  // PLA-1070: log when publisher is missing/empty so the lossy paths are
+  // observable instead of producing silent `developer: null`. The upsert
+  // layer (app-details-scraper) preserves the previous developer when the
+  // current scrape returns null, so this is a signal — not a fix in itself.
+  const publisherName = typeof publisher === "string"
+    ? publisher
+    : (publisher && typeof publisher === "object" ? (publisher.name as string | undefined) : undefined);
+  if (!publisherName) {
+    log.warn("listing publisher missing or empty", {
+      slug,
+      hasPublisherObject: typeof publisher === "object" && publisher !== null,
+      publisherId: listing.publisher_id ?? null,
+    });
+  }
+
   return {
     name: listing.title || listing.name || slug,
     slug,
@@ -53,9 +68,9 @@ function normalizeListing(listing: Record<string, any>, slug: string): Normalize
     pricingHint: pricing?.price_model_type || null,
     pricingModel: normalizePricingModel(pricing?.price_model_type || null),
     iconUrl: extractLogoUrl(listing),
-    developer: publisher
+    developer: publisherName
       ? {
-          name: typeof publisher === "string" ? publisher : publisher.name || "",
+          name: publisherName,
           url: undefined,
           website: typeof publisher === "object" ? publisher.website || undefined : undefined,
         }
