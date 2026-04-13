@@ -128,6 +128,11 @@ export interface PlatformConstants {
    *  when no tracked field changed. Only used when refreshSnapshotFromCategoryCard
    *  is true. Default: 20 hours. */
   refreshSnapshotMaxAgeMs?: number;
+  /** Primary method for per-app detail fetch. "http" hits a JSON endpoint;
+   *  "browser" renders the SPA via Playwright. The other method is the
+   *  automatic fallback. Default: "browser" (every platform starts with the
+   *  safe path; Salesforce flips to "http" via its constants). */
+  appDetailFetchMode?: "http" | "browser";
 }
 
 // --- Scoring config ---

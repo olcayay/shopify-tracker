@@ -45,4 +45,10 @@ export const salesforceUrls = {
   /** Reviews API (10 per page, 1-based) */
   reviewApi: (listingId: string, page = 1) =>
     `${API_BASE.replace('/recommendations/v3/listings', '/services/apexrest')}/reviews?listingId=${listingId}&pageNumber=${page}`,
+
+  /** App detail via HTTP — partners/experience endpoint returns full listing JSON
+   *  (fullDescription, plugins, publisher, solution, pricing plans, extensions).
+   *  Used as the primary fetch when SALESFORCE_CONSTANTS.appDetailFetchMode === "http". */
+  listingDetailApi: (listingId: string) =>
+    `https://api.appexchange.salesforce.com/partners/experience/listings/${listingId}`,
 } as const;

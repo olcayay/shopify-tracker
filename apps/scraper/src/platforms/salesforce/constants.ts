@@ -35,6 +35,9 @@ export const SALESFORCE_CONSTANTS: PlatformConstants = {
   // so we can refresh snapshots daily for the whole catalog at zero cost.
   refreshSnapshotFromCategoryCard: true,
   refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
+  // Per-app detail fetch: HTTP primary (partners/experience/listings endpoint),
+  // browser as automatic fallback. Flip to "browser" here to revert.
+  appDetailFetchMode: "http",
 };
 
 /** Headers required for Salesforce AppExchange API to return correct search rankings */

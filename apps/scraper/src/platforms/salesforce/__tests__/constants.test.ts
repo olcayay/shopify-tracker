@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SALESFORCE_CONSTANTS, SALESFORCE_CATEGORY_CHILDREN } from "../constants.js";
+import { salesforceUrls } from "../urls.js";
 
 describe("SALESFORCE_CONSTANTS", () => {
   it("lists all 10 root categories as seeds", () => {
@@ -27,5 +28,21 @@ describe("SALESFORCE_CONSTANTS", () => {
       "publisher",
       "pricing",
     ]);
+  });
+
+  it("uses HTTP as primary app-detail fetch mode (PLA-1054)", () => {
+    expect(SALESFORCE_CONSTANTS.appDetailFetchMode).toBe("http");
+  });
+});
+
+describe("salesforceUrls.listingDetailApi", () => {
+  it("builds the partners/experience detail endpoint", () => {
+    expect(salesforceUrls.listingDetailApi("a0N300000024XvyEAE")).toBe(
+      "https://api.appexchange.salesforce.com/partners/experience/listings/a0N300000024XvyEAE",
+    );
+  });
+
+  it("interpolates any listing id verbatim", () => {
+    expect(salesforceUrls.listingDetailApi("abc")).toMatch(/\/listings\/abc$/);
   });
 });
