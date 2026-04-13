@@ -5991,3 +5991,10 @@ PLA-179: Global API rate limiting middleware
 - `process-job.ts` — when scope=all, if the platform module's `refreshSnapshotFromCategoryCard === true`, route to `scrapeAllViaCategoryApi` instead of `scrapeAll`. Shopify path unchanged (no flag → stays on per-app HTTP loop, already fast).
 - Result: System-admin "Scrape ALL" button now works identically for Shopify and Salesforce without any UI change. Under the hood Salesforce uses the bulk HTTP path; Shopify uses its per-app HTTP path. Both complete well under the timeout.
 - Email snapshot tests (6) regenerated — they were failing because stored snapshots contained "Apr 12" and the test clock crossed midnight UTC; unrelated to this change.
+
+## PLA-1045: Rankings chart tooltip redesign (2026-04-12 late)
+- New `apps/dashboard/src/components/ranking-chart-tooltip.tsx`. Replaces the stock recharts Tooltip on `RankingChart`.
+- Features: sort by position asc, tier groups (Top 3 / Top 10 / Top 50 / Beyond 50 / Dropped), day-over-day change indicator (▲+N / ▼−N / new / lost / —), collapsible groups (Beyond 50 and Dropped collapsed by default), sticky date + group headers, 320px max width with max-height 70vh scroll. Flat mode for ≤5 keywords skips group headers.
+- Pure helpers `tierFor`, `changeFor`, `buildTooltipGroups` exported for tests. 15 unit tests in `ranking-chart-tooltip.test.tsx` cover tier boundaries, change semantics, hidden-label filtering, tie-breaking, collapse defaults, and expand-on-click.
+- Full dashboard suite 217 files / 2277 tests green.
+- Reused existing `labels`, `colorMap`, `pivoted`, and `hidden` state from `ranking-chart.tsx` — no new data pipeline.

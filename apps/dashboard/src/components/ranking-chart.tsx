@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { RankingChartTooltip } from "./ranking-chart-tooltip";
 
 const COLORS = [
   "var(--chart-1)",
@@ -112,12 +113,16 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
           <XAxis dataKey="date" fontSize={12} />
           <YAxis reversed domain={[1, "auto"]} fontSize={12} />
           <Tooltip
-            contentStyle={{
-              backgroundColor: "var(--card)",
-              borderColor: "var(--border)",
-              color: "var(--foreground)",
-              borderRadius: "0.5rem",
-            }}
+            wrapperStyle={{ outline: "none", pointerEvents: "auto" }}
+            allowEscapeViewBox={{ x: true, y: true }}
+            content={
+              <RankingChartTooltip
+                pivotedData={pivoted}
+                labels={labels}
+                colorMap={colorMap}
+                hiddenLabels={hidden}
+              />
+            }
           />
           {labels.map((label) => (
             <Line
