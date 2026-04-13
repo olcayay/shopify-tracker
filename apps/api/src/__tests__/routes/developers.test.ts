@@ -320,6 +320,41 @@ describe("Developer routes", () => {
       expect(body.developers[0].totalApps).toBe(42);
       await trackedApp.close();
     });
+
+    // PLA-1080 regression: total_apps must be computed on the fly, never
+    // read from the dormant global_developers.total_apps column. The SQL
+    // must expose total_apps as a projected alias (via subquery), so if the
+    // row includes that alias the mapping returns it correctly.
+    it("returns non-zero totalApps when the computed column is present (PLA-1080 regression)", async () => {
+      const trackedApp = await buildTestApp({
+        routes: developerRoutes,
+        prefix: "/api/developers",
+        db: {
+          executeResult: [
+            {
+              id: 1,
+              slug: "acme",
+              name: "Acme",
+              total_apps: 5,
+              platform_count: 2,
+              platforms: ["shopify", "atlassian"],
+              is_starred: false,
+              tracked_apps: [{ slug: "a1", name: "A1", platform: "shopify", icon_url: null }],
+            },
+          ],
+        },
+      });
+      const res = await trackedApp.inject({
+        method: "GET",
+        url: "/api/developers/tracked",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.developers[0].totalApps).toBe(5);
+      expect(body.developers[0].totalApps).not.toBe(0);
+      await trackedApp.close();
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -365,6 +400,52 @@ describe("Developer routes", () => {
       expect(body.developers).toHaveLength(1);
       expect(body.developers[0].totalApps).toBe(7);
       await compApp.close();
+    });
+
+    // PLA-1080 regression: total_apps must be computed on the fly.
+    it("returns non-zero totalApps when the computed column is present (PLA-1080 regression)", async () => {
+      const compApp = await buildTestApp({
+        routes: developerRoutes,
+        prefix: "/api/developers",
+        db: {
+          executeResult: [
+            {
+              id: 2,
+              slug: "rival",
+              name: "Rival Co",
+              total_apps: 3,
+              platform_count: 1,
+              platforms: ["shopify"],
+              is_starred: false,
+              competitor_apps: [{ slug: "c1", name: "C1", platform: "shopify", icon_url: null }],
+            },
+          ],
+        },
+      });
+      const res = await compApp.inject({
+        method: "GET",
+        url: "/api/developers/competitors",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.developers[0].totalApps).toBe(3);
+      expect(body.developers[0].totalApps).not.toBe(0);
+      await compApp.close();
+    });
+  });
+
+  // PLA-1080: the SQL for /tracked and /competitors must not reference
+  // the never-populated global_developers.total_apps column. The computed
+  // total_apps must be derived via subquery instead. A static check guards
+  // against reintroduction.
+  describe("PLA-1080 SQL guard — no reads from g.total_apps", () => {
+    it("developers.ts /tracked and /competitors endpoints do not read g.total_apps", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const routeFile = path.resolve(__dirname, "../../routes/developers.ts");
+      const src = fs.readFileSync(routeFile, "utf8");
+      expect(src).not.toMatch(/\bg\.total_apps\b/);
     });
   });
 

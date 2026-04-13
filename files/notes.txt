@@ -6206,3 +6206,10 @@ PLA-179: Global API rate limiting middleware
 - Tests:
   - `apps/api/src/__tests__/routes/developers.test.ts`: +4 cases (sort=avgRating, sort=avgReviews, sort=firstLaunch, sort=lastLaunch) and a `per-developer aggregate fields` block (2 cases: populated values round-trip correctly with `avgReviewCount`/`avgRating` parsed as numbers + dates as ISO; null aggregates surface as `null` not `0`). 29 total in the file, all green.
 - Not done: no dedicated backfill migration — `apps.launched_date`, `apps.rating_count`, `apps.average_rating` are already populated by each platform's scraper pipeline. If a given platform leaves them null (documented on a per-platform basis elsewhere), the aggregates naturally fall back to `—`. Also deferred: a materialized view / denormalized columns — not needed at current data volumes and `db-f1-micro` throughput; the CTE chain reuses the same lateral lookup that already backs the existing `appCount` column, so the marginal cost is one extra GROUP BY.
+
+PLA-1080 — App Count always 0 in My/Competitor Developers sections
+- Root cause: `global_developers.total_apps` column (added in 0101_developer_enrichment.sql) has zero writers — never populated. Both `/api/developers/tracked` and `/api/developers/competitors` were reading `g.total_apps`, hence App Count always displayed 0.
+- Fix (Option A from ticket): stop reading `g.total_apps`. Instead, project `total_apps` via a correlated subquery that counts distinct `apps.id` whose latest `app_snapshots.developer->>'name'` matches a `platform_developers` row for this developer. Matches the on-the-fly pattern already used by the main `/api/developers` listing.
+- Output row set is tiny (tens of tracked/competitor developers per account), so a per-row subquery is cheaper than a full CTE over all developers.
+- Tests: 2 new regression tests in `developers.test.ts` + a static guard that fails if `g.total_apps` ever reappears in the routes file. 34 total pass.
+- Follow-up candidate (not done here): drop `global_developers.total_apps` (and the other dormant enrichment columns `total_reviews`, `avg_rating`, `platforms_active`) in a standalone migration once confirmed unused.

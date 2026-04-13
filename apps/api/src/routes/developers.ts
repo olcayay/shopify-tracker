@@ -253,12 +253,27 @@ export async function developerRoutes(app: FastifyInstance) {
       trackedAppsPlatformFilterSql = sql`AND ta.platform = ANY(${sqlArray(enabledPlatforms)})`;
     }
 
+    // total_apps computed on the fly: global_developers.total_apps column is
+    // never populated by any write path (PLA-1080). Count distinct apps whose
+    // latest snapshot attributes them to this developer — matches the /api/developers
+    // main-listing pattern. Result set is tiny (user's tracked-developer set),
+    // so the correlated subquery is cheap.
     const rows: any[] = await db.execute(sql`
       SELECT
-        g.id, g.slug, g.name, g.total_apps,
+        g.id, g.slug, g.name,
         COUNT(DISTINCT pd.platform) AS platform_count,
         ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
         CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
+        (
+          SELECT COUNT(DISTINCT a2.id)
+          FROM apps a2
+          JOIN platform_developers pd2 ON pd2.platform = a2.platform AND pd2.global_developer_id = g.id
+          JOIN LATERAL (
+            SELECT s2.developer->>'name' AS dev_name
+            FROM app_snapshots s2 WHERE s2.app_id = a2.id
+            ORDER BY s2.scraped_at DESC LIMIT 1
+          ) ls2 ON ls2.dev_name = pd2.name
+        ) AS total_apps,
         (
           SELECT COALESCE(json_agg(json_build_object(
             'slug', ta.slug,
@@ -283,7 +298,7 @@ export async function developerRoutes(app: FastifyInstance) {
       LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
       WHERE s.developer->>'name' = pd.name ${platformFilterSql}
       GROUP BY g.id, asd.id
-      ORDER BY (asd.id IS NOT NULL) DESC, g.total_apps DESC, g.name ASC
+      ORDER BY (asd.id IS NOT NULL) DESC, total_apps DESC, g.name ASC
     `);
 
     return {
@@ -330,12 +345,23 @@ export async function developerRoutes(app: FastifyInstance) {
       compAppsPlatformFilterSql = sql`AND ca.platform = ${requestedPlatform}`;
     }
 
+    // total_apps computed on the fly — see PLA-1080. Same pattern as /tracked.
     const rows: any[] = await db.execute(sql`
       SELECT
-        g.id, g.slug, g.name, g.total_apps,
+        g.id, g.slug, g.name,
         COUNT(DISTINCT pd.platform) AS platform_count,
         ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
         CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
+        (
+          SELECT COUNT(DISTINCT a2.id)
+          FROM apps a2
+          JOIN platform_developers pd2 ON pd2.platform = a2.platform AND pd2.global_developer_id = g.id
+          JOIN LATERAL (
+            SELECT s2.developer->>'name' AS dev_name
+            FROM app_snapshots s2 WHERE s2.app_id = a2.id
+            ORDER BY s2.scraped_at DESC LIMIT 1
+          ) ls2 ON ls2.dev_name = pd2.name
+        ) AS total_apps,
         (
           SELECT COALESCE(json_agg(json_build_object(
             'slug', ca.slug,
@@ -360,7 +386,7 @@ export async function developerRoutes(app: FastifyInstance) {
       LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
       WHERE s.developer->>'name' = pd.name ${platformFilterSql}
       GROUP BY g.id, asd.id
-      ORDER BY (asd.id IS NOT NULL) DESC, g.total_apps DESC, g.name ASC
+      ORDER BY (asd.id IS NOT NULL) DESC, total_apps DESC, g.name ASC
     `);
 
     return {

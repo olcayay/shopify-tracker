@@ -1223,3 +1223,5 @@ distinguish transient backend error from "not indexed" on category detail page +
 activity log: show app name (truncated to 20 chars) instead of slug in Details column (PLA-1076) ✅
 
 enrich developers list with avgReviewCount/avgRating/firstLaunch/lastLaunch + sortable columns (PLA-1074) ✅
+
+fix App Count always 0 in My/Competitor Developers sections — total_apps now computed on the fly via correlated subquery (PLA-1080) ✅
