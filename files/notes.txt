@@ -6032,3 +6032,12 @@ PLA-179: Global API rate limiting middleware
 - Feature-flag short-circuit + `NON_PLATFORM_JOBS` bypass behaviour unchanged.
 - Regression test: `apps/scraper/src/__tests__/worker-platform-lock.test.ts` — 7 cases incl. a concurrency assertion that `maxActive === 1` when two Salesforce `app_details` jobs race.
 - Follow-up deferred: the unique-index / `parent_run_id` migration (Option A of PLA-1053/1060 description) still open; the lock alone is sufficient to stop the double-scrape symptom, but stall-retry collisions on the same jobId remain theoretically possible. Treat as follow-up ticket.
+
+## PLA-1053 — Redis noeviction startup check (2026-04-13)
+- Added `apps/scraper/src/redis-policy-check.ts` with `assertRedisNoEviction(client, log, captureMessage?)`. Worker bootstrap calls it right after initialising the `redisLock` (worker.ts). Uses an ioredis connection built from `getRedisConnection()`, `CONFIG GET maxmemory-policy`.
+- Behaviour: if policy !== `noeviction`, emits a loud error banner naming the ticket and captures to Sentry (when DSN present). Does NOT fail fast — the prod VM3 Redis still runs `volatile-lru`, and bricking the worker before that infra flip would take the scraping pipeline offline. Once Redis is reconfigured, the check is a silent info log.
+- Tests: `apps/scraper/src/__tests__/redis-policy-check.test.ts` — 6 cases (noeviction ok in array/string form, volatile-lru flagged w/ Sentry, other eviction policies all flagged, CONFIG GET error returns ok=false without throwing, Sentry arg optional).
+- Docs: `files/SYSTEM_ARCHITECTURE.md` §7.6 — added the required-config block with the `CONFIG SET maxmemory-policy noeviction` command + persistence note for `redis.conf`.
+- Not done (intentionally deferred, noted in Linear comment):
+  - The prod Redis config flip itself (infra change on VM3 — owner action).
+  - `scrape_runs` unique-index / `jobKey` column migration (Option A). Option B is effectively satisfied by the PLA-1061 UI change (operators no longer key off jobId) and the PLA-1060 interactive lock (no more concurrent same-platform runs).

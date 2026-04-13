@@ -23,6 +23,8 @@ import { createGracefulShutdown } from "./graceful-shutdown.js";
 import { browserPool } from "./browser-pool.js";
 import { RedisLock } from "./redis-lock.js";
 import { withPlatformLock } from "./worker-platform-lock.js";
+import { assertRedisNoEviction } from "./redis-policy-check.js";
+import Redis from "ioredis";
 import {
   PLATFORM_LOCK_TTL_MS,
   PLATFORM_LOCK_TIMEOUT_MS,
@@ -50,6 +52,34 @@ await cleanupStaleRuns(db);
  * 5-minute TTL auto-expires to prevent deadlocks if a worker crashes.
  */
 const redisLock = new RedisLock(getRedisConnection() as { host?: string; port?: number; password?: string });
+
+// PLA-1053: assert Redis maxmemory-policy is 'noeviction' on startup.
+// Logs loudly (+ Sentry) when misconfigured; does not fail fast because the infra
+// flip on VM3 is a prerequisite — this check surfaces the issue until prod is fixed.
+{
+  const conn = getRedisConnection() as { host?: string; port?: number; password?: string };
+  const policyClient = new Redis({
+    host: conn.host,
+    port: conn.port,
+    password: conn.password,
+    maxRetriesPerRequest: 1,
+    lazyConnect: true,
+  });
+  try {
+    await policyClient.connect();
+    await assertRedisNoEviction(
+      policyClient,
+      log,
+      process.env.SENTRY_DSN
+        ? (msg, level) => Sentry.captureMessage(msg, level)
+        : undefined,
+    );
+  } catch (err) {
+    log.error("redis maxmemory-policy check failed to run", { error: serializeError(err) });
+  } finally {
+    policyClient.disconnect();
+  }
+}
 
 const bgProcessJobFn = createProcessJob(db, "background");
 const intProcessJob = createProcessJob(db, "interactive");

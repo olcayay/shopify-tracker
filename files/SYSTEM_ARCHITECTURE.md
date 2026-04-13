@@ -877,6 +877,24 @@ gcloud compute ssh deploy@appranks-email --zone=europe-west1-b \
 - Network issue between VMs (check VPC firewall)
 - Redis AOF corruption (very rare) → `docker exec redis redis-check-aof --fix /data/appendonly.aof`
 
+**Required config (PLA-1053):** Redis on VM3 **must** run with `maxmemory-policy noeviction`.
+BullMQ stores its monotonic job-ID counter (`bull:<queue>:id`) as a regular key; any
+eviction-enabled policy (`volatile-lru`, `allkeys-lru`, …) lets the counter be reclaimed,
+after which BullMQ restarts IDs from 1 and collides with historical
+`scrape_runs.job_id` values. The scraper worker runs a startup check
+(`assertRedisNoEviction`, `apps/scraper/src/redis-policy-check.ts`) that logs an error
+banner + Sentry event when the policy is misconfigured.
+
+```bash
+# Verify / set the policy:
+ssh -i ~/.ssh/appranks-gcp deploy@34.62.80.10 \
+  "sudo docker exec appranks-redis-1 redis-cli CONFIG GET maxmemory-policy"
+# If not noeviction:
+ssh ... "sudo docker exec appranks-redis-1 redis-cli CONFIG SET maxmemory-policy noeviction"
+# Persist across restarts in the redis config file (redis.conf):
+#   maxmemory-policy noeviction
+```
+
 ### 7.7 Email Delivery Issues
 
 **Symptoms:** Emails not being sent, email_logs show failures.

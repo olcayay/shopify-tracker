@@ -1195,3 +1195,5 @@ salesforce app-detail HTTP migration (PLA-1054..1058) ✅
 scrape_runs table: show UUID-prefix as primary id, BullMQ job id secondary (PLA-1061) ✅
 
 per-platform lock applied to interactive worker (PLA-1060) ✅
+
+Redis noeviction startup check + docs (PLA-1053) ✅
