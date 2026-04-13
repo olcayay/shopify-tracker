@@ -6012,3 +6012,10 @@ PLA-179: Global API rate limiting middleware
 - `process-job.ts`: removed auto-routing of scope=all → bulk_via_category for platforms with `refreshSnapshotFromCategoryCard`. scope=all now always runs `scrapeAll` (per-app HTTP detail).
 - `scope=bulk_via_category` stays as an explicit opt-in scope; scheduler `salesforce_app_details_bulk` (03:00 daily) still uses it.
 - Dashboard "Scrape ALL" button reverts to scope=all for all platforms (incl. Salesforce). Confirm dialog updated — all platforms now get the "1.5–3 hours" warning + force prompt.
+
+## Salesforce app-detail HTTP migration (PLA-1054..1058, 2026-04-13)
+- Discovered `GET https://api.appexchange.salesforce.com/partners/experience/listings/{id}` returns the full listing JSON (fullDescription, plugins, publisher, solution, pricing plans, extensions) — every field the Playwright parser extracted.
+- `SALESFORCE_CONSTANTS.appDetailFetchMode: 'http' | 'browser'` (default `'http'`) is the single rollback switch.
+- `fetchAppPage` dispatches HTTP → browser → search-API (or reversed if mode=browser). Both primary paths share the `normalizeListing` helper so no mapping drift.
+- Concurrency raised from 3 → 12; HttpClient adaptive backoff still applies.
+- Expected prod duration: 5709 apps @ ~300 ms with concurrency 12 ≈ **2–5 minutes** (vs ~6 h browser baseline observed on job 32 / 2026-04-13).

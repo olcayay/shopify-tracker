@@ -1189,3 +1189,5 @@ ranking chart tooltip: tier groups + day-over-day change (PLA-1045) ✅
 add upsert-phase progress logs to scrape_runs bulk_via_category path (observability) ✅
 
 revert auto-route scope=all to bulk_via_category — per-app detail fetch required ✅
+
+salesforce app-detail HTTP migration (PLA-1054..1058) ✅
