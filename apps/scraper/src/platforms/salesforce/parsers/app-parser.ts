@@ -7,8 +7,7 @@ const log = createLogger("salesforce-app-parser");
  * Parse Salesforce AppExchange app detail page.
  *
  * Extracts `window.stores.LISTING.listing` JSON from the rendered SPA HTML
- * and normalizes it into the canonical schema (matching the Python
- * salesforce_listing_canonical.py logic).
+ * and normalizes it into the canonical schema.
  */
 export function parseSalesforceAppPage(html: string, slug: string): NormalizedAppDetails {
   const stores = extractWindowStores(html);
@@ -23,6 +22,25 @@ export function parseSalesforceAppPage(html: string, slug: string): NormalizedAp
     return fallback(html, slug);
   }
 
+  return normalizeListing(listing, slug);
+}
+
+/**
+ * Parse the JSON response from `partners/experience/listings/{id}` (PLA-1055).
+ * The response is shaped like the `listing` object embedded in `window.stores`,
+ * so we delegate to the same normalizer. A parse failure returns the same
+ * minimal shape as the HTML fallback so upstream code handles both identically.
+ */
+export function parseListingJson(raw: unknown, slug: string): NormalizedAppDetails {
+  if (!raw || typeof raw !== "object") {
+    log.warn("parseListingJson: non-object payload", { slug });
+    return emptyFallback(slug);
+  }
+  return normalizeListing(raw as Record<string, any>, slug);
+}
+
+/** Shared normalizer used by both the HTML (window.stores) and HTTP (partners/experience) paths. */
+function normalizeListing(listing: Record<string, any>, slug: string): NormalizedAppDetails {
   const ext = getExtensionData(listing);
   const pricing = listing.pricing || {};
   const publisher = listing.publisher;
@@ -31,7 +49,7 @@ export function parseSalesforceAppPage(html: string, slug: string): NormalizedAp
     name: listing.title || listing.name || slug,
     slug,
     averageRating: listing.reviewsSummary?.averageRating ?? null,
-    ratingCount: listing.reviewsSummary?.reviewCount ?? null,
+    ratingCount: listing.reviewsSummary?.reviewCount ?? listing.reviewsSummary?.totalReviewCount ?? null,
     pricingHint: pricing?.price_model_type || null,
     pricingModel: normalizePricingModel(pricing?.price_model_type || null),
     iconUrl: extractLogoUrl(listing),
@@ -63,6 +81,21 @@ export function parseSalesforceAppPage(html: string, slug: string): NormalizedAp
       businessNeeds: flattenBusinessNeeds(listing.businessNeeds),
       plugins: normalizePlugins(listing.plugins),
     },
+  };
+}
+
+function emptyFallback(slug: string): NormalizedAppDetails {
+  return {
+    name: slug,
+    slug,
+    averageRating: null,
+    ratingCount: null,
+    pricingHint: null,
+    pricingModel: null,
+    iconUrl: null,
+    developer: null,
+    badges: [],
+    platformData: {},
   };
 }
 
