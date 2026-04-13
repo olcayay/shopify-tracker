@@ -107,6 +107,7 @@ export default async function RankingsPage({
                 linkPrefix: `/${platform}/categories/`,
               }))}
               pageSize={PLATFORMS[platform as PlatformId]?.pageSize ?? 24}
+              itemLabel="category"
             />
           </CardContent>
         </Card>

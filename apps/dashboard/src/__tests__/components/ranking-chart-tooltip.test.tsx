@@ -195,3 +195,144 @@ describe("<RankingChartTooltip />", () => {
     expect(screen.getByText("f")).toBeInTheDocument();
   });
 });
+
+/** PLA-1059 — itemLabel prop, pluralization, 2-col grid, pin-on-hover. */
+describe("<RankingChartTooltip /> (PLA-1059)", () => {
+  const smallPivot = [
+    { date: "Apr 10", a: 2 },
+    { date: "Apr 11", a: 1 },
+  ];
+
+  it("defaults the header noun to 'keyword(s)' and pluralizes", () => {
+    render(
+      <RankingChartTooltip
+        active={true}
+        payload={[{ dataKey: "a", value: 1 }]}
+        label="Apr 11"
+        pivotedData={smallPivot}
+        labels={["a"]}
+        colorMap={new Map([["a", "c1"]])}
+        hiddenLabels={new Set()}
+      />,
+    );
+    expect(screen.getByText(/1 keyword$/)).toBeInTheDocument();
+  });
+
+  it("uses itemLabel='category' with 'categories' plural", () => {
+    const labels = ["a", "b"];
+    const pivot = [
+      { date: "Apr 10", a: 2, b: 3 },
+      { date: "Apr 11", a: 1, b: 2 },
+    ];
+    render(
+      <RankingChartTooltip
+        active={true}
+        payload={[
+          { dataKey: "a", value: 1 },
+          { dataKey: "b", value: 2 },
+        ]}
+        label="Apr 11"
+        pivotedData={pivot}
+        labels={labels}
+        colorMap={new Map([["a", "c1"], ["b", "c2"]])}
+        hiddenLabels={new Set()}
+        itemLabel="category"
+      />,
+    );
+    expect(screen.getByText(/2 categories$/)).toBeInTheDocument();
+  });
+
+  it("renders a 2-column grid for tiers with more than 12 rows", () => {
+    const N = 15;
+    const bigLabels = Array.from({ length: N }, (_, i) => `k${i}`);
+    const prevRow: Record<string, any> = { date: "Apr 10" };
+    const curRow: Record<string, any> = { date: "Apr 11" };
+    // Place every row in Top 50 (positions 11..25) so one tier exceeds the grid threshold.
+    bigLabels.forEach((l, i) => {
+      prevRow[l] = i + 11;
+      curRow[l] = i + 11;
+    });
+    const pivot = [prevRow, curRow];
+    render(
+      <RankingChartTooltip
+        active={true}
+        payload={bigLabels.map((l, i) => ({ dataKey: l, value: i + 11 }))}
+        label="Apr 11"
+        pivotedData={pivot}
+        labels={bigLabels}
+        colorMap={new Map(bigLabels.map((l, i) => [l, `c${i}`]))}
+        hiddenLabels={new Set()}
+      />,
+    );
+    expect(screen.getByTestId("tier-top50-grid")).toBeInTheDocument();
+  });
+
+  it("keeps a single-column list for tiers at or below the grid threshold", () => {
+    const N = 8;
+    const bigLabels = Array.from({ length: N }, (_, i) => `k${i}`);
+    const prevRow: Record<string, any> = { date: "Apr 10" };
+    const curRow: Record<string, any> = { date: "Apr 11" };
+    bigLabels.forEach((l, i) => {
+      prevRow[l] = i + 11;
+      curRow[l] = i + 11; // Top 50 (11..18)
+    });
+    const pivot = [prevRow, curRow];
+    render(
+      <RankingChartTooltip
+        active={true}
+        payload={bigLabels.map((l, i) => ({ dataKey: l, value: i + 11 }))}
+        label="Apr 11"
+        pivotedData={pivot}
+        labels={bigLabels}
+        colorMap={new Map(bigLabels.map((l, i) => [l, `c${i}`]))}
+        hiddenLabels={new Set()}
+      />,
+    );
+    expect(screen.getByTestId("tier-top50-list")).toBeInTheDocument();
+  });
+
+  it("pins on mouseenter so content does not change on re-render", () => {
+    const { rerender } = render(
+      <RankingChartTooltip
+        active={true}
+        payload={[{ dataKey: "a", value: 1 }]}
+        label="Apr 11"
+        pivotedData={smallPivot}
+        labels={["a"]}
+        colorMap={new Map([["a", "c1"]])}
+        hiddenLabels={new Set()}
+      />,
+    );
+    const tt = screen.getByTestId("ranking-tooltip");
+    fireEvent.mouseEnter(tt);
+    // Simulate recharts pushing a new label (cursor moved off to a day with no data).
+    rerender(
+      <RankingChartTooltip
+        active={false}
+        payload={[]}
+        label={undefined}
+        pivotedData={smallPivot}
+        labels={["a"]}
+        colorMap={new Map([["a", "c1"]])}
+        hiddenLabels={new Set()}
+      />,
+    );
+    // Pinned: tooltip still shows the frozen Apr 11 + `a` row.
+    expect(screen.getByTestId("ranking-tooltip")).toBeInTheDocument();
+    expect(screen.getByText("a")).toBeInTheDocument();
+    // Unpinning via mouseleave removes it on the next inactive render.
+    fireEvent.mouseLeave(screen.getByTestId("ranking-tooltip"));
+    rerender(
+      <RankingChartTooltip
+        active={false}
+        payload={[]}
+        label={undefined}
+        pivotedData={smallPivot}
+        labels={["a"]}
+        colorMap={new Map([["a", "c1"]])}
+        hiddenLabels={new Set()}
+      />,
+    );
+    expect(screen.queryByTestId("ranking-tooltip")).not.toBeInTheDocument();
+  });
+});

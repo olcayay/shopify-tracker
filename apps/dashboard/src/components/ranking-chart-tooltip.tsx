@@ -3,6 +3,13 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, Minus } from "lucide-react";
 
+const GRID_THRESHOLD = 12;
+const PLURALS: Record<string, string> = { category: "categories" };
+function pluralize(label: string, count: number): string {
+  if (count === 1) return label;
+  return PLURALS[label] ?? `${label}s`;
+}
+
 export interface RankingTooltipRow {
   label: string;
   color: string;
@@ -134,6 +141,8 @@ interface TooltipProps {
   labels: string[];
   colorMap: Map<string, string>;
   hiddenLabels: Set<string>;
+  /** Noun for the items being ranked. Defaults to "keyword". */
+  itemLabel?: string;
 }
 
 export function RankingChartTooltip({
@@ -144,15 +153,27 @@ export function RankingChartTooltip({
   labels,
   colorMap,
   hiddenLabels,
+  itemLabel = "keyword",
 }: TooltipProps) {
-  const groups = useMemo(
+  const liveGroups = useMemo(
     () => buildTooltipGroups(payload, pivotedData, labels, colorMap, hiddenLabels, label),
     [payload, pivotedData, labels, colorMap, hiddenLabels, label],
   );
 
   const [expanded, setExpanded] = useState<Partial<Record<TierKey, boolean>>>({});
+  // Freeze the groups + header label while the user's cursor is inside the
+  // tooltip. Without this, moving the mouse over the tooltip body drags
+  // recharts' x-cursor to the next day and the content re-renders under the
+  // pointer, making long lists unreachable. Using state (not a ref) keeps
+  // this safe under strict-mode / React compiler lint rules.
+  const [frozen, setFrozen] = useState<{ groups: TierGroup[]; label: string | number | undefined } | null>(null);
 
-  if (!active || groups.length === 0) return null;
+  const groups = frozen ? frozen.groups : liveGroups;
+  const displayLabel = frozen ? frozen.label : label;
+  const pinned = frozen !== null;
+
+  if (!pinned && (!active || groups.length === 0)) return null;
+  if (pinned && groups.length === 0) return null;
 
   // Flat list mode: ≤5 visible keywords and at most one tier used.
   const totalVisible = groups.reduce((n, g) => n + g.rows.length, 0);
@@ -160,13 +181,16 @@ export function RankingChartTooltip({
 
   return (
     <div
+      data-testid="ranking-tooltip"
+      onMouseEnter={() => setFrozen({ groups: liveGroups, label })}
+      onMouseLeave={() => setFrozen(null)}
       className="rounded-lg border border-border bg-card text-foreground shadow-md text-xs"
-      style={{ width: "min(320px, 90vw)", maxHeight: "min(480px, 70vh)", overflowY: "auto" }}
+      style={{ width: "min(420px, 95vw)", maxHeight: "90vh", overflowY: "auto" }}
     >
       <div className="sticky top-0 bg-card border-b border-border px-3 py-2 font-medium">
-        {String(label ?? "")}
+        {String(displayLabel ?? "")}
         <span className="ml-2 text-muted-foreground font-normal">
-          {totalVisible} keyword{totalVisible === 1 ? "" : "s"}
+          {totalVisible} {pluralize(itemLabel, totalVisible)}
         </span>
       </div>
 
@@ -179,6 +203,7 @@ export function RankingChartTooltip({
       ) : (
         groups.map((group) => {
           const isExpanded = expanded[group.key] ?? !group.defaultCollapsed;
+          const useGrid = isExpanded && group.rows.length > GRID_THRESHOLD;
           return (
             <section key={group.key} className="border-b border-border last:border-0">
               <button
@@ -196,7 +221,10 @@ export function RankingChartTooltip({
                 <span className="ml-auto text-muted-foreground text-[11px]">{group.rows.length}</span>
               </button>
               {isExpanded && (
-                <ul className="py-1">
+                <ul
+                  data-testid={useGrid ? `tier-${group.key}-grid` : `tier-${group.key}-list`}
+                  className={useGrid ? "grid grid-cols-2 gap-x-1 py-1" : "py-1"}
+                >
                   {group.rows.map((row) => (
                     <TooltipRow key={row.label} row={row} />
                   ))}

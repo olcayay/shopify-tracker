@@ -34,7 +34,15 @@ interface RankingData {
   iconUrl?: string;
 }
 
-export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pageSize?: number }) {
+export function RankingChart({
+  data,
+  pageSize = 24,
+  itemLabel = "keyword",
+}: {
+  data: RankingData[];
+  pageSize?: number;
+  itemLabel?: string;
+}) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   if (data.length === 0) {
@@ -121,6 +129,7 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
                 labels={labels}
                 colorMap={colorMap}
                 hiddenLabels={hidden}
+                itemLabel={itemLabel}
               />
             }
           />
