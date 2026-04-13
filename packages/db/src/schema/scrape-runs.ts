@@ -1,4 +1,5 @@
-import { pgTable, uuid, pgEnum, timestamp, jsonb, text, varchar, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, pgEnum, timestamp, jsonb, text, varchar, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const scraperTypeEnum = pgEnum("scraper_type", [
   "category",
@@ -46,5 +47,11 @@ export const scrapeRuns = pgTable(
     index("idx_scrape_runs_status").on(table.status),
     index("idx_scrape_runs_platform_type_started").on(table.platform, table.scraperType, table.startedAt),
     index("idx_scrape_runs_parent_run_id").on(table.parentRunId),
+    /** PLA-1064: defense-in-depth against duplicate scrape_runs rows for the
+     *  same BullMQ job. Partial — scheduler-internal rows with no jobId are
+     *  exempt. Created CONCURRENTLY in migration 0145. */
+    uniqueIndex("uniq_scrape_runs_queue_jobid_startedat")
+      .on(table.queue, table.jobId, table.startedAt)
+      .where(sql`${table.jobId} IS NOT NULL`),
   ]
 );
