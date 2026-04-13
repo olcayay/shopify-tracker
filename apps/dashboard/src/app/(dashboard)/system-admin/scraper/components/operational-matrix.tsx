@@ -151,25 +151,16 @@ export function OperationalMatrix({ healthData, onTrigger, onTriggerAll, onScrap
                           className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
                           disabled={triggering !== null || !scraperEnabled}
                           onClick={() => {
-                            const isBulkViaCategory = platformId === "salesforce";
-                            const prompt = isBulkViaCategory
-                              ? `Scrape ALL ${PLATFORM_LABELS[platformId]} apps via category API?\n\nHTTP-only bulk refresh (no browser). ~20–60 seconds for the full catalog.\n\nOK = proceed\nCancel = abort`
-                              : `Scrape ALL discovered ${PLATFORM_LABELS[platformId]} apps?\n\nOK = Resume mode (skip apps scraped in last 12h) — recommended\nCancel = abort\n\nThis can take 1.5–3 hours for ~13.5k apps.`;
-                            const resume = window.confirm(prompt);
+                            const resume = window.confirm(
+                              `Scrape ALL discovered ${PLATFORM_LABELS[platformId]} apps?\n\nFull per-app detail fetch — can take 1.5–3 hours for large catalogs.\n\nOK = Resume mode (skip apps scraped in last 12h) — recommended\nCancel = abort`,
+                            );
                             if (!resume) return;
-                            let forceReScrape = false;
-                            if (!isBulkViaCategory) {
-                              forceReScrape = window.confirm(
-                                `Force re-scrape every app (bypass 12h cache)?\n\nOK = force=true (full re-scrape, slower)\nCancel = force=false (resume-friendly, skip recent)`,
-                              );
-                            }
+                            const forceReScrape = window.confirm(
+                              `Force re-scrape every app (bypass 12h cache)?\n\nOK = force=true (full re-scrape, slower)\nCancel = force=false (resume-friendly, skip recent)`,
+                            );
                             onScrapeAllApps(platformId, forceReScrape);
                           }}
-                          title={
-                            platformId === "salesforce"
-                              ? `Bulk-refresh all ${PLATFORM_LABELS[platformId]} apps via category API (~20s)`
-                              : `Scrape ALL discovered apps for ${PLATFORM_LABELS[platformId]} (system admin)`
-                          }
+                          title={`Scrape ALL discovered apps for ${PLATFORM_LABELS[platformId]} (per-app detail fetch, system admin)`}
                         >
                           <Database className="h-3 w-3" />
                         </Button>

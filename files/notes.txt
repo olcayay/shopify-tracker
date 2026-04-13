@@ -6006,3 +6006,9 @@ PLA-179: Global API rate limiting middleware
 - Run 3 (job 28): 20.1s, 0 snapshots — warm-run baseline restored.
 - Root cause of run-2 slowdown: probably transient DB contention (cascades from run 1 still finishing, autovacuum, Cloud SQL micro-instance). Isolated, not reproducible in run 3.
 - Process improvement: `scrapeAllViaCategoryApi` now emits "upsert phase started" + "progress" logs every 500 items with itemsScraped/itemsFailed/snapshotsInserted/elapsedMs/avgMsPerItem. Removes the blind spot that had me mark run 2 as "stuck" prematurely — future slow runs will show actual progress instead of silence. No behavior change, observability only.
+
+## PLA-1048 revert auto-routing (2026-04-13)
+- User feedback: 19s for 5573 apps is misleading — it's card-data only, not real per-app detail fetch.
+- `process-job.ts`: removed auto-routing of scope=all → bulk_via_category for platforms with `refreshSnapshotFromCategoryCard`. scope=all now always runs `scrapeAll` (per-app HTTP detail).
+- `scope=bulk_via_category` stays as an explicit opt-in scope; scheduler `salesforce_app_details_bulk` (03:00 daily) still uses it.
+- Dashboard "Scrape ALL" button reverts to scope=all for all platforms (incl. Salesforce). Confirm dialog updated — all platforms now get the "1.5–3 hours" warning + force prompt.

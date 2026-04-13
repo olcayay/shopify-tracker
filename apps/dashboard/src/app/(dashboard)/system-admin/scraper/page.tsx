@@ -119,10 +119,7 @@ export default function ScraperPage() {
   }
 
   async function triggerScrapeAllApps(platform: string, force: boolean) {
-    // Platforms whose category API already carries every tracked field can use
-    // the HTTP-only bulk path (PLA-1048) instead of the ~24h browser loop.
-    const bulkViaCategoryPlatforms = new Set(["salesforce"]);
-    const scope = bulkViaCategoryPlatforms.has(platform) ? "bulk_via_category" : "all";
+    const scope = "all";
     const key = `${platform}:app_details:${scope}`;
     setTriggering(key);
     setMessage("");
