@@ -189,29 +189,41 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
         `);
         const snap = ((snapRows as any).rows ?? snapRows)[0];
 
-        // Top 10 ranked apps
+        // Top 10 ranked apps. We query the LATEST ranking per (app_id) for this
+        // category instead of joining on snap.scrape_run_id — appCategoryRankings
+        // has a dedup unique index on (app_id, category_slug, DATE(scraped_at))
+        // so reruns that hit ON CONFLICT DO NOTHING never update scrape_run_id,
+        // leaving the latest snapshot's run id unmatched (PLA-1067).
         let topApps: any[] = [];
-        if (snap?.scrape_run_id && cat.isListingPage) {
-          topApps = await db
-            .select({
-              position: appCategoryRankings.position,
-              appSlug: apps.slug,
-              name: apps.name,
-              iconUrl: apps.iconUrl,
-              averageRating: apps.averageRating,
-              ratingCount: apps.ratingCount,
-              pricingHint: apps.pricingHint,
-            })
-            .from(appCategoryRankings)
-            .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
-            .where(
-              and(
-                eq(appCategoryRankings.scrapeRunId, snap.scrape_run_id),
-                eq(appCategoryRankings.categorySlug, slug)
-              )
-            )
-            .orderBy(asc(appCategoryRankings.position))
-            .limit(10);
+        if (cat.isListingPage) {
+          const rows = await db.execute(sql`
+            SELECT DISTINCT ON (r.app_id)
+              r.position,
+              a.slug AS app_slug,
+              a.name,
+              a.icon_url,
+              a.average_rating,
+              a.rating_count,
+              a.pricing_hint,
+              r.scraped_at
+            FROM ${appCategoryRankings} r
+            JOIN ${apps} a ON a.id = r.app_id
+            WHERE r.category_slug = ${slug}
+              AND a.platform = ${platform}
+            ORDER BY r.app_id, r.scraped_at DESC
+          `);
+          topApps = ((rows as any).rows ?? rows)
+            .map((r: any) => ({
+              position: r.position,
+              appSlug: r.app_slug,
+              name: r.name,
+              iconUrl: r.icon_url,
+              averageRating: r.average_rating,
+              ratingCount: r.rating_count,
+              pricingHint: r.pricing_hint,
+            }))
+            .sort((a: any, b: any) => a.position - b.position)
+            .slice(0, 10);
         }
 
         return {
