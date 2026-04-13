@@ -37,10 +37,14 @@ export const scrapeRuns = pgTable(
     queue: varchar("queue", { length: 20 }),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     error: text("error"),
+    /** PLA-1066: pointer to the original run when this row was created by a
+     *  BullMQ stall-retry of an existing jobId. NULL on first attempts. */
+    parentRunId: uuid("parent_run_id"),
   },
   (table) => [
     index("idx_scrape_runs_type_started").on(table.scraperType, table.startedAt),
     index("idx_scrape_runs_status").on(table.status),
     index("idx_scrape_runs_platform_type_started").on(table.platform, table.scraperType, table.startedAt),
+    index("idx_scrape_runs_parent_run_id").on(table.parentRunId),
   ]
 );

@@ -32,6 +32,7 @@ import { HttpClient } from "../http-client.js";
 import { parseAppPage, parseSimilarApps } from "../parsers/app-parser.js";
 import type { PlatformModule, NormalizedCategoryApp } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
+import { resolveParentRunId } from "../utils/parent-run-id.js";
 import { recordItemError } from "../utils/record-item-error.js";
 import { upsertSnapshotFromCategoryCard } from "../utils/upsert-snapshot-from-card.js";
 
@@ -389,6 +390,7 @@ export class AppDetailsScraper {
 
     log.info("scraping all discovered apps", { count: allApps.length });
 
+    const parentRunId = await resolveParentRunId(this.db, queue, this.jobId ? String(this.jobId) : null);
     const [run] = await this.db
       .insert(scrapeRuns)
       .values({
@@ -400,6 +402,7 @@ export class AppDetailsScraper {
         triggeredBy,
         queue,
         jobId: this.jobId ?? null,
+        parentRunId,
         metadata: this.resolvedConfig
           ? { config_snapshot: { merged: this.resolvedConfig.merged, overrides: this.resolvedConfig.overrides }, scope: "all" }
           : { scope: "all" },
@@ -525,6 +528,7 @@ export class AppDetailsScraper {
     }
     const module = this.platformModule;
 
+    const parentRunId = await resolveParentRunId(this.db, queue, this.jobId ? String(this.jobId) : null);
     const [run] = await this.db
       .insert(scrapeRuns)
       .values({
@@ -536,6 +540,7 @@ export class AppDetailsScraper {
         triggeredBy,
         queue,
         jobId: this.jobId ?? null,
+        parentRunId,
         metadata: { scope: "bulk_via_category" },
       })
       .returning();
@@ -809,6 +814,7 @@ export class AppDetailsScraper {
       breakdown: selection.breakdown,
     });
 
+    const parentRunIdFull = await resolveParentRunId(this.db, queue, this.jobId ? String(this.jobId) : null);
     const [run] = await this.db
       .insert(scrapeRuns)
       .values({
@@ -820,6 +826,7 @@ export class AppDetailsScraper {
         triggeredBy,
         queue,
         jobId: this.jobId ?? null,
+        parentRunId: parentRunIdFull,
         metadata: {
           scope: "all_with_full_details",
           selection_breakdown: selection.breakdown,
