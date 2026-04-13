@@ -46,6 +46,11 @@ COPY apps/scraper/canva-auth-state.json ./apps/scraper/canva-auth-state.json
 #               "interactive" runs only the interactive worker
 ENV WORKER_MODE=background
 
+# GIT_SHA: image build commit, surfaced in the per-job `job:config` log line
+# so retro-inspection can correlate behaviour with code (PLA-1068).
+ARG GIT_SHA=unknown
+ENV GIT_SHA=${GIT_SHA}
+
 # Health check: verify main process is running via /proc filesystem
 HEALTHCHECK --interval=60s --timeout=5s --start-period=15s --retries=3 \
   CMD test -f /proc/1/status || exit 1

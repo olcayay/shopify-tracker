@@ -15,7 +15,7 @@ import { getModule, getPlatformConstants } from "./platforms/registry.js";
 import { resolveConfig } from "./config-resolver.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
 import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
-import { recordSuccess, recordFailure } from "./circuit-breaker.js";
+import { recordSuccess, recordFailure, getCircuitState } from "./circuit-breaker.js";
 import { afterKeywordScrape, afterCategoryScrape, afterReviewScrape } from "./events/post-scrape-events.js";
 import {
   HTTP_DEFAULT_DELAY_MS,
@@ -110,6 +110,31 @@ export async function runMigrations(db: ReturnType<typeof createDb>, label?: str
   }
 }
 
+/**
+ * Redact secret-shaped keys from `options` before emitting in `job:config`
+ * (PLA-1068). Strict allow-list of known-safe keys for app_details + friends;
+ * anything else is dropped if its name suggests a credential.
+ */
+const SECRET_KEY_PATTERN = /(token|secret|key|password|auth|cookie|bearer)/i;
+export function redactJobOptions(opts: unknown): Record<string, unknown> | null {
+  if (!opts || typeof opts !== "object") return null;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(opts as Record<string, unknown>)) {
+    if (SECRET_KEY_PATTERN.test(k)) {
+      out[k] = "[redacted]";
+      continue;
+    }
+    if (v == null || typeof v !== "object") {
+      out[k] = v;
+    } else if (Array.isArray(v)) {
+      out[k] = `[array len=${v.length}]`;
+    } else {
+      out[k] = redactJobOptions(v);
+    }
+  }
+  return out;
+}
+
 /** Per-type timeout map (milliseconds) */
 const JOB_TIMEOUT_MAP: Partial<Record<ScraperJobType, number>> & { default: number } = {
   category: JOB_TIMEOUT_CATEGORY_MS,
@@ -194,6 +219,49 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       platformModule = getModule(platform, httpClient, browserClient, tracker);
     } catch {
       // Fall back to no module (Shopify default behavior)
+    }
+
+    // Emit a single structured log line capturing the resolved runtime config
+    // for this job (PLA-1068). Pair with `processing job` so retro-inspection
+    // of slow/failed runs can correlate behaviour with the exact knobs in
+    // effect — concurrency, fetch mode, circuit state, worker identity,
+    // image SHA. Best-effort: never block the job on the circuit lookup.
+    try {
+      const circuit = await getCircuitState(platform).catch(() => null);
+      log.info("job:config", {
+        jobId: job.id,
+        traceId,
+        type,
+        platform,
+        queue: queueName ?? null,
+        triggeredBy,
+        scope: opts?.scope ?? null,
+        force: opts?.force ?? null,
+        options: redactJobOptions(opts),
+        platformConstants: {
+          appDetailsConcurrency: platformConstants?.appDetailsConcurrency ?? null,
+          appDetailsConcurrencyBulk: platformConstants?.appDetailsConcurrencyBulk ?? null,
+          concurrentSeedCategories: platformConstants?.concurrentSeedCategories ?? null,
+          keywordConcurrency: platformConstants?.keywordConcurrency ?? null,
+          appDetailFetchMode: platformConstants?.appDetailFetchMode ?? null,
+          refreshSnapshotFromCategoryCard: platformConstants?.refreshSnapshotFromCategoryCard ?? null,
+          rateLimit: platformConstants?.rateLimit ?? null,
+          httpMaxConcurrency: platformConstants?.httpMaxConcurrency ?? null,
+        },
+        circuit: circuit ? {
+          state: circuit.state,
+          failures: circuit.failures,
+          openedAt: circuit.openedAt,
+          usingFallback: circuit.usingFallback,
+        } : null,
+        usesBrowser: !!browserClient,
+        configSource: resolvedConfig ? "scraper_configs+constants" : "constants",
+        workerId: process.env.HOSTNAME ?? "unknown",
+        gitSha: process.env.GIT_SHA ?? "unknown",
+        nodeVersion: process.version,
+      });
+    } catch (err) {
+      log.warn("job:config emit failed (non-fatal)", { jobId: job.id, error: String(err) });
     }
 
     // Job-level timeout to prevent hanging indefinitely

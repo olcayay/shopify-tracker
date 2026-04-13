@@ -72,6 +72,8 @@ jobs:
           tags: |
             ghcr.io/olcayay/appranks-worker:latest
             ghcr.io/olcayay/appranks-worker:${{ github.sha }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=worker
           cache-to: type=gha,scope=worker,mode=max
 
@@ -84,6 +86,8 @@ jobs:
           tags: |
             ghcr.io/olcayay/appranks-worker-interactive:latest
             ghcr.io/olcayay/appranks-worker-interactive:${{ github.sha }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=worker-interactive
           cache-to: type=gha,scope=worker-interactive,mode=max
 

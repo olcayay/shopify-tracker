@@ -42,6 +42,10 @@ COPY --from=build /app/packages/db/src/migrations ./packages/db/src/migrations
 COPY --from=build /app/apps/scraper/dist ./apps/scraper/dist
 COPY apps/scraper/canva-auth-state.json ./apps/scraper/canva-auth-state.json
 
+# GIT_SHA: image build commit, surfaced in per-job `job:config` log line (PLA-1068).
+ARG GIT_SHA=unknown
+ENV GIT_SHA=${GIT_SHA}
+
 # Start only the interactive worker (no scheduler)
 HEALTHCHECK --interval=60s --timeout=5s --start-period=15s --retries=3 \
   CMD test -f /proc/1/status || exit 1
