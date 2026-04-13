@@ -18,6 +18,7 @@ function makeJob(overrides: Partial<ScraperJobData> = {}, id = "1"): Job<Scraper
 function makeDeps(overrides: Partial<Parameters<typeof withPlatformLock>[1]> = {}) {
   const release = vi.fn(async () => undefined);
   const acquireWithWait = vi.fn(async () => release);
+  const extend = vi.fn(async () => true);
   const limit = vi.fn(async () => [] as Array<{ isEnabled: boolean }>);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
@@ -25,15 +26,16 @@ function makeDeps(overrides: Partial<Parameters<typeof withPlatformLock>[1]> = {
 
   const deps = {
     db: { select } as unknown as Parameters<typeof withPlatformLock>[1]["db"],
-    redisLock: { acquireWithWait },
+    redisLock: { acquireWithWait, extend },
     log: { warn: vi.fn() },
     lockTtlMs: 1000,
     lockPollMs: 100,
     lockTimeoutMs: 5000,
+    lockRenewMs: 500,
     ...overrides,
   };
 
-  return { deps, release, acquireWithWait, selectMock: select };
+  return { deps, release, acquireWithWait, extend, selectMock: select };
 }
 
 describe("withPlatformLock (PLA-1060)", () => {
@@ -69,6 +71,27 @@ describe("withPlatformLock (PLA-1060)", () => {
     );
     expect(processFn).toHaveBeenCalledTimes(1);
     expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it("periodically extends the lock while the processor is running and stops on completion", async () => {
+    vi.useFakeTimers();
+    try {
+      const { deps, extend } = makeDeps({ lockTtlMs: 900, lockRenewMs: 300 } as Partial<Parameters<typeof withPlatformLock>[1]>);
+      let resolve: (v: unknown) => void = () => {};
+      processFn.mockImplementationOnce(() => new Promise((r) => { resolve = r; }));
+      const wrapped = withPlatformLock(processFn, deps);
+      const p = wrapped(makeJob({ platform: "shopify", type: "app_details" }));
+      await vi.advanceTimersByTimeAsync(900); // 3 renew intervals
+      expect(extend).toHaveBeenCalled();
+      expect(extend.mock.calls.length).toBeGreaterThanOrEqual(2);
+      resolve(undefined);
+      await p;
+      const callsAtFinish = extend.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(1200);
+      expect(extend.mock.calls.length).toBe(callsAtFinish);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("releases lock even when the processor throws", async () => {

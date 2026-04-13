@@ -18,11 +18,13 @@ export const NON_PLATFORM_JOBS = new Set<string>([
 
 export interface PlatformLockDeps {
   db: NodePgDatabase<Record<string, never>> | { select: (...args: unknown[]) => unknown };
-  redisLock: Pick<RedisLock, "acquireWithWait">;
+  redisLock: Pick<RedisLock, "acquireWithWait" | "extend">;
   log: LockLogger;
   lockTtlMs: number;
   lockPollMs: number;
   lockTimeoutMs: number;
+  /** How often (ms) to extend the lock while the job runs. Should be < lockTtlMs. */
+  lockRenewMs: number;
 }
 
 /**
@@ -37,7 +39,7 @@ export function withPlatformLock(
   processFn: (job: Job<ScraperJobData>) => Promise<void> | Promise<unknown>,
   deps: PlatformLockDeps,
 ): (job: Job<ScraperJobData>) => Promise<void> {
-  const { db, redisLock, log, lockTtlMs, lockPollMs, lockTimeoutMs } = deps;
+  const { db, redisLock, log, lockTtlMs, lockPollMs, lockTimeoutMs, lockRenewMs } = deps;
   return async (job: Job<ScraperJobData>): Promise<void> => {
     if (NON_PLATFORM_JOBS.has(job.data.type)) {
       await processFn(job);
@@ -86,9 +88,15 @@ export function withPlatformLock(
         `Could not acquire lock for platform ${platform} within ${lockTimeoutMs}ms`,
       );
     }
+    const renewTimer = setInterval(() => {
+      redisLock.extend(lockKey, lockTtlMs).catch((err) => {
+        log.warn("platform lock extend failed", { lockKey, error: String(err) });
+      });
+    }, lockRenewMs);
     try {
       await processFn(job);
     } finally {
+      clearInterval(renewTimer);
       await release();
     }
   };

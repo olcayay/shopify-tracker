@@ -44,7 +44,7 @@ describe("scraper constants", () => {
   describe("worker concurrency and locking", () => {
     it("has correct lock and concurrency values", () => {
       expect(BACKGROUND_WORKER_CONCURRENCY).toBe(11);
-      expect(PLATFORM_LOCK_TTL_MS).toBe(300_000);
+      expect(PLATFORM_LOCK_TTL_MS).toBe(90_000);
       expect(PLATFORM_LOCK_TIMEOUT_MS).toBe(300_000);
       expect(LOCK_POLL_INTERVAL_MS).toBe(500);
       expect(GRACEFUL_SHUTDOWN_TIMEOUT_MS).toBe(60_000);

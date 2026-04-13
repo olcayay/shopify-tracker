@@ -27,6 +27,7 @@ import { assertRedisNoEviction } from "./redis-policy-check.js";
 import Redis from "ioredis";
 import {
   PLATFORM_LOCK_TTL_MS,
+  PLATFORM_LOCK_RENEW_INTERVAL_MS,
   PLATFORM_LOCK_TIMEOUT_MS,
   LOCK_POLL_INTERVAL_MS,
   BACKGROUND_WORKER_CONCURRENCY,
@@ -91,6 +92,7 @@ const platformLockDeps = {
   lockTtlMs: PLATFORM_LOCK_TTL_MS,
   lockPollMs: LOCK_POLL_INTERVAL_MS,
   lockTimeoutMs: PLATFORM_LOCK_TIMEOUT_MS,
+  lockRenewMs: PLATFORM_LOCK_RENEW_INTERVAL_MS,
 };
 
 const bgWorker = new Worker<ScraperJobData>(

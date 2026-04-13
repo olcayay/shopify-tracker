@@ -18,8 +18,12 @@ export const QUEUE_CLEAN_FAILED_LIMIT = 1000;
 // ── Worker concurrency & locking ────────────────────────────────────
 /** Number of background jobs processed concurrently (one per platform) */
 export const BACKGROUND_WORKER_CONCURRENCY = 11;
-/** Redis distributed lock TTL in ms (auto-expires to prevent deadlocks) */
-export const PLATFORM_LOCK_TTL_MS = 300_000; // 5 minutes
+/** Redis distributed lock TTL in ms (auto-expires to prevent deadlocks).
+ * Kept short so a killed worker releases the platform slot quickly.
+ * Longer jobs renew via PLATFORM_LOCK_RENEW_INTERVAL_MS. */
+export const PLATFORM_LOCK_TTL_MS = 90_000; // 90s
+/** How often to extend the platform lock while a job is running (≈ TTL/3) */
+export const PLATFORM_LOCK_RENEW_INTERVAL_MS = 30_000;
 /** Maximum time to wait for a platform lock before failing the job */
 export const PLATFORM_LOCK_TIMEOUT_MS = 300_000; // 5 minutes
 /** Polling interval while waiting for a lock slot */
@@ -34,8 +38,10 @@ export const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 60_000;
  * can cause false "stalled" detection. Set to 5 min so locks renew every 2.5 min.
  */
 export const BULLMQ_LOCK_DURATION_MS = 300_000; // 5 minutes
-/** How often BullMQ checks for stalled jobs. Matches lockDuration to avoid false positives. */
-export const BULLMQ_STALLED_INTERVAL_MS = 300_000; // 5 minutes
+/** How often BullMQ checks for stalled jobs. Short interval → faster recovery
+ * when a worker dies mid-job. Worker renews its own BullMQ lock at lockDuration/2,
+ * so stalledInterval can be well below lockDuration without false positives. */
+export const BULLMQ_STALLED_INTERVAL_MS = 60_000; // 1 minute
 
 // ── Stale run cleanup ──────────────────────────────────────────────
 /** Max automatic retries when a scrape_run goes stale (per platform+type, rolling 6-hour window) */
