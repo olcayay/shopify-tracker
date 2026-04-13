@@ -23,6 +23,13 @@ import {
 } from "@appranks/db";
 import { requireRole } from "../middleware/authorize.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
+import { cacheGet, cacheDel } from "../utils/cache.js";
+
+// PLA-1069: starred-categories merges starred + auto-detected (DISTINCT ON
+// over app_category_rankings for all tracked+competitor app IDs) and then
+// joins the latest category snapshots. Hot on the platform overview page.
+// Brief staleness on star/unstar is acceptable.
+const STARRED_CATEGORIES_TTL_S = 30;
 import {
   addStarredCategorySchema,
   addStarredFeatureSchema,
@@ -42,6 +49,14 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
+    return cacheGet(
+      `starred-cats:${accountId}:${platform}`,
+      () => buildStarredCategories(accountId, platform),
+      STARRED_CATEGORIES_TTL_S,
+    );
+  });
+
+  async function buildStarredCategories(accountId: string, platform: string) {
     // Parallelize: starred categories, tracked apps, and competitor apps are independent
     const [starredRows, trackedAppsRows2, competitorAppsRows2] = await Promise.all([
       db
@@ -241,7 +256,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
         competitorAppsInResults,
       };
     });
-  });
+  }
 
   // POST /api/account/starred-categories
   app.post(
@@ -273,6 +288,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ error: "Category already starred" });
       }
 
+      await cacheDel(`starred-cats:${accountId}:${platform}`);
       return result;
     }
   );
@@ -311,6 +327,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "Starred category not found" });
       }
 
+      await cacheDel(`starred-cats:${accountId}:${platform}`);
       return { message: "Category unstarred" };
     }
   );

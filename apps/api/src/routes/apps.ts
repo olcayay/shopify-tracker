@@ -5,6 +5,13 @@ import { slugsBodySchema } from "../schemas/apps.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
+import { cacheGet } from "../utils/cache.js";
+
+// PLA-1069: per-account+platform tracked-apps overview is expensive (multiple
+// DISTINCT ON scans on app_keyword_rankings / app_snapshots / app_field_changes).
+// Short TTL absorbs the page-load thundering herd and rapid client refetches
+// without needing strict invalidation on every track/keyword toggle.
+const TRACKED_APPS_OVERVIEW_TTL_S = 30;
 import {
   apps,
   appSnapshots,
@@ -47,6 +54,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
+    return cacheGet(`apps:overview:${accountId}:${platform}`, () => buildTrackedAppsOverview(accountId, platform), TRACKED_APPS_OVERVIEW_TTL_S);
+  });
+
+  async function buildTrackedAppsOverview(accountId: string, platform: string) {
     // Get tracked app IDs, competitor counts, and keyword counts in parallel
     const [trackedRows, competitorCounts, keywordCounts] = await Promise.all([
       db.select({ appId: accountTrackedApps.appId })
@@ -189,7 +200,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     });
 
     return result;
-  });
+  }
 
   // POST /api/apps/last-changes — bulk lookup lastChangeAt for multiple apps
   app.post("/last-changes", async (request) => {

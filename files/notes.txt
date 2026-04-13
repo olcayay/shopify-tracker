@@ -1,3 +1,29 @@
+Salesforce Platform Page Perf — Phase 1 (PLA-1069, 2026-04-13)
+====================================
+Why: Salesforce overview blocked on /api/apps (3.99s) and
+/api/account/starred-categories (2.04s). Both pages perform several
+DISTINCT ON scans over app_keyword_rankings, app_snapshots,
+app_field_changes, app_category_rankings.
+
+Investigation: All composite indexes the issue suggested already exist
+(0132 added (app_id, keyword_id, scraped_at DESC) and (app_id,
+category_slug, scraped_at DESC); 0133 added the latest variant; 0134
+added category_snapshots latest). So adding more indexes won't help —
+need EXPLAIN ANALYZE on prod data to identify true cost. Without DB
+access, deferred query restructuring.
+
+Phase 1 (this commit): wrap both endpoints with cacheGet (Redis-backed,
+fail-open) keyed by `accountId:platform`, 30s TTL. Invalidate
+starred-categories cache on POST/DELETE /starred-categories. Skipped
+per-mutation invalidation for /api/apps overview because tracked-app /
+keyword / competitor mutations are spread across many routes — 30s
+staleness is acceptable. The cache absorbs page-load thundering herd
+and rapid client refetches; first-paint stays slow until first
+EXPLAIN-driven query refactor lands.
+
+Risk: stale data after star/unstar on rare cache key collisions —
+caveat documented in code comments.
+
 Salesforce Developer Preservation (PLA-1070, 2026-04-13)
 ====================================
 Why: After the HTTP-primary dispatch (PLA-1054/1055/1056), some Salesforce

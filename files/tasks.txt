@@ -8,6 +8,10 @@ Card-Refresh False Drift Fix (2026-04-13)
 Salesforce Developer Preservation (2026-04-13)
   PLA-1070: parser warning on missing publisher + non-overwrite snapshot rule ✅
 
+Salesforce Platform Page Perf — Phase 1 (2026-04-13)
+  PLA-1069: 30s Redis cache on /api/apps + /api/account/starred-categories ✅
+  PLA-1069: defer index/query restructuring (existing indexes already in place per 0132/0133)
+
 Scrape All Apps from System Admin (2026-04-12)
   - Add ScraperJobOptions.scope ("tracked" | "all") ✅
   - Add JOB_TIMEOUT_APP_DETAILS_ALL_MS (6h) ✅
