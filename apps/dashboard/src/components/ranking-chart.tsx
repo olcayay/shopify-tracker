@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   LineChart,
@@ -12,6 +12,26 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { RankingChartTooltip } from "./ranking-chart-tooltip";
+
+// Width of the tooltip card, must stay in sync with `style={{ width: "min(420px, 95vw)" }}`
+// in ranking-chart-tooltip.tsx. Used to flip the tooltip to the left of the
+// cursor when hovering near the right edge of the chart.
+const TOOLTIP_WIDTH = 420;
+const TOOLTIP_GAP = 16;
+
+export function computeTooltipX(
+  cursorX: number,
+  containerWidth: number,
+  tooltipWidth = TOOLTIP_WIDTH,
+  gap = TOOLTIP_GAP,
+): number {
+  if (containerWidth <= 0) return cursorX + gap;
+  // If placing tooltip to the right of cursor would overflow, flip to the left.
+  if (cursorX + gap + tooltipWidth > containerWidth) {
+    return Math.max(0, cursorX - gap - tooltipWidth);
+  }
+  return cursorX + gap;
+}
 
 const COLORS = [
   "var(--chart-1)",
@@ -44,6 +64,8 @@ export function RankingChart({
   itemLabel?: string;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | undefined>(undefined);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   if (data.length === 0) {
     return <p className="text-muted-foreground text-sm">No data available.</p>;
@@ -115,14 +137,30 @@ export function RankingChart({
 
   return (
     <div className="space-y-4">
+      <div ref={containerRef}>
       <ResponsiveContainer width="100%" height={labels.length === 1 ? 250 : 300}>
-        <LineChart data={pivoted}>
+        <LineChart
+          data={pivoted}
+          onMouseMove={(state: { activeCoordinate?: { x: number } } | undefined) => {
+            const cx = state?.activeCoordinate?.x;
+            if (cx == null) return;
+            const cw = containerRef.current?.clientWidth ?? 0;
+            const x = computeTooltipX(cx, cw);
+            // Anchor y to the top of the chart so the tooltip's max-height
+            // (capped in the tooltip itself) extends downward predictably
+            // instead of from the cursor's y position which can push content
+            // off-screen on tall lists.
+            setTooltipPos((prev) => (prev?.x === x && prev?.y === 0 ? prev : { x, y: 0 }));
+          }}
+          onMouseLeave={() => setTooltipPos(undefined)}
+        >
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
           <XAxis dataKey="date" fontSize={12} />
           <YAxis reversed domain={[1, "auto"]} fontSize={12} />
           <Tooltip
             wrapperStyle={{ outline: "none", pointerEvents: "auto" }}
-            allowEscapeViewBox={{ x: true, y: true }}
+            position={tooltipPos}
+            isAnimationActive={false}
             content={
               <RankingChartTooltip
                 pivotedData={pivoted}
@@ -146,6 +184,7 @@ export function RankingChart({
           ))}
         </LineChart>
       </ResponsiveContainer>
+      </div>
 
       {/* Ranking table */}
       <div className="border rounded-md">

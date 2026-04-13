@@ -1,3 +1,6 @@
+Rankings Chart Tooltip Fix (2026-04-13)
+  PLA-1071: Position-flip when near right edge + dynamic max-height clamp ✅
+
 Scrape All Apps from System Admin (2026-04-12)
   - Add ScraperJobOptions.scope ("tracked" | "all") ✅
   - Add JOB_TIMEOUT_APP_DETAILS_ALL_MS (6h) ✅

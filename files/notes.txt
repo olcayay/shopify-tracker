@@ -1,3 +1,25 @@
+Rankings Chart Tooltip Fix (PLA-1071, 2026-04-13)
+====================================
+Why: On rankings page, hover tooltip overflowed viewport on right-side data points
+and tail of long keyword lists was cut off below viewport bottom (scrollbar
+unreachable). User: jotform-ai-chatbot rankings page.
+
+Fix:
+- ranking-chart.tsx now controls Tooltip `position` via onMouseMove. Uses helper
+  computeTooltipX(cursorX, containerWidth) to flip the tooltip to the left of
+  the cursor when right placement would overflow. Y anchored to chart top so
+  tall lists don't push content below the viewport from a high cursor position.
+- ranking-chart-tooltip.tsx measures its top via useLayoutEffect+ref and sets
+  inner card maxHeight = window.innerHeight - top - 16 (min 160px). Resize
+  listener keeps it correct on viewport changes. SSR-safe (typeof window guard).
+- isAnimationActive=false to avoid recharts animating position/content.
+- Existing onMouseEnter freeze (PLA-1059) keeps content stable while the cursor
+  enters the tooltip to scroll.
+
+Tests: computeTooltipX (4 cases: right-place, flip-left, clamp-zero, unknown
+container width). Existing ranking-chart-tooltip.test.tsx still passes; the
+hooks-before-early-return reorder was needed.
+
 Scrape All Apps from System Admin (2026-04-12)
 ====================================
 Why: Cron only processes 36 tracked Shopify apps; 13,538 untracked discovered apps

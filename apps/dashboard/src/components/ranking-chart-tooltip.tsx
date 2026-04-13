@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, Minus } from "lucide-react";
 
 const GRID_THRESHOLD = 12;
@@ -172,6 +172,31 @@ export function RankingChartTooltip({
   const displayLabel = frozen ? frozen.label : label;
   const pinned = frozen !== null;
 
+  // Clamp the tooltip so its bottom never falls past the viewport. Recharts
+  // anchors the wrapper at the chart top; on tall lists the inner card
+  // would otherwise stretch past the visible area and the scroll handle
+  // sat off-screen.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [maxHeightPx, setMaxHeightPx] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    const node = cardRef.current;
+    if (!node) return;
+    const top = node.getBoundingClientRect().top;
+    setMaxHeightPx(Math.max(160, window.innerHeight - top - 16));
+  }, [groups, displayLabel]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onResize = () => {
+      const node = cardRef.current;
+      if (!node) return;
+      const top = node.getBoundingClientRect().top;
+      setMaxHeightPx(Math.max(160, window.innerHeight - top - 16));
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   if (!pinned && (!active || groups.length === 0)) return null;
   if (pinned && groups.length === 0) return null;
 
@@ -181,11 +206,16 @@ export function RankingChartTooltip({
 
   return (
     <div
+      ref={cardRef}
       data-testid="ranking-tooltip"
       onMouseEnter={() => setFrozen({ groups: liveGroups, label })}
       onMouseLeave={() => setFrozen(null)}
       className="rounded-lg border border-border bg-card text-foreground shadow-md text-xs"
-      style={{ width: "min(420px, 95vw)", maxHeight: "90vh", overflowY: "auto" }}
+      style={{
+        width: "min(420px, 95vw)",
+        maxHeight: maxHeightPx != null ? `${maxHeightPx}px` : "85vh",
+        overflowY: "auto",
+      }}
     >
       <div className="sticky top-0 bg-card border-b border-border px-3 py-2 font-medium">
         {String(displayLabel ?? "")}

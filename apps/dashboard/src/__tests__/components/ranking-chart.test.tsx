@@ -19,7 +19,27 @@ vi.mock("recharts", () => ({
   }) => <div data-testid="responsive-container">{children}</div>,
 }));
 
-import { RankingChart } from "@/components/ranking-chart";
+import { RankingChart, computeTooltipX } from "@/components/ranking-chart";
+
+describe("computeTooltipX", () => {
+  it("places tooltip to the right of cursor when there is room", () => {
+    expect(computeTooltipX(100, 1000, 420, 16)).toBe(116);
+  });
+
+  it("flips tooltip to the left of cursor when right would overflow", () => {
+    // cursorX 800, container 1000, tooltip 420, gap 16 -> right edge would be
+    // 800 + 16 + 420 = 1236 > 1000 -> flip to 800 - 16 - 420 = 364
+    expect(computeTooltipX(800, 1000, 420, 16)).toBe(364);
+  });
+
+  it("clamps to 0 when flipping left would go off-screen", () => {
+    expect(computeTooltipX(50, 200, 420, 16)).toBe(0);
+  });
+
+  it("falls back to right of cursor when container width is unknown", () => {
+    expect(computeTooltipX(100, 0)).toBe(116);
+  });
+});
 
 const mockData = [
   { date: "2026-01-01", position: 5, label: "My App", slug: "my-app", linkPrefix: "/shopify/apps/" },
