@@ -1914,3 +1914,73 @@ describe("Cross-cutting: platform scoping", () => {
     expect(res.statusCode).toBe(200);
   });
 });
+
+// ==========================================================================
+// GET /api/account/platform-stats
+// ==========================================================================
+
+describe("GET /api/account/platform-stats", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    const { _resetCacheRedis } = await import("../../utils/cache.js");
+    _resetCacheRedis(null); // disable Redis so fetcher always runs
+    const { accountTrackingRoutes } = await import(
+      "../../routes/account-tracking.js"
+    );
+    app = await buildTestApp({
+      routes: accountTrackingRoutes,
+      prefix: "/api/account",
+      db: {
+        selectResult: [
+          { platform: "shopify", count: 5 },
+        ],
+      },
+    });
+  });
+
+  afterAll(() => app.close());
+
+  it("returns 401 without auth header", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/platform-stats",
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns stats object keyed by platform", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/platform-stats",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body).toHaveProperty("shopify");
+    expect(body.shopify).toMatchObject({
+      apps: expect.any(Number),
+      keywords: expect.any(Number),
+      competitors: expect.any(Number),
+    });
+  });
+
+  it("accepts ?platform=<id> without error", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/platform-stats?platform=shopify",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("ignores invalid ?platform and returns all-platform stats", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/platform-stats?platform=not-a-platform",
+      headers: authHeaders(userToken()),
+    });
+    // Invalid platform is ignored (filter not applied); endpoint still returns.
+    expect(res.statusCode).toBe(200);
+  });
+});

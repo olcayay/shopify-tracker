@@ -54,6 +54,19 @@ import {
   addKeywordToAppSchema,
 } from "../schemas/account.js";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
+import { cacheGet, cacheDel } from "../utils/cache.js";
+import { PLATFORMS } from "@appranks/shared";
+
+const PLATFORM_STATS_TTL_SECONDS = 30;
+
+function platformStatsCacheKey(accountId: string, platform?: string): string {
+  return platform ? `platform-stats:${accountId}:${platform}` : `platform-stats:${accountId}`;
+}
+
+async function invalidatePlatformStats(accountId: string, platform?: string): Promise<void> {
+  await cacheDel(platformStatsCacheKey(accountId));
+  if (platform) await cacheDel(platformStatsCacheKey(accountId, platform));
+}
 
 const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 
@@ -156,48 +169,75 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
   // --- Platform Stats (lightweight badge counts) ---
 
-  // GET /api/account/platform-stats — fast counts for the platform badge
+  // GET /api/account/platform-stats — fast counts for the platform badge.
+  // Cached for ~30s to avoid repeated aggregation on page navigation.
+  // Accepts optional ?platform=<id> to scope to a single platform.
   app.get("/platform-stats", async (request) => {
     const { accountId } = request.user;
+    const rawPlatform = (request.query as Record<string, unknown> | undefined)?.platform;
+    const platformFilter =
+      typeof rawPlatform === "string" && rawPlatform in PLATFORMS ? rawPlatform : undefined;
 
-    // 3 simple COUNT queries — no joins with snapshots/rankings
-    const [appCounts, keywordCounts, competitorCounts] = await Promise.all([
-      db
-        .select({ platform: apps.platform, count: sql<number>`count(*)::int` })
-        .from(accountTrackedApps)
-        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
-        .where(eq(accountTrackedApps.accountId, accountId))
-        .groupBy(apps.platform),
-      db
-        .select({ platform: sql<string>`COALESCE(${apps.platform}, ${trackedKeywords.platform})`, count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int` })
-        .from(accountTrackedKeywords)
-        .leftJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
-        .innerJoin(trackedKeywords, eq(trackedKeywords.id, accountTrackedKeywords.keywordId))
-        .where(eq(accountTrackedKeywords.accountId, accountId))
-        .groupBy(sql`COALESCE(${apps.platform}, ${trackedKeywords.platform})`),
-      db
-        .select({ platform: apps.platform, count: sql<number>`count(distinct ${accountCompetitorApps.competitorAppId})::int` })
-        .from(accountCompetitorApps)
-        .innerJoin(apps, eq(apps.id, accountCompetitorApps.trackedAppId))
-        .where(eq(accountCompetitorApps.accountId, accountId))
-        .groupBy(apps.platform),
-    ]);
+    return cacheGet(
+      platformStatsCacheKey(accountId, platformFilter),
+      async () => {
+        // 3 simple COUNT queries — no joins with snapshots/rankings
+        const appsWhere = platformFilter
+          ? and(eq(accountTrackedApps.accountId, accountId), eq(apps.platform, platformFilter))
+          : eq(accountTrackedApps.accountId, accountId);
+        const keywordsWhere = platformFilter
+          ? and(
+              eq(accountTrackedKeywords.accountId, accountId),
+              sql`COALESCE(${apps.platform}, ${trackedKeywords.platform}) = ${platformFilter}`
+            )
+          : eq(accountTrackedKeywords.accountId, accountId);
+        const competitorsWhere = platformFilter
+          ? and(
+              eq(accountCompetitorApps.accountId, accountId),
+              eq(apps.platform, platformFilter)
+            )
+          : eq(accountCompetitorApps.accountId, accountId);
 
-    const stats: Record<string, { apps: number; keywords: number; competitors: number }> = {};
-    for (const row of appCounts) {
-      if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
-      stats[row.platform].apps = row.count;
-    }
-    for (const row of keywordCounts) {
-      if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
-      stats[row.platform].keywords = row.count;
-    }
-    for (const row of competitorCounts) {
-      if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
-      stats[row.platform].competitors = row.count;
-    }
+        const [appCounts, keywordCounts, competitorCounts] = await Promise.all([
+          db
+            .select({ platform: apps.platform, count: sql<number>`count(*)::int` })
+            .from(accountTrackedApps)
+            .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+            .where(appsWhere)
+            .groupBy(apps.platform),
+          db
+            .select({ platform: sql<string>`COALESCE(${apps.platform}, ${trackedKeywords.platform})`, count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int` })
+            .from(accountTrackedKeywords)
+            .leftJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
+            .innerJoin(trackedKeywords, eq(trackedKeywords.id, accountTrackedKeywords.keywordId))
+            .where(keywordsWhere)
+            .groupBy(sql`COALESCE(${apps.platform}, ${trackedKeywords.platform})`),
+          db
+            .select({ platform: apps.platform, count: sql<number>`count(distinct ${accountCompetitorApps.competitorAppId})::int` })
+            .from(accountCompetitorApps)
+            .innerJoin(apps, eq(apps.id, accountCompetitorApps.trackedAppId))
+            .where(competitorsWhere)
+            .groupBy(apps.platform),
+        ]);
 
-    return stats;
+        const stats: Record<string, { apps: number; keywords: number; competitors: number }> = {};
+        for (const row of appCounts) {
+          if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
+          stats[row.platform].apps = row.count;
+        }
+        for (const row of keywordCounts) {
+          if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
+          stats[row.platform].keywords = row.count;
+        }
+        for (const row of competitorCounts) {
+          if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
+          stats[row.platform].competitors = row.count;
+        }
+
+        return stats;
+      },
+      PLATFORM_STATS_TTL_SECONDS
+    );
   });
 
   // --- Tracked Apps ---
@@ -282,6 +322,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
+      await invalidatePlatformStats(accountId, platform);
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_tracked", "app", slug, { platform, slug })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
@@ -381,6 +422,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         await syncKeywordActiveFlag(db, k.keywordId);
       }
 
+      await invalidatePlatformStats(accountId, platform);
       // Activity log (fire-and-forget)
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_untracked", "app", slug, { platform, slug })).catch(() => {});
       return { message: "App removed from tracking" };
@@ -518,6 +560,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      await invalidatePlatformStats(accountId, platform);
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_tracked", "keyword", String(kw.id), { keyword: kw.keyword, platform, appSlug: trackedAppSlug || null })).catch(() => {});
       return { ...result, keyword: kw.keyword, scraperEnqueued };
     }
@@ -563,6 +606,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncKeywordActiveFlag(db, keywordId);
 
+      await invalidatePlatformStats(accountId);
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId), { keywordId })).catch(() => {});
       return { message: "Keyword removed from tracking" };
     }
@@ -1632,6 +1676,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug, existingApp.platform, request.id);
 
+      await invalidatePlatformStats(accountId, platform);
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", competitorSlug, { competitorSlug, platform, trackedAppSlug })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
@@ -1682,6 +1727,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncAppTrackedFlag(db, delCompAppRow.id);
 
+      await invalidatePlatformStats(accountId, platform);
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", competitorSlug, { competitorSlug, platform: getPlatformFromQuery(request.query as Record<string, unknown>), trackedAppSlug })).catch(() => {});
       return { message: "Competitor removed" };
     }
@@ -2052,6 +2098,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncKeywordActiveFlag(db, keywordId);
 
+      await invalidatePlatformStats(accountId);
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId), { keywordId })).catch(() => {});
       return { message: "Keyword removed from tracking" };
     }
