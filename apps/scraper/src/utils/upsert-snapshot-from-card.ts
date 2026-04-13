@@ -42,6 +42,22 @@ export async function upsertSnapshotFromCategoryCard(
       pricing: appSnapshots.pricing,
       appIntroduction: appSnapshots.appIntroduction,
       developer: appSnapshots.developer,
+      // Detail-only fields — never set by the card pass, but read here so the
+      // card-pass insert can preserve them instead of blanking them out.
+      // See PLA-1072: card insert was dropping appDetails/seoTitle/
+      // seoMetaDescription/features/pricingPlans to "" / [], which then
+      // poisoned the next detail-pass diff (its `if (!newVal) continue` guard
+      // turned the recovery into a silent no-op).
+      appDetails: appSnapshots.appDetails,
+      seoTitle: appSnapshots.seoTitle,
+      seoMetaDescription: appSnapshots.seoMetaDescription,
+      features: appSnapshots.features,
+      pricingPlans: appSnapshots.pricingPlans,
+      demoStoreUrl: appSnapshots.demoStoreUrl,
+      languages: appSnapshots.languages,
+      integrations: appSnapshots.integrations,
+      categories: appSnapshots.categories,
+      support: appSnapshots.support,
     })
     .from(appSnapshots)
     .where(eq(appSnapshots.appId, appId))
@@ -89,10 +105,15 @@ export async function upsertSnapshotFromCategoryCard(
     if (pricingChanged) {
       drift.push({ field: "pricing", oldValue: latestSnap.pricing ?? null, newValue: nextPricingTrim });
     }
-    if (nextIntro !== (latestSnap.appIntroduction ?? "")) {
+    // appIntroduction: card.shortDescription is sometimes empty on a refresh
+    // even after the detail pass populated it. Treat empty as no-op (mirrors
+    // the pricing guard above) — see PLA-1072.
+    if (nextIntro !== "" && nextIntro !== (latestSnap.appIntroduction ?? "")) {
       drift.push({ field: "appIntroduction", oldValue: latestSnap.appIntroduction ?? null, newValue: nextIntro });
     }
-    if (nextDeveloperName !== prevDeveloperName) {
+    // developer: same story — vendorName may be undefined on a card-pass
+    // refresh after the detail pass set it. Don't blank it out.
+    if (nextDeveloperName && nextDeveloperName !== prevDeveloperName) {
       drift.push({ field: "developer", oldValue: prevDeveloperName, newValue: nextDeveloperName });
     }
 
@@ -122,6 +143,17 @@ export async function upsertSnapshotFromCategoryCard(
     ? card.pricingHint
     : (latestSnap?.pricing ?? "");
 
+  // Preserve detail-only fields from the previous snapshot — the card pass
+  // does not produce them, so blanking them would force the next detail pass
+  // to recover, but its `if (!newVal) continue` guard would mask the
+  // recovery. See PLA-1072.
+  const introForInsert = (card.shortDescription && card.shortDescription.length > 0)
+    ? card.shortDescription
+    : (latestSnap?.appIntroduction ?? "");
+  const developerForInsert = vendorName
+    ? { name: vendorName, url: "" }
+    : (latestSnap?.developer ?? null);
+
   await db.insert(appSnapshots).values({
     appId,
     scrapeRunId: runId,
@@ -129,18 +161,18 @@ export async function upsertSnapshotFromCategoryCard(
     averageRating: hasRating ? String(card.averageRating) : null,
     ratingCount: hasCount ? card.ratingCount : null,
     pricing: pricingForInsert,
-    appIntroduction: card.shortDescription || "",
-    appDetails: "",
-    seoTitle: "",
-    seoMetaDescription: "",
-    features: [],
-    developer: vendorName ? { name: vendorName, url: "" } : null,
-    demoStoreUrl: null,
-    languages: [],
-    integrations: [],
-    categories: [],
-    pricingPlans: [],
-    support: null,
+    appIntroduction: introForInsert,
+    appDetails: latestSnap?.appDetails ?? "",
+    seoTitle: latestSnap?.seoTitle ?? "",
+    seoMetaDescription: latestSnap?.seoMetaDescription ?? "",
+    features: latestSnap?.features ?? [],
+    developer: developerForInsert,
+    demoStoreUrl: latestSnap?.demoStoreUrl ?? null,
+    languages: latestSnap?.languages ?? [],
+    integrations: latestSnap?.integrations ?? [],
+    categories: latestSnap?.categories ?? [],
+    pricingPlans: latestSnap?.pricingPlans ?? [],
+    support: latestSnap?.support ?? null,
   });
 
   const reason: UpsertSnapshotResult["reason"] = !latestSnap

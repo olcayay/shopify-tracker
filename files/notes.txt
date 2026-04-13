@@ -1,3 +1,31 @@
+Card-Refresh False Drift Fix (PLA-1072, 2026-04-13)
+====================================
+Why: /system-admin/app-updates was polluted by `app_field_changes` rows where
+`oldValue` was populated and `newValue` was empty. Cause: the listing/category
+pass refreshes a snapshot using a card payload that's missing fields the
+detail pass had previously populated (shortDescription empty, vendorName
+undefined). Symmetric guard exists in the detail pass (`if (!newVal) continue`)
+but not in the card path.
+
+Fix (Part A — root cause):
+- apps/scraper/src/utils/upsert-snapshot-from-card.ts:
+  - appIntroduction guard: empty nextIntro → no drift (mirrors pricing guard).
+  - developer guard: missing vendorName → no drift.
+  - Snapshot insert now reads detail-only fields from the previous snapshot
+    and preserves them: appDetails, seoTitle, seoMetaDescription, features,
+    pricingPlans, demoStoreUrl, languages, integrations, categories, support.
+    Previously these were blanked to ""/[], which then poisoned the next
+    detail-pass diff.
+
+Tests (4 new, in category-scraper-refresh.test.ts):
+- Empty shortDescription → no appIntroduction drift.
+- Missing vendorName → no developer drift.
+- Stale snapshot insert preserves all detail-only fields + developer.
+- Real shortDescription change still recorded as drift.
+
+Deferred (Part B, follow-up): system label `false-empty-after`, backfill
+SQL for historical rows, post-insert auto-tag, dashboard bulk-dismiss button.
+
 Rankings Chart Tooltip Fix (PLA-1071, 2026-04-13)
 ====================================
 Why: On rankings page, hover tooltip overflowed viewport on right-side data points

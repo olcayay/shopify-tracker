@@ -272,6 +272,182 @@ describe("upsertSnapshotFromCategoryCard (PLA-1049)", () => {
     expect(pricingDrift).toHaveLength(0);
   });
 
+  // PLA-1072: card-pass refresh used to overwrite detail-derived fields with
+  // empty values, generating false "before populated → after empty" change
+  // rows on /system-admin/app-updates.
+  it("PLA-1072: empty shortDescription does NOT generate appIntroduction drift when previous was populated", async () => {
+    const now = new Date();
+    const mockDb = createMockDb({
+      latestSnapshot: {
+        id: 100,
+        scrapedAt: new Date(now.getTime() - 60 * 60 * 1000),
+        averageRating: "4.50",
+        ratingCount: 10,
+        pricing: "Free",
+        appIntroduction: "Detailed description from detail pass",
+        developer: { name: "Acme", url: "" },
+      },
+    });
+    const scraper = new CategoryScraper(mockDb as any, {
+      platformModule: {
+        platformId: "salesforce",
+        constants: {
+          seedCategories: ["sales"],
+          maxCategoryDepth: 1,
+          refreshSnapshotFromCategoryCard: true,
+          refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
+        },
+      } as any,
+    });
+
+    await (scraper as any).recordNormalizedAppRankings(
+      [{ ...sampleApp, shortDescription: "" }],
+      "sales",
+      "run-empty-intro",
+      0,
+    );
+
+    const fieldChangeInserts = mockDb._insertCalls.filter(
+      (v: any) => Array.isArray(v) && v[0]?.field,
+    );
+    const introDrift = fieldChangeInserts.flatMap((arr: any[]) => arr).filter((c: any) => c.field === "appIntroduction");
+    expect(introDrift).toHaveLength(0);
+  });
+
+  it("PLA-1072: missing vendorName does NOT generate developer drift when previous was populated", async () => {
+    const now = new Date();
+    const mockDb = createMockDb({
+      latestSnapshot: {
+        id: 100,
+        scrapedAt: new Date(now.getTime() - 60 * 60 * 1000),
+        averageRating: "4.50",
+        ratingCount: 10,
+        pricing: "Free",
+        appIntroduction: "desc",
+        developer: { name: "Acme Corp", url: "https://acme.example" },
+      },
+    });
+    const scraper = new CategoryScraper(mockDb as any, {
+      platformModule: {
+        platformId: "salesforce",
+        constants: {
+          seedCategories: ["sales"],
+          maxCategoryDepth: 1,
+          refreshSnapshotFromCategoryCard: true,
+          refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
+        },
+      } as any,
+    });
+
+    // sampleApp.shortDescription === "desc" → no intro drift either.
+    // No vendorName passed via opts (recordNormalizedAppRankings does not
+    // forward one) — equivalent to vendor missing on a card refresh.
+    await (scraper as any).recordNormalizedAppRankings([sampleApp], "sales", "run-no-vendor", 0);
+
+    const fieldChangeInserts = mockDb._insertCalls.filter(
+      (v: any) => Array.isArray(v) && v[0]?.field,
+    );
+    const developerDrift = fieldChangeInserts.flatMap((arr: any[]) => arr).filter((c: any) => c.field === "developer");
+    expect(developerDrift).toHaveLength(0);
+  });
+
+  it("PLA-1072: card-pass insert preserves detail-only fields from previous snapshot", async () => {
+    const now = new Date();
+    const previousFeatures = [{ name: "F1", description: "d" }];
+    const previousPricingPlans = [{ name: "Pro", price: "$10" }];
+    const mockDb = createMockDb({
+      latestSnapshot: {
+        id: 100,
+        scrapedAt: new Date(now.getTime() - 25 * 60 * 60 * 1000), // stale: forces insert
+        averageRating: "4.50",
+        ratingCount: 10,
+        pricing: "Free",
+        appIntroduction: "desc",
+        developer: { name: "Acme", url: "" },
+        appDetails: "Detailed body",
+        seoTitle: "SEO title",
+        seoMetaDescription: "SEO meta",
+        features: previousFeatures,
+        pricingPlans: previousPricingPlans,
+        demoStoreUrl: "https://demo.example",
+        languages: ["en"],
+        integrations: ["slack"],
+        categories: ["sales"],
+        support: { email: "x@y" },
+      },
+    });
+    const scraper = new CategoryScraper(mockDb as any, {
+      platformModule: {
+        platformId: "salesforce",
+        constants: {
+          seedCategories: ["sales"],
+          maxCategoryDepth: 1,
+          refreshSnapshotFromCategoryCard: true,
+          refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
+        },
+      } as any,
+    });
+
+    await (scraper as any).recordNormalizedAppRankings([sampleApp], "sales", "run-preserve", 0);
+
+    const snapshotInsert = mockDb._insertCalls.find(
+      (v: any) => v && typeof v === "object" && "appIntroduction" in v,
+    ) as any;
+    expect(snapshotInsert).toBeTruthy();
+    expect(snapshotInsert.appDetails).toBe("Detailed body");
+    expect(snapshotInsert.seoTitle).toBe("SEO title");
+    expect(snapshotInsert.seoMetaDescription).toBe("SEO meta");
+    expect(snapshotInsert.features).toEqual(previousFeatures);
+    expect(snapshotInsert.pricingPlans).toEqual(previousPricingPlans);
+    expect(snapshotInsert.demoStoreUrl).toBe("https://demo.example");
+    expect(snapshotInsert.languages).toEqual(["en"]);
+    expect(snapshotInsert.integrations).toEqual(["slack"]);
+    expect(snapshotInsert.support).toEqual({ email: "x@y" });
+    // developer also preserved when card has no vendorName
+    expect(snapshotInsert.developer).toEqual({ name: "Acme", url: "" });
+  });
+
+  it("PLA-1072: real shortDescription change still recorded", async () => {
+    const now = new Date();
+    const mockDb = createMockDb({
+      latestSnapshot: {
+        id: 100,
+        scrapedAt: new Date(now.getTime() - 60 * 60 * 1000),
+        averageRating: "4.50",
+        ratingCount: 10,
+        pricing: "Free",
+        appIntroduction: "old description",
+        developer: null,
+      },
+    });
+    const scraper = new CategoryScraper(mockDb as any, {
+      platformModule: {
+        platformId: "salesforce",
+        constants: {
+          seedCategories: ["sales"],
+          maxCategoryDepth: 1,
+          refreshSnapshotFromCategoryCard: true,
+          refreshSnapshotMaxAgeMs: 20 * 60 * 60 * 1000,
+        },
+      } as any,
+    });
+
+    await (scraper as any).recordNormalizedAppRankings(
+      [{ ...sampleApp, shortDescription: "brand new description" }],
+      "sales",
+      "run-real-change",
+      0,
+    );
+
+    const fieldChangeInserts = mockDb._insertCalls.filter(
+      (v: any) => Array.isArray(v) && v[0]?.field,
+    );
+    const introDrift = fieldChangeInserts.flatMap((arr: any[]) => arr).filter((c: any) => c.field === "appIntroduction");
+    expect(introDrift).toHaveLength(1);
+    expect(introDrift[0].newValue).toBe("brand new description");
+    expect(introDrift[0].oldValue).toBe("old description");
+  });
+
   it("flag=true, no change but snapshot stale (>20h): inserts refreshed snapshot, no field changes", async () => {
     const now = new Date();
     const mockDb = createMockDb({

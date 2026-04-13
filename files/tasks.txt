@@ -1,6 +1,10 @@
 Rankings Chart Tooltip Fix (2026-04-13)
   PLA-1071: Position-flip when near right edge + dynamic max-height clamp ✅
 
+Card-Refresh False Drift Fix (2026-04-13)
+  PLA-1072 Part A: guard appIntroduction/developer + preserve detail-only fields ✅
+  PLA-1072 Part B: deferred — label backfill + bulk-dismiss UI (follow-up)
+
 Scrape All Apps from System Admin (2026-04-12)
   - Add ScraperJobOptions.scope ("tracked" | "all") ✅
   - Add JOB_TIMEOUT_APP_DETAILS_ALL_MS (6h) ✅
