@@ -1247,3 +1247,5 @@ progress-aware staleness for scrape_runs cleanup — no more killing healthy lon
 make canva scraper fail loudly: parseCanvaAppPage / fetchAppPageWithPage / fetchAllSearchResults throw on degraded output instead of silent stubs; CF challenge wait 15→45s ✅
 
 install real Google Chrome in worker image to bypass Canva Cloudflare, bump navigateToAppsPage CF timeout 15→45s, refresh canva auth cookies ✅
+
+PLA-1089: Canva lowercase app name stubs — DB backfill script (packages/db/src/scripts/backfill-canva-stub-names.ts) + explicit regression test that parser never returns slug-derived name stub ✅

@@ -6330,3 +6330,9 @@ Canva scraper — real Chrome in worker image + CF timeout consistency
   - `apps/scraper/src/platforms/canva/index.ts`: `navigateToAppsPage` CF-resolve timeout bumped 15s → 45s for consistency with the detail-page fix from the prior commit. Production CF passes take 20-35s with valid cookies; 15s was too tight.
   - Refreshed `apps/scraper/canva-auth-state.json` with live cookies from a logged-in Olcay/Jotform Chrome profile (14 cookies incl. `cf_clearance` exp 2027-03, `CPA`/`__cf_bm` freshly issued, Google OAuth cookies for the logged-in Canva session).
 - Test plan: push → GitHub Actions deploy (~1m) → trigger canva app_details → expect CF challenges to resolve under 45s on most apps, items_scraped to advance.
+
+PLA-1089 — Canva lowercase app name stubs (backfill + regression test)
+- Parser fix already landed in commit 4981d36c (fallback() that synthesised names from slugs was removed; parseCanvaAppPage now throws CanvaAppNotFoundError instead of returning a stub). No new stubs can enter the DB going forward.
+- Existing DB rows still carry old stubs (e.g. "jotform ai chatbot"). Added `packages/db/src/scripts/backfill-canva-stub-names.ts` — one-off script that matches `apps.name ~ '^[a-z0-9 ]+$'` AND `name == slug.split("--")[1].replace(/-/g," ")`, then NULLs the match. Dry-run by default; requires `--apply`. A null name signals the next successful app_details scrape to repopulate.
+- Regression test in `app-parser.test.ts`: iterates a matrix of degraded HTMLs × slugs and asserts parser never returns the slug-derived stub; must throw with "not found in page".
+- Not auto-run on deploy — safe manual invocation when the operator is ready. Run after canva app_details stability (PLA-1083) is fixed, so re-scrapes actually succeed and the nulled names get repopulated.

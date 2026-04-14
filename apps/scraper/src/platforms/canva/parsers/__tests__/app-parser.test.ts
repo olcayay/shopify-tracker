@@ -365,6 +365,36 @@ describe("parseCanvaAppPage", () => {
     expect(() => parseCanvaAppPage(cfHtml, "AAFabc--foo")).toThrow(/not found in page/);
   });
 
+  // PLA-1089: regression — a pre-4981d36c bug synthesised a name from the slug
+  // (`slug.split("--")[1].replace(/-/g, " ")`), producing lowercase stubs like
+  // "jotform ai chatbot" that were persisted to apps.name. The parser must
+  // never return such a stub; it must throw instead.
+  it("never synthesises a slug-derived lowercase name stub", () => {
+    const degradedHtmls = [
+      "<html></html>",
+      "<html><body>whatever</body></html>",
+      "<html><head><title>Just a moment...</title></head></html>",
+    ];
+    const slugs = [
+      "AAGX23MX5S8--jotform-ai-chatbot",
+      "AAFabc--some-multi-word-app",
+      "AAGY1234--single",
+    ];
+    for (const html of degradedHtmls) {
+      for (const slug of slugs) {
+        const expectedStub = (slug.split("--")[1] || "").replace(/-/g, " ");
+        try {
+          const got = parseCanvaAppPage(html, slug);
+          // If it didn't throw, the returned name must not be the slug stub.
+          expect(got.name).not.toBe(expectedStub);
+          throw new Error(`expected parser to throw for degraded html + slug ${slug}`);
+        } catch (e) {
+          expect((e as Error).message).toMatch(/not found in page/);
+        }
+      }
+    }
+  });
+
   it("extracts appId from slug with double dash", () => {
     const html = buildDetailHtml("AAF_dash1", { name: "Dash App" });
     const result = parseCanvaAppPage(html, "AAF_dash1--dash-app");
