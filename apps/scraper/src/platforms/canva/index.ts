@@ -68,7 +68,21 @@ export class CanvaModule implements PlatformModule {
   /** Page pool for concurrent app scrapes (prevents navigation race conditions) */
   private pagePool: Page[] = [];
   private pagesInUse = new Set<Page>();
-  private static readonly MAX_POOL_SIZE = 5;
+  /**
+   * PLA-1083: reduced from 5 → 3. Real Chrome renderer processes run
+   * ~200-400 MB RSS each; at 5 pages + main page + Chromium overhead we
+   * came within OOM risk on the 3 GiB worker container, and in practice
+   * ~80% of failures in run `1447` (2026-04-14) were `Page crashed` errors
+   * even when container memory wasn't saturated — likely renderer churn
+   * from Canva's heavy client-side JS under contention. 3 keeps throughput
+   * close to 5 while halving renderer count at peak.
+   */
+  private static readonly MAX_POOL_SIZE = 3;
+  /**
+   * Pages that emitted the Playwright `crash` event. Removed from the pool
+   * on next acquire and replaced with a fresh page. See PLA-1083.
+   */
+  private crashedPages = new WeakSet<Page>();
 
   /** Cache search results per keyword (all pages fetched at once) */
   private searchCache = new Map<string, string>();
@@ -504,6 +518,17 @@ export class CanvaModule implements PlatformModule {
   private async acquirePoolPage(): Promise<Page> {
     await this.ensureBrowserPage(); // ensure browser + context are initialized
 
+    // PLA-1083: evict crashed pages from the pool before picking one
+    this.pagePool = this.pagePool.filter((p) => {
+      if (this.crashedPages.has(p)) {
+        this.pagesInUse.delete(p);
+        try { p.close().catch(() => {}); } catch { /* ignore */ }
+        log.info("pool:evicted_crashed", { poolSize: this.pagePool.length - 1 });
+        return false;
+      }
+      return true;
+    });
+
     // Return an available page from the pool
     for (const page of this.pagePool) {
       if (!this.pagesInUse.has(page)) {
@@ -516,6 +541,7 @@ export class CanvaModule implements PlatformModule {
     // Create a new page if under the max
     if (this.pagePool.length < CanvaModule.MAX_POOL_SIZE && this.browserContext) {
       const page = await this.browserContext.newPage();
+      this.attachCrashHandler(page);
       this.pagePool.push(page);
       this.pagesInUse.add(page);
       log.info("pool:created_new", { poolSize: this.pagePool.length, inUse: this.pagesInUse.size });
@@ -527,12 +553,29 @@ export class CanvaModule implements PlatformModule {
     while (true) {
       await new Promise((r) => setTimeout(r, 200));
       for (const page of this.pagePool) {
-        if (!this.pagesInUse.has(page)) {
+        if (!this.pagesInUse.has(page) && !this.crashedPages.has(page)) {
           this.pagesInUse.add(page);
           return page;
         }
       }
     }
+  }
+
+  /**
+   * Attach a `crash` listener so we can mark the page as dead and let
+   * `acquirePoolPage` evict it before serving another navigation.
+   * Also releases it from `pagesInUse` so waiters don't deadlock.
+   * PLA-1083.
+   */
+  private attachCrashHandler(page: Page): void {
+    page.on("crash", () => {
+      log.error("pool:page_crashed", {
+        poolSize: this.pagePool.length,
+        inUse: this.pagesInUse.size,
+      });
+      this.crashedPages.add(page);
+      this.pagesInUse.delete(page);
+    });
   }
 
   /**
@@ -729,6 +772,7 @@ export class CanvaModule implements PlatformModule {
     if (this.browser?.isConnected() && this.browserContext) {
       log.info("creating fresh page on existing browser", { smokeTest: isSmokeTest });
       this.browserPage = await this.browserContext.newPage();
+      this.attachCrashHandler(this.browserPage);
       await this.navigateToAppsPage(this.browserPage, isSmokeTest);
       log.info("fresh page ready", { ms: Date.now() - t0 });
       return this.browserPage;
@@ -780,6 +824,7 @@ export class CanvaModule implements PlatformModule {
       ...(storageState && { storageState }),
     });
     this.browserPage = await this.browserContext.newPage();
+    this.attachCrashHandler(this.browserPage);
     await this.navigateToAppsPage(this.browserPage, isSmokeTest);
     log.info("canva:browser_ready", { totalMs: Date.now() - t0 });
 

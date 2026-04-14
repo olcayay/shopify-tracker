@@ -6356,3 +6356,16 @@ PLA-1085 — Remove dead HTTP fallbacks in canva scraper
 - bulk-search.ts removed — it was the text-search helper called by the removed search fallback; no other callers.
 - Tests: removed 4 tests that asserted the HTTP-fallback paths, kept the cached-page assertion for fetchCategoryPage. 65/65 canva tests green, 2619/2619 scraper tests overall.
 - Imports trimmed: withFallback, searchBulkApps gone. HttpClient field retained for constructor compat.
+
+PLA-1083 — Canva page-crash mitigation (S1 minimal fixes)
+- Root cause of run 1447's ~82% `Page crashed` failure rate: combo of real Chrome renderer weight + 5-page pool + heavy Canva SPA JS under contention. Memory wasn't saturated (57% peak) but renderer churn was high.
+- Changes in `apps/scraper/src/platforms/canva/index.ts`:
+  - `MAX_POOL_SIZE` 5 → 3. Halves peak renderer count with minimal throughput loss (browser pool was rarely saturated in observed runs).
+  - New `attachCrashHandler(page)` method registers Playwright's `page.on("crash")` listener on every pool page and on the main search `browserPage`. On crash the page is added to a `crashedPages` WeakSet and removed from `pagesInUse` so waiters unblock.
+  - `acquirePoolPage` now evicts crashed pages before serving: filters `pagePool`, calls `page.close()` on evicted entries, logs `pool:evicted_crashed`. Fresh pages replace them up to `MAX_POOL_SIZE`.
+  - Wait loop also skips crashed pages so a crashed-and-still-"in use" entry can't deadlock acquisition.
+- Not in this commit (follow-up candidates for PLA-1083 itself):
+  - Retry on crash at the `fetchAppPageViaBrowser` level: if a page crash happens mid-fetch, release and acquire a fresh page, retry the current app once before failing. Current commit still fails the current app on crash but subsequent apps get a healthy pool.
+  - Periodic page recycling (every N uses). Not required yet — if post-deploy success rate still underwhelms, add.
+  - Chrome browser process audit. Observed two `user-data-dir` profiles co-existing on the VM; root cause not yet traced.
+- Tests: 2619/2619 green. New coverage in `fallback.test.ts`: crash-eviction + attach-handler-registration. Existing pool tests updated to provide `on` on mock pages.

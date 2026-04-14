@@ -59,27 +59,30 @@ describe("CanvaModule fallback", () => {
   });
 
   describe("page pool for concurrent scrapes", () => {
+    // PLA-1083: pool pages now have an `on("crash")` listener attached, so
+    // mocks must expose an `on` spy.
+    function mockPage(id: number) {
+      return { id, close: vi.fn().mockResolvedValue(undefined), on: vi.fn() };
+    }
+
     it("acquirePoolPage returns different pages for concurrent callers", async () => {
-      // Simulate browser context by mocking internal state
       const mockPages: any[] = [];
       const mockContext = {
         newPage: vi.fn().mockImplementation(() => {
-          const page = { id: mockPages.length, close: vi.fn() };
-          mockPages.push(page);
-          return page;
+          const p = mockPage(mockPages.length);
+          mockPages.push(p);
+          return p;
         }),
       };
       (mod as any).browserContext = mockContext;
-      // Pretend browser is initialized by setting browserPage
       (mod as any).browserPage = { fake: true };
       (mod as any).browser = { close: vi.fn() };
 
-      // Acquire 3 pages concurrently
+      // Acquire 3 pages concurrently (MAX_POOL_SIZE now 3)
       const p1 = await (mod as any).acquirePoolPage();
       const p2 = await (mod as any).acquirePoolPage();
       const p3 = await (mod as any).acquirePoolPage();
 
-      // All should be different page instances
       expect(p1).not.toBe(p2);
       expect(p2).not.toBe(p3);
       expect(p1).not.toBe(p3);
@@ -89,10 +92,7 @@ describe("CanvaModule fallback", () => {
 
     it("releasePoolPage allows page reuse", async () => {
       const mockContext = {
-        newPage: vi.fn().mockImplementation(() => ({
-          id: Math.random(),
-          close: vi.fn(),
-        })),
+        newPage: vi.fn().mockImplementation(() => mockPage(Math.random())),
       };
       (mod as any).browserContext = mockContext;
       (mod as any).browserPage = { fake: true };
@@ -101,10 +101,48 @@ describe("CanvaModule fallback", () => {
       const p1 = await (mod as any).acquirePoolPage();
       (mod as any).releasePoolPage(p1);
 
-      // Should reuse the released page
       const p2 = await (mod as any).acquirePoolPage();
       expect(p2).toBe(p1);
-      expect(mockContext.newPage).toHaveBeenCalledTimes(1); // Only created once
+      expect(mockContext.newPage).toHaveBeenCalledTimes(1);
+    });
+
+    // PLA-1083: crashed pool page is evicted and replaced on next acquire
+    it("evicts a crashed page from the pool on next acquire", async () => {
+      const mockContext = {
+        newPage: vi.fn().mockImplementation(() => mockPage(Math.random())),
+      };
+      (mod as any).browserContext = mockContext;
+      (mod as any).browserPage = { fake: true };
+      (mod as any).browser = { close: vi.fn() };
+
+      const p1 = await (mod as any).acquirePoolPage();
+      (mod as any).releasePoolPage(p1);
+
+      // Simulate a crash — the crashHandler normally adds to crashedPages
+      // and clears pagesInUse. Emulate that directly.
+      (mod as any).crashedPages.add(p1);
+
+      const p2 = await (mod as any).acquirePoolPage();
+      expect(p2).not.toBe(p1);
+      expect((mod as any).pagePool).not.toContain(p1);
+      // p1 must have been closed as part of eviction
+      expect(p1.close).toHaveBeenCalled();
+      expect(mockContext.newPage).toHaveBeenCalledTimes(2); // one for p1, one for replacement
+    });
+
+    // PLA-1083: attachCrashHandler wires the `on("crash")` listener
+    it("attachCrashHandler registers a crash listener that marks the page crashed", () => {
+      const page = mockPage(1);
+      (mod as any).attachCrashHandler(page);
+
+      expect(page.on).toHaveBeenCalledWith("crash", expect.any(Function));
+      const handler = (page.on as any).mock.calls[0][1];
+
+      (mod as any).pagesInUse.add(page);
+      handler();
+
+      expect((mod as any).crashedPages.has(page)).toBe(true);
+      expect((mod as any).pagesInUse.has(page)).toBe(false);
     });
 
     it("closeBrowser clears the page pool", async () => {
@@ -131,6 +169,7 @@ describe("CanvaModule fallback", () => {
           waitForSelector: vi.fn().mockResolvedValue(undefined),
           waitForTimeout: vi.fn().mockResolvedValue(undefined),
           content: vi.fn().mockResolvedValue("<html></html>"),
+          on: vi.fn(),
         }),
       };
 
