@@ -1058,6 +1058,13 @@
       "when": 1808553600000,
       "tag": "0150_drop_legacy_platform_visibility_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 151,
+      "version": "7",
+      "when": 1808640000000,
+      "tag": "0151_seed_label_and_autotag_case_only_diffs",
+      "breakpoints": true
     }
   ]
 }

@@ -52,6 +52,7 @@ import { runConcurrent } from "../utils/run-concurrent.js";
 import { resolveParentRunId } from "../utils/parent-run-id.js";
 import { recordItemError } from "../utils/record-item-error.js";
 import { upsertSnapshotFromCategoryCard } from "../utils/upsert-snapshot-from-card.js";
+import { isCaseOnlyDiff } from "../utils/text-change.js";
 
 /** Snapshot fields needed for change detection */
 interface PrevSnapshotData {
@@ -1307,7 +1308,15 @@ export class AppDetailsScraper {
             .then((rows) => rows[0]);
 
       if (currentApp && currentApp.name !== details.app_name) {
-        changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
+        if (isCaseOnlyDiff(currentApp.name, details.app_name)) {
+          log.warn("skipping false change: name case-only diff", {
+            slug,
+            old: currentApp.name,
+            new: details.app_name,
+          });
+        } else {
+          changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
+        }
       }
 
       // Version change detection (WordPress and other platforms with _currentVersion)
@@ -1357,6 +1366,13 @@ export class AppDetailsScraper {
             // Guard: skip boilerplate seoMetaDescription (scraper got shell page)
             if (field === "seoMetaDescription" && isBoilerplateMeta(newVal, this.platform)) {
               log.warn("skipping false change: boilerplate meta description", { slug, field, newVal });
+              continue;
+            }
+            // Guard: skip case-only diffs on title-like fields (Canva/SFDC re-case
+            // the same brand across renders — never a real update). Intentionally
+            // limited to seoTitle here; long-form body text can be case-semantic.
+            if (field === "seoTitle" && isCaseOnlyDiff(oldVal, newVal)) {
+              log.warn("skipping false change: seoTitle case-only diff", { slug, field, old: oldVal, new: newVal });
               continue;
             }
             changes.push({ field, oldValue: oldVal, newValue: newVal });

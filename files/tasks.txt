@@ -1,3 +1,11 @@
+Case-Only Diff Guard (PLA-1092, 2026-04-15)
+  - `apps/scraper/src/utils/text-change.ts` — shared `isCaseOnlyDiff()` helper
+  - `app-details-scraper.ts` — guards applied to `name` and `seoTitle` diffs (warn + skip)
+  - Migration 0151: seeds `case-only-diff` label + AFTER INSERT trigger `trg_tag_case_only`
+    + backfills 590 historical rows (name: 477, seoTitle: 113)
+  - Prod dry-run verified: positive (Jotform→JotForm tagged) + negative (Jotform→Jotform Pro not tagged)
+  - 5 unit tests on the helper; npm test 5/5 green ✅
+
 Platform Access — Phase B/C: DROP legacy columns (PLA-1082, 2026-04-14)
   - `platform_visibility.is_visible` → DROP (now feature_flags.platform-<id>.is_enabled)
   - `account_platforms.override_global_visibility` → DROP (now account_feature_flags row)

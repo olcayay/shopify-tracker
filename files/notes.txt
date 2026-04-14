@@ -1,3 +1,47 @@
+Case-Only Diff Guard (PLA-1092, 2026-04-15)
+====================================
+Problem: Canva (and occasionally Salesforce) re-case the same brand across
+renders — `Jotform` ↔ `JotForm` for the same app. The scraper's `!==` check
+treated this as a real change and emitted bogus `name` / `seoTitle` rows into
+app_field_changes, polluting the per-app change log, inflating recent-update
+metrics, and risking spurious competitor-alert emails.
+
+Prod audit: 477 `name` rows and 113 `seoTitle` rows where old and new only
+differ in case (LOWER equality). Sample IDs from the ticket: 22263, 22260, 22255.
+
+Fix — two layers:
+1. Scraper guard (prevents new false-positives). New shared helper
+   `apps/scraper/src/utils/text-change.ts::isCaseOnlyDiff()` is the single
+   chokepoint for this noise class. Wired into app-details-scraper.ts at the
+   `name` diff (line ~1309) and inside fieldMap for `seoTitle` (~L1365). Both
+   log a warning with old/new values so tuning is still observable.
+   Intentionally NOT applied to appIntroduction / appDetails / seoMetaDescription
+   where case can be semantically meaningful in long-form text.
+
+2. Migration 0151 (same pattern as 0149 / false-empty-after):
+   - Seeds `case-only-diff` system label (color #9ca3af).
+   - AFTER INSERT trigger `trg_tag_case_only` on app_field_changes:
+     if `field IN ('name','seoTitle')` AND old/new non-null AND LOWER-equal
+     AND not byte-equal → tag with the label.
+   - Backfill: 590 historical rows tagged (477 name + 113 seoTitle).
+
+Why a DB trigger (same argument as 0149): the `app_field_changes` insert
+surface includes multiple scraper paths and would spread if we moved guards
+into code only. The scraper guard stops new ones; the trigger is defense-in-
+depth for any path that slips through.
+
+Verification:
+- Prod dry-run (rolled back): 590 rows tagged, positive test (Jotform→JotForm
+  → tagged) and negative test (Jotform→Jotform Pro → not tagged) both pass.
+- 5 unit tests on isCaseOnlyDiff cover equal strings, case-only diffs, real
+  diffs, null/undefined/empty inputs, and non-ASCII casing (Turkish dotted I
+  is intentionally treated as a real diff under default lowercase semantics).
+- `npm test` 5/5 green.
+
+Scope boundary: the stored `apps.name` value is NOT rewritten to a canonical
+case. That's a separate decision affecting URLs / search / display and is
+out of scope. The guard only suppresses the drift row.
+
 Platform Access — Phase B/C DROP legacy columns (PLA-1082, 2026-04-14)
 ====================================
 Problem: Phase A (fe5baff0, migration 0148, earlier today) moved the platform
