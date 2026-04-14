@@ -1245,3 +1245,5 @@ supersede duplicate `running` scrape_runs rows sharing the same (queue, jobId) o
 progress-aware staleness for scrape_runs cleanup — no more killing healthy long-running scrapes (PLA-1081 follow-up) ✅
 
 make canva scraper fail loudly: parseCanvaAppPage / fetchAppPageWithPage / fetchAllSearchResults throw on degraded output instead of silent stubs; CF challenge wait 15→45s ✅
+
+install real Google Chrome in worker image to bypass Canva Cloudflare, bump navigateToAppsPage CF timeout 15→45s, refresh canva auth cookies ✅

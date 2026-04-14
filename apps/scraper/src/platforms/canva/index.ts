@@ -825,11 +825,13 @@ export class CanvaModule implements PlatformModule {
       timeout: gotoTimeout,
     });
 
-    // Wait for Cloudflare challenge to auto-resolve if present
+    // Wait for Cloudflare challenge to auto-resolve if present.
+    // Production CF passes take 20-35s in logs with real Chrome + valid
+    // clearance cookies, so 45s gives headroom; keep 8s for smoke tests.
     const initTitle = await page.title();
     if (initTitle === "Just a moment...") {
       log.info("Cloudflare challenge on /apps, waiting for auto-resolve");
-      const cfTimeout = isSmokeTest ? 8_000 : 15_000;
+      const cfTimeout = isSmokeTest ? 8_000 : 45_000;
       try {
         await page.waitForFunction(
           () => document.title !== "Just a moment...",

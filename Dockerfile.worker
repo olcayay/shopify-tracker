@@ -32,9 +32,14 @@ COPY packages/db/package.json ./packages/db/
 COPY apps/scraper/package.json ./apps/scraper/
 RUN npm ci --omit=dev
 
-# Install Playwright browsers inside the image (not in /root/.cache which may be ephemeral)
+# Install Playwright browsers inside the image (not in /root/.cache which may be ephemeral).
+# Chrome (real Google Chrome) is installed alongside Chromium because Canva's
+# Cloudflare bot-detection inspects TLS fingerprint + CDP features and
+# reliably challenges bundled Chromium even with valid session cookies;
+# real Chrome passes. The canva module calls chromium.launch({ channel: "chrome" })
+# first and falls back to Chromium if Chrome isn't present.
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
-RUN npx playwright install chromium --with-deps
+RUN npx playwright install chromium chrome --with-deps
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
