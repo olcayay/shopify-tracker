@@ -588,6 +588,27 @@ describe("System admin routes", () => {
       });
       expect(res.statusCode).toBe(200);
     });
+
+    // PLA-1091: regression — the endpoint used to 500 because two of its SQL
+    // queries referenced non-existent columns (c.app_slug, sc.category_slug,
+    // SUM(c.app_count) on categories). A statusCode-only check above passes
+    // under mocked DBs but didn't catch it in prod. Assert response body shape
+    // so any future column drift fails here.
+    it("returns apps/keywords/categories arrays with expected shape", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/platform-counts",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as Record<string, unknown>;
+      expect(body).toHaveProperty("apps");
+      expect(body).toHaveProperty("keywords");
+      expect(body).toHaveProperty("categories");
+      expect(Array.isArray(body.apps)).toBe(true);
+      expect(Array.isArray(body.keywords)).toBe(true);
+      expect(Array.isArray(body.categories)).toBe(true);
+    });
   });
 
   // -----------------------------------------------------------------------

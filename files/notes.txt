@@ -6369,3 +6369,11 @@ PLA-1083 — Canva page-crash mitigation (S1 minimal fixes)
   - Periodic page recycling (every N uses). Not required yet — if post-deploy success rate still underwhelms, add.
   - Chrome browser process audit. Observed two `user-data-dir` profiles co-existing on the VM; root cause not yet traced.
 - Tests: 2619/2619 green. New coverage in `fallback.test.ts`: crash-eviction + attach-handler-registration. Existing pool tests updated to provide `on` on mock pages.
+
+PLA-1091 — /api/system-admin/platform-counts 500s fixed
+- system-admin.ts:2232-2269 had three SQL queries referencing columns that don't exist on the actual Drizzle schema:
+  - `account_competitor_apps.app_slug` / `.platform` - table uses `competitor_app_id` FK to apps. Rewrote EXISTS subquery to use `aca.competitor_app_id = a.id`.
+  - `account_starred_categories.category_slug` / `.platform` - table uses `category_id` FK. Rewrote to `asc_tbl.category_id = c.id` (aliased to avoid the `asc` SQL keyword).
+  - `SUM(c.app_count)` on `categories` - `app_count` lives on `category_snapshots`, not `categories`. Replaced with LATERAL join to latest snapshot per category.
+- Added regression test `apps/api/src/__tests__/routes/system-admin.test.ts` that asserts response body shape (apps/keywords/categories arrays) so a status 200 with a degraded response still passes — but a column-mismatch SQL error would now fail the new assertion because the handler would return 500.
+- All packages green (5/5 turbo).

@@ -2230,6 +2230,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // GET /api/system-admin/platform-counts — per-platform counts for apps, keywords, categories
+  // PLA-1091: fixed three column-mismatch bugs — joins now match the actual Drizzle
+  // schema (account_competitor_apps.competitor_app_id, account_starred_categories.category_id,
+  // and categories.app_count lives on category_snapshots, not categories).
   app.get("/platform-counts", async () => {
     const [appCounts, kwCounts, catCounts] = await Promise.all([
       db.execute<{ platform: string; total: number; tracked: number; scraped: number; competitor: number; last_scraped_at: string | null }>(sql`
@@ -2240,7 +2243,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             SELECT 1 FROM app_snapshots s WHERE s.app_id = a.id
           ))::int AS scraped,
           COUNT(*) FILTER (WHERE EXISTS (
-            SELECT 1 FROM account_competitor_apps c WHERE c.app_slug = a.slug AND c.platform = a.platform
+            SELECT 1 FROM account_competitor_apps aca WHERE aca.competitor_app_id = a.id
           ))::int AS competitor,
           MAX(a.updated_at)::text AS last_scraped_at
         FROM apps a GROUP BY a.platform
@@ -2257,11 +2260,19 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       db.execute<{ platform: string; total: number; total_apps: number; starred: number }>(sql`
         SELECT c.platform,
           COUNT(*)::int AS total,
-          COALESCE(SUM(c.app_count), 0)::int AS total_apps,
+          COALESCE(SUM(latest.app_count), 0)::int AS total_apps,
           COUNT(*) FILTER (WHERE EXISTS (
-            SELECT 1 FROM account_starred_categories sc WHERE sc.category_slug = c.slug AND sc.platform = c.platform
+            SELECT 1 FROM account_starred_categories asc_tbl WHERE asc_tbl.category_id = c.id
           ))::int AS starred
-        FROM categories c GROUP BY c.platform
+        FROM categories c
+        LEFT JOIN LATERAL (
+          SELECT cs.app_count
+          FROM category_snapshots cs
+          WHERE cs.category_id = c.id
+          ORDER BY cs.scraped_at DESC
+          LIMIT 1
+        ) latest ON true
+        GROUP BY c.platform
       `),
     ]);
 
