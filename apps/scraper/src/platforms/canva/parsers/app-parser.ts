@@ -419,28 +419,22 @@ export function parseCanvaAppPage(html: string, slug: string): NormalizedAppDeta
   const app = apps.find((a) => a.id === appId);
 
   if (!app) {
-    log.warn("app not found in embedded JSON", { slug, appId, totalApps: apps.length });
-    return fallback(slug);
+    // All three extraction paths failed — this is not a successful scrape.
+    // Throw so the caller counts it as failed and withFallback can try other paths.
+    // Previously we returned a stub "minimal" record which silently inflated
+    // items_scraped even though the data was effectively empty (e.g. Cloudflare
+    // challenge HTML, which has no embedded app JSON at all).
+    throw new CanvaAppNotFoundError(slug, appId, apps.length);
   }
 
   return normalizeCanvaApp(app);
 }
 
-function fallback(slug: string): NormalizedAppDetails {
-  const appId = slug.split("--")[0];
-  log.info("app parsed with minimal data (fallback)", { slug });
-  return {
-    name: slug.split("--")[1]?.replace(/-/g, " ") || appId,
-    slug,
-    averageRating: null,
-    ratingCount: null,
-    pricingHint: null,
-    pricingModel: null,
-    iconUrl: null,
-    developer: null,
-    badges: [],
-    platformData: { canvaAppId: appId },
-  };
+export class CanvaAppNotFoundError extends Error {
+  constructor(public readonly slug: string, public readonly appId: string, public readonly embeddedAppCount: number) {
+    super(`canva app ${slug} not found in page (appId=${appId}, embeddedApps=${embeddedAppCount})`);
+    this.name = "CanvaAppNotFoundError";
+  }
 }
 
 function escapeRegex(s: string): string {

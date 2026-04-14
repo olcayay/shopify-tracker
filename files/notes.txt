@@ -6302,3 +6302,22 @@ PLA-1081 follow-up — Progress-aware staleness (no more killing healthy long ru
 - Migration 0147 backfills `last_progress_at = COALESCE(started_at, created_at)` for existing rows so the trigger has a sane anchor on day one. Index on `(status, last_progress_at)`.
 - Tests: existing cleanup test suite (14/14) still green. No new test cases added — behavior is SQL-only; the mocked Database.execute returns `rowCount` which is what cleanup reads. Full suite 5/5 packages green (email template snapshots also refreshed for today's date, unrelated to this work).
 - Follow-ups still open from PLA-1081: BullMQ `getActive()` cross-check at cleanup time, parametrised worker-platform-lock audit test, Sentry breadcrumb on each flip.
+
+Canva scraper: surface degraded output instead of silent stubs
+- Problem: canva app_details runs on the scraper VM looked frozen (items_scraped/current_index stuck at 0) even though the worker was chugging through apps. Root cause: two layers of silent fallback.
+  1. `parseCanvaAppPage` called `fallback(slug)` when no extraction path matched, returning a minimal stub with the slug-derived name and all ratings=null. The app-details-scraper counted these stubs as `itemsScraped++`, so a fully-broken run reported the same "progress" shape as a healthy one. In practice Cloudflare was returning challenge HTML (no embedded app JSON at all), every app dropped into `fallback()`, and the run looked frozen.
+  2. `fetchAppPageWithPage` logged `hasDetailJson=false` but returned the HTML anyway. And `fetchAllSearchResults` returned `{A:0, C:[]}` on the final attempt even when zero `/_ajax/appsearch/search` responses were intercepted (i.e. the search JS never fired because the page was still on CF challenge). Both cases meant `withFallback` never saw a throw, so the HTTP fallback path was dead code.
+  3. Separately, the "HTTP fallback" to `https://www.canva.com/apps` is itself blocked by Cloudflare (HTTP 403 on both scraper VM and local). So even when the primary throws, the HTTP fallback will also throw — but the failure will now be recorded honestly.
+- Fix in `apps/scraper/src/platforms/canva/`:
+  - `parsers/app-parser.ts`: removed `fallback()`; `parseCanvaAppPage` throws `CanvaAppNotFoundError` when SSR / appListing API / bulk JSON all fail.
+  - `index.ts` `fetchAppPageWithPage`: throws when CF challenge still unresolved, and when both SSR detail JSON and appListing API response are missing.
+  - `index.ts` CF challenge wait: 15s → 45s (most real CF passes take 20-35s in logs; 15s was too tight).
+  - `index.ts` `fetchAllSearchResults`: throws when the final attempt captured 0 `/_ajax/appsearch/search` responses (distinct from "CF passed but keyword genuinely has 0 results").
+  - `doFetchAllSearchResults` now returns `{ A, C, capturedResponses }` so the retry loop can distinguish blocked-page from empty-result.
+- Tests (`apps/scraper`): 2619/2619 green.
+  - `parsers/__tests__/app-parser.test.ts:354`: replaced the old "returns fallback for unknown app" test (which encoded the broken behavior) with a throw assertion; added a CF challenge HTML case.
+  - `__tests__/fallback.test.ts`: updated mocks to include `capturedResponses`; added a test that final-attempt 0-captured throws so withFallback fires.
+- Not in this commit — still open:
+  - HTTP fallback on both fetchAppPage and fetchSearchPage hits the same Cloudflare wall (verified via curl from both scraper VM and local). Effectively dead code; needs to be replaced with a different strategy (saved clearance cookies via storageState persistence, or a cache-based "last known good" path).
+  - `storageState` cookie persistence across browser restarts — canva-auth.ts / canva-refresh-cookies.ts scripts exist but the module only loads storage state on launch, doesn't write it back after a successful CF pass. This is the next step ("S3") and is the real fix for canva reliability.
+  - `platform-canva` flag was observed auto-deactivating at 11:38 UTC on 2026-04-14 after being manually re-enabled at 11:11 — some scheduled process (cron?) is toggling it. Not investigated yet.

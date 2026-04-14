@@ -1243,3 +1243,5 @@ short-TTL cache for /api/auth/me + PATCH /me invalidation to guard against Cloud
 supersede duplicate `running` scrape_runs rows sharing the same (queue, jobId) on every cleanup cycle (PLA-1081) ✅
 
 progress-aware staleness for scrape_runs cleanup — no more killing healthy long-running scrapes (PLA-1081 follow-up) ✅
+
+make canva scraper fail loudly: parseCanvaAppPage / fetchAppPageWithPage / fetchAllSearchResults throw on degraded output instead of silent stubs; CF challenge wait 15→45s ✅

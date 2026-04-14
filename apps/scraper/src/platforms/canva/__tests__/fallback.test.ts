@@ -193,30 +193,24 @@ describe("CanvaModule fallback", () => {
           // Simulate a hang — return a promise that never resolves (timeout will catch it)
           return new Promise(() => {}); // never resolves
         }
-        return { A: 5, C: [{ A: "app1", B: "Test App" }] };
+        return { A: 5, C: [{ A: "app1", B: "Test App" }], capturedResponses: 1 };
       });
       (mod as any).doFetchAllSearchResults = mockDoFetch;
       (mod as any).resetBrowserPage = vi.fn().mockResolvedValue(undefined);
 
-      // fetchAllSearchResults should retry after timeout
-      // Use a short timeout for testing by temporarily patching
-      const origMethod = (mod as any).fetchAllSearchResults.bind(mod);
-
-      // Test the retry logic directly
       const result = await (mod as any).fetchAllSearchResults("test-keyword");
 
-      // Should have called doFetch twice (first timeout, second success)
       expect(mockDoFetch).toHaveBeenCalledTimes(2);
       expect(result.C).toHaveLength(1);
       expect(result.C[0].A).toBe("app1");
-    }, 70_000); // 60s timeout + buffer
+    }, 70_000);
 
     it("fetchAllSearchResults retries on 0 results", async () => {
       let callCount = 0;
       const mockDoFetch = vi.fn().mockImplementation(async () => {
         callCount++;
-        if (callCount === 1) return { A: 0, C: [] };
-        return { A: 3, C: [{ A: "app1", B: "App" }] };
+        if (callCount === 1) return { A: 0, C: [], capturedResponses: 1 };
+        return { A: 3, C: [{ A: "app1", B: "App" }], capturedResponses: 1 };
       });
       (mod as any).doFetchAllSearchResults = mockDoFetch;
       (mod as any).resetBrowserPage = vi.fn().mockResolvedValue(undefined);
@@ -224,6 +218,19 @@ describe("CanvaModule fallback", () => {
       const result = await (mod as any).fetchAllSearchResults("test");
       expect(mockDoFetch).toHaveBeenCalledTimes(2);
       expect(result.C).toHaveLength(1);
+    });
+
+    it("fetchAllSearchResults throws when final attempt has 0 captured responses", async () => {
+      // Simulates the Cloudflare-blocked case: search JS never fires,
+      // no /_ajax/appsearch/search responses intercepted on either attempt.
+      // Must throw so withFallback can try the HTTP path instead of silently
+      // returning an empty result set.
+      const mockDoFetch = vi.fn().mockResolvedValue({ A: 0, C: [], capturedResponses: 0 });
+      (mod as any).doFetchAllSearchResults = mockDoFetch;
+      (mod as any).resetBrowserPage = vi.fn().mockResolvedValue(undefined);
+
+      await expect((mod as any).fetchAllSearchResults("blocked")).rejects.toThrow(/captured 0 responses/);
+      expect(mockDoFetch).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -238,12 +245,12 @@ describe("CanvaModule fallback", () => {
       // 2. The smoke test with --fallback flag (integration test)
     });
 
-    it("parseAppDetails handles both browser and bulk page HTML", () => {
-      // Browser returns full detail page, bulk returns /apps page
-      // Parser should handle both gracefully
-      const result = mod.parseAppDetails("<html>no data</html>", "AAFtest--test");
-      expect(result).toBeDefined();
-      expect(result.name).toBeDefined();
+    it("parseAppDetails throws on HTML with no extractable app data", () => {
+      // Previously returned a silent minimal stub, which inflated items_scraped
+      // when Cloudflare returned challenge HTML. Now throws so the caller
+      // records a real failure.
+      expect(() => mod.parseAppDetails("<html>no data</html>", "AAFtest--test"))
+        .toThrow(/not found in page/);
     });
   });
 });

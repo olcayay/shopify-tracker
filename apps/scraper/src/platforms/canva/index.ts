@@ -142,19 +142,28 @@ export class CanvaModule implements PlatformModule {
 
       // Handle Cloudflare challenge if present
       let title = await page.title();
+      let cfResolved = true;
       if (title === "Just a moment...") {
         log.info("Cloudflare challenge on detail page, waiting for auto-resolve", { slug });
         try {
           await page.waitForFunction(
             () => document.title !== "Just a moment...",
-            { timeout: 15_000 },
+            { timeout: 45_000 },
           );
           await page.waitForTimeout(3000);
           title = await page.title();
           log.info("Cloudflare challenge resolved", { slug, newTitle: title });
         } catch {
+          cfResolved = false;
           log.warn("Cloudflare challenge did not resolve in time", { slug });
         }
+      }
+
+      if (!cfResolved) {
+        // CF challenge still up — the page body is the challenge, not Canva content.
+        // Throw so withFallback fires (even if HTTP fallback also fails,
+        // the error is counted honestly instead of silently returning empty HTML).
+        throw new Error(`canva: Cloudflare challenge unresolved for ${slug}`);
       }
 
       const isBulkPage = title === "Apps Marketplace | Canva";
@@ -181,6 +190,15 @@ export class CanvaModule implements PlatformModule {
 
       const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
       log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson, hasAppListingApi: !!appListingJson });
+
+      if (!hasDetailJson && !appListingJson) {
+        // Page loaded (CF passed) but neither SSR detail JSON nor the appListing
+        // API response is present. Likely means the app id is stale/removed, or
+        // Canva served a degraded HTML. Throw so withFallback fires and the
+        // failure is counted — don't return empty HTML to let the parser
+        // silently emit a stub record.
+        throw new Error(`canva: detail page missing both SSR JSON and appListing API for ${slug}`);
+      }
 
       return html;
     } finally {
@@ -556,7 +574,7 @@ export class CanvaModule implements PlatformModule {
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        const result = await Promise.race([
+        const result: { A: number; C: any[]; capturedResponses: number } = await Promise.race([
           this.doFetchAllSearchResults(keyword, attempt),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error(`search timed out after ${SEARCH_TIMEOUT_MS / 1000}s`)), SEARCH_TIMEOUT_MS)
@@ -569,7 +587,15 @@ export class CanvaModule implements PlatformModule {
           continue;
         }
 
-        return result;
+        // On the final attempt, if we still captured zero search responses AND
+        // got zero results, Canva's search JS never fired — usually because the
+        // search input wasn't hydrated (Cloudflare blocked /apps). Throw so
+        // withFallback triggers and the failure is accounted for.
+        if (result.capturedResponses === 0 && result.C.length === 0) {
+          throw new Error(`canva: search captured 0 responses for keyword "${keyword}" after ${attempt} attempts — page likely not hydrated`);
+        }
+
+        return { A: result.A, C: result.C };
       } catch (err) {
         log.error("fetchAllSearchResults attempt failed", { keyword, attempt, error: String(err) });
         if (attempt < MAX_ATTEMPTS) {
@@ -581,7 +607,8 @@ export class CanvaModule implements PlatformModule {
       }
     }
 
-    return { A: 0, C: [] };
+    // Unreachable under normal flow — MAX_ATTEMPTS loop either returns or throws.
+    throw new Error(`canva: exhausted ${MAX_ATTEMPTS} attempts for keyword "${keyword}"`);
   }
 
   /**
@@ -597,7 +624,7 @@ export class CanvaModule implements PlatformModule {
     await this.ensureBrowserPage();
   }
 
-  private async doFetchAllSearchResults(keyword: string, attempt: number): Promise<{ A: number; C: any[] }> {
+  private async doFetchAllSearchResults(keyword: string, attempt: number): Promise<{ A: number; C: any[]; capturedResponses: number }> {
     const page = await this.ensureBrowserPage();
 
     // Collect all search API responses
@@ -674,7 +701,7 @@ export class CanvaModule implements PlatformModule {
         uniqueApps: allApps.length,
       });
 
-      return { A: totalResults, C: allApps };
+      return { A: totalResults, C: allApps, capturedResponses: searchResponses.length };
     } finally {
       page.off("response", responseHandler);
     }

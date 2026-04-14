@@ -351,14 +351,18 @@ describe("parseCanvaAppPage", () => {
     expect(result.name).toBe("Bulk App");
   });
 
-  it("returns fallback for unknown app", () => {
+  it("throws CanvaAppNotFoundError when no extraction path matches", () => {
+    // Previously returned a silent minimal stub which inflated items_scraped
+    // even for Cloudflare challenge HTML. Now throws so the caller can count
+    // it as a failure and withFallback can try other paths.
     const html = "<html><body>nothing</body></html>";
-    const result = parseCanvaAppPage(html, "AAF_unknown--my-app");
-    expect(result.name).toBe("my app");
-    expect(result.slug).toBe("AAF_unknown--my-app");
-    expect(result.averageRating).toBeNull();
-    expect(result.ratingCount).toBeNull();
-    expect(result.developer).toBeNull();
+    expect(() => parseCanvaAppPage(html, "AAF_unknown--my-app"))
+      .toThrow(/not found in page/);
+  });
+
+  it("throws on Cloudflare challenge HTML (empty bulk page)", () => {
+    const cfHtml = "<html><head><title>Just a moment...</title></head><body></body></html>";
+    expect(() => parseCanvaAppPage(cfHtml, "AAFabc--foo")).toThrow(/not found in page/);
   });
 
   it("extracts appId from slug with double dash", () => {
