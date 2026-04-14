@@ -6346,3 +6346,13 @@ PLA-1087 — single-letter competitor names — root cause: PLA-1089 data qualit
 - Small UI robustness tweak landed in this commit: `charAt(0)` fallback now `(app.name?.charAt(0) || "?").toUpperCase()`. Handles null name (post-PLA-1089 backfill) and at least uppercases the initial so existing lowercase-stub data shows "J" instead of "j" while PLA-1089 backfill / PLA-1083 re-scrape pipeline is still pending.
 - Real fix: PLA-1089 backfill (`packages/db/src/scripts/backfill-canva-stub-names.ts --apply`) + PLA-1083 page-crash resolution → real names + real iconUrls populate → fallback rarely fires.
 - All 2302 dashboard tests green.
+
+PLA-1085 — Remove dead HTTP fallbacks in canva scraper
+- fetchAppPage, fetchCategoryPage, fetchSearchPage no longer call withFallback. Primary (browser) path is the only path.
+- Rationale: canva.com/apps returns HTTP 403 to any non-browser TLS fingerprint (verified from scraper VM and local). The HTTP fallback always threw the same kind of error as primary, so logs would emit "primary failed, trying fallback" followed immediately by the real error. Pure noise.
+- fetchCategoryPage still has an implicit cache-based fallback via fetchAppsPage's cachedAppsPageHtml (persistent browser page snapshot), which is a real resilience layer.
+- fetchAppPage has no fallback now. Future work (if needed): per-app LRU cache keyed on appId.
+- fetchSearchPage has no fallback. Search freshness is time-sensitive; stale cache is worse than explicit failure.
+- bulk-search.ts removed — it was the text-search helper called by the removed search fallback; no other callers.
+- Tests: removed 4 tests that asserted the HTTP-fallback paths, kept the cached-page assertion for fetchCategoryPage. 65/65 canva tests green, 2619/2619 scraper tests overall.
+- Imports trimmed: withFallback, searchBulkApps gone. HttpClient field retained for constructor compat.

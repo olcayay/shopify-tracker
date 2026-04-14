@@ -1251,3 +1251,5 @@ install real Google Chrome in worker image to bypass Canva Cloudflare, bump navi
 PLA-1089: Canva lowercase app name stubs — DB backfill script (packages/db/src/scripts/backfill-canva-stub-names.ts) + explicit regression test that parser never returns slug-derived name stub ✅
 
 PLA-1087: single-letter competitor names — uppercase + null-safe icon fallback in keywords-table & keywords-app-icon (UI tweak; real fix is PLA-1089 backfill + PLA-1083) ✅
+
+PLA-1085: remove dead HTTP fallback paths in canva scraper (fetchAppPage/CategoryPage/SearchPage) + delete bulk-search.ts + trim stale tests ✅

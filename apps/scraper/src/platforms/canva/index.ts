@@ -10,7 +10,6 @@ import type {
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
-import { withFallback } from "../../utils/with-fallback.js";
 import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import type { Browser, BrowserContext, Page, Response } from "playwright";
 import { canvaUrls } from "./urls.js";
@@ -20,7 +19,6 @@ import { parseCanvaCategoryPage } from "./parsers/category-parser.js";
 import { parseCanvaFeaturedSections } from "./parsers/featured-parser.js";
 import { parseCanvaSearchPage } from "./parsers/search-parser.js";
 import { parseCanvaSuggestions } from "./parsers/suggest-parser.js";
-import { searchBulkApps } from "./parsers/bulk-search.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("canva-module");
@@ -94,20 +92,12 @@ export class CanvaModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
-    return withFallback(
-      () => this.fetchAppPageViaBrowser(slug),
-      async () => {
-        // Fallback: fetch /apps bulk page via HTTP and extract app data
-        const html = await this.httpClient.fetchPage("https://www.canva.com/apps");
-        const appId = slug.split("--")[0];
-        if (!html.includes(`"A":"${appId}"`)) {
-          throw new Error(`App ${slug} not found in bulk page`);
-        }
-        return html;
-      },
-      `canva/fetchAppPage/${slug}`,
-      this.tracker,
-    );
+    // PLA-1085: HTTP fallback removed — canva.com/apps returns HTTP 403 to any
+    // non-browser TLS fingerprint (verified from multiple origins), so the
+    // fallback always threw the same error as the primary. Dead code.
+    // If per-app resilience is needed later, replace with an LRU cache keyed
+    // on appId that serves last-known-good HTML.
+    return this.fetchAppPageViaBrowser(slug);
   }
 
   private async fetchAppPageViaBrowser(slug: string): Promise<string> {
@@ -207,12 +197,11 @@ export class CanvaModule implements PlatformModule {
   }
 
   async fetchCategoryPage(_slug: string, _page?: number): Promise<string> {
-    return withFallback(
-      () => this.fetchAppsPage(),
-      () => this.httpClient.fetchPage("https://www.canva.com/apps"),
-      "canva/fetchCategoryPage",
-      this.tracker,
-    );
+    // PLA-1085: HTTP fallback removed. fetchAppsPage already returns the
+    // cached /apps HTML from the persistent browser page, so the browser
+    // path is itself a cached fallback on subsequent calls. Raw-HTTP
+    // fallback hits Cloudflare 403 on every request — dead code.
+    return this.fetchAppsPage();
   }
 
   // --- Parse ---
@@ -274,21 +263,12 @@ export class CanvaModule implements PlatformModule {
       return JSON.stringify({ A: 0, C: [] });
     }
 
-    const combinedJson = await withFallback(
-      async () => {
-        const allResults = await this.fetchAllSearchResults(keyword);
-        return JSON.stringify(allResults);
-      },
-      async () => {
-        // Fallback: fetch /apps bulk page via HTTP and do client-side text search
-        log.info("using bulk search fallback", { keyword });
-        const html = await this.httpClient.fetchPage("https://www.canva.com/apps");
-        return searchBulkApps(html, keyword);
-      },
-      `canva/fetchSearchPage/${keyword}`,
-      this.tracker,
-    );
-
+    // PLA-1085: HTTP bulk-search fallback removed. canva.com/apps returns
+    // Cloudflare 403 to non-browser TLS, so the fallback path always threw.
+    // Search freshness is time-sensitive — stale cached results are worse
+    // than an explicit failure, so no cache-based fallback either.
+    const allResults = await this.fetchAllSearchResults(keyword);
+    const combinedJson = JSON.stringify(allResults);
     this.searchCache.set(keyword, combinedJson);
     return combinedJson;
   }

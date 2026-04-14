@@ -35,67 +35,26 @@ describe("CanvaModule fallback", () => {
     vi.restoreAllMocks();
   });
 
-  describe("fetchAppPage fallback logic", () => {
-    it("HTTP fallback returns bulk page when app ID found", async () => {
-      vi.spyOn(httpClient, "fetchPage").mockResolvedValue('<html>"A":"AAFabcd" bulk data</html>');
-
-      // Directly test the fallback function (same logic as in fetchAppPage)
-      const slug = "AAFabcd--test-app";
-      const appId = slug.split("--")[0];
-      const html = await httpClient.fetchPage("https://www.canva.com/apps");
-      expect(html.includes(`"A":"${appId}"`)).toBe(true);
-    });
-
-    it("HTTP fallback throws when app not in bulk page", async () => {
-      vi.spyOn(httpClient, "fetchPage").mockResolvedValue("<html>no matching</html>");
-
-      const slug = "AAFabcd--test-app";
-      const appId = slug.split("--")[0];
-      const html = await httpClient.fetchPage("https://www.canva.com/apps");
-      expect(html.includes(`"A":"${appId}"`)).toBe(false);
-    });
-  });
+  // PLA-1085: HTTP fallback paths removed from fetchAppPage, fetchCategoryPage,
+  // and fetchSearchPage. canva.com/apps returns HTTP 403 to any non-browser TLS
+  // fingerprint (verified from multiple origins), so the fallback path always
+  // threw the same kind of error as the primary. Previously covered-by-tests
+  // scenarios:
+  //   - "HTTP fallback returns bulk page when app ID found" / "throws when not"
+  //   - "fetchCategoryPage HTTP /apps fallback works correctly"
+  //   - "searchBulkApps handles/returns-empty keyword"
+  // are gone. fetchCategoryPage still has an implicit cache-based resilience
+  // path via fetchAppsPage's cachedAppsPageHtml (tested below).
 
   describe("fetchCategoryPage", () => {
-    it("uses cached /apps page when available (primary path)", async () => {
+    it("uses cached /apps page when available", async () => {
       (mod as any).cachedAppsPageHtml = "<html>cached</html>";
       vi.spyOn(httpClient, "fetchPage").mockResolvedValue("<html>http</html>");
 
       const result = await mod.fetchCategoryPage("productivity");
       expect(result).toBe("<html>cached</html>");
+      // fetchCategoryPage no longer calls httpClient at all
       expect(httpClient.fetchPage).not.toHaveBeenCalled();
-    });
-
-    it("HTTP /apps fallback works correctly", async () => {
-      vi.spyOn(httpClient, "fetchPage").mockResolvedValue("<html>http fallback</html>");
-
-      // Test the fallback function directly
-      const result = await httpClient.fetchPage("https://www.canva.com/apps");
-      expect(result).toBe("<html>http fallback</html>");
-    });
-  });
-
-  describe("fetchSearchPage fallback (searchBulkApps)", () => {
-    it("searchBulkApps handles embedded app data", async () => {
-      const { searchBulkApps } = await import("../parsers/bulk-search.js");
-
-      const html = `<html><script>self.__next_f.push([1,"[{\\"A\\":\\"AAFtest\\",\\"B\\":\\"SDK_APP\\",\\"C\\":\\"Email Tool\\",\\"D\\":\\"Send emails easily\\",\\"E\\":\\"Email management\\",\\"F\\":\\"EmailCo\\",\\"I\\":[\\"marketplace_topic.communication\\"]}]"])</script></html>`;
-
-      const result = searchBulkApps(html, "email");
-      const parsed = JSON.parse(result);
-      expect(parsed.A).toBeGreaterThanOrEqual(0);
-      expect(parsed.C).toBeDefined();
-    });
-
-    it("searchBulkApps returns empty for non-matching keyword", async () => {
-      const { searchBulkApps } = await import("../parsers/bulk-search.js");
-
-      const html = `<html><script>self.__next_f.push([1,"[{\\"A\\":\\"AAFtest\\",\\"B\\":\\"SDK_APP\\",\\"C\\":\\"Photo Editor\\",\\"D\\":\\"Edit photos\\"}]"])</script></html>`;
-
-      const result = searchBulkApps(html, "nonexistent-keyword-xyz");
-      const parsed = JSON.parse(result);
-      expect(parsed.A).toBe(0);
-      expect(parsed.C).toEqual([]);
     });
   });
 
