@@ -6336,3 +6336,13 @@ PLA-1089 — Canva lowercase app name stubs (backfill + regression test)
 - Existing DB rows still carry old stubs (e.g. "jotform ai chatbot"). Added `packages/db/src/scripts/backfill-canva-stub-names.ts` — one-off script that matches `apps.name ~ '^[a-z0-9 ]+$'` AND `name == slug.split("--")[1].replace(/-/g," ")`, then NULLs the match. Dry-run by default; requires `--apply`. A null name signals the next successful app_details scrape to repopulate.
 - Regression test in `app-parser.test.ts`: iterates a matrix of degraded HTMLs × slugs and asserts parser never returns the slug-derived stub; must throw with "not found in page".
 - Not auto-run on deploy — safe manual invocation when the operator is ready. Run after canva app_details stability (PLA-1083) is fixed, so re-scrapes actually succeed and the nulled names get repopulated.
+
+PLA-1087 — single-letter competitor names — root cause: PLA-1089 data quality, not a string-spread bug
+- Investigated keywords page render path. The "single letters" come from the `{app.name.charAt(0)}` icon fallback in `keywords-table.tsx:103` (column header) and `keywords-app-icon.tsx:35` (selector card). Both render the first character of `app.name` when `iconUrl` is null.
+- For canva apps, two upstream issues coincide:
+  1. `apps.iconUrl` is null for some apps (parser fallback didn't set it); see PLA-1088 for the related CDN 403 issue.
+  2. `apps.name` carries the lowercase slug-derived stub from the pre-4981d36c parser fallback (PLA-1089), so charAt(0) returns lowercase 'j', 'c', etc.
+- Not a string-spread bug. The task hypothesis was incorrect — verified the API returns `apps.name` as a string (`apps/api/src/routes/keywords.ts:480, 522`) and the UI renders it as a string. There's no `[...app.name]` or `Array.from(name)` pattern anywhere in the keywords or app-detail surfaces.
+- Small UI robustness tweak landed in this commit: `charAt(0)` fallback now `(app.name?.charAt(0) || "?").toUpperCase()`. Handles null name (post-PLA-1089 backfill) and at least uppercases the initial so existing lowercase-stub data shows "J" instead of "j" while PLA-1089 backfill / PLA-1083 re-scrape pipeline is still pending.
+- Real fix: PLA-1089 backfill (`packages/db/src/scripts/backfill-canva-stub-names.ts --apply`) + PLA-1083 page-crash resolution → real names + real iconUrls populate → fallback rarely fires.
+- All 2302 dashboard tests green.

@@ -31,8 +31,8 @@ export function AppIcon({
         {app.iconUrl ? (
           <img src={app.iconUrl} alt={app.name} className="rounded-lg h-10 w-10" />
         ) : (
-          <div className="rounded-lg bg-muted flex items-center justify-center text-xs font-bold h-10 w-10">
-            {app.name.charAt(0)}
+          <div className="rounded-lg bg-muted flex items-center justify-center text-xs font-bold h-10 w-10 uppercase">
+            {app.name?.charAt(0) || "?"}
           </div>
         )}
         {selected && !isMain && (

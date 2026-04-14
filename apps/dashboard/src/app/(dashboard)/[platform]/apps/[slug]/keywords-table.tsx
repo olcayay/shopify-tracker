@@ -100,7 +100,7 @@ export function KeywordsTable({
                 {app.iconUrl ? (
                   <img src={app.iconUrl} alt={app.name} className="h-6 w-6 rounded" />
                 ) : (
-                  <span className="text-xs font-bold">{app.name.charAt(0)}</span>
+                  <span className="text-xs font-bold uppercase">{app.name?.charAt(0) || "?"}</span>
                 )}
                 {sortBySlug === app.slug && (
                   <ArrowDown className={cn("h-3 w-3 text-muted-foreground transition-transform", sortDirection === "asc" && "rotate-180")} />
