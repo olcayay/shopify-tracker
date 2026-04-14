@@ -1,3 +1,10 @@
+Forgot-password 307 redirect fix (PLA-1093, 2026-04-15)
+  - `apps/dashboard/src/proxy.ts` — PUBLIC_PATHS now includes /forgot-password,
+    /reset-password, /verify-email; exported so tests can assert coverage.
+  - `apps/dashboard/src/__tests__/middleware.test.ts` — 5 new tests: anon access
+    to each auth route, token-preserving /reset-password?token=x, authed user on
+    /forgot-password, structural guard that every `(auth)/*` dir is in PUBLIC_PATHS.
+
 Case-Only Diff Guard (PLA-1092, 2026-04-15)
   - `apps/scraper/src/utils/text-change.ts` — shared `isCaseOnlyDiff()` helper
   - `app-details-scraper.ts` — guards applied to `name` and `seoTitle` diffs (warn + skip)

@@ -1,3 +1,23 @@
+Forgot-password 307 redirect fix (PLA-1093, 2026-04-15)
+=======================================================
+Problem: On production, clicking "Forgot password?" on /login responded
+HTTP 307 → /login, so users were locked out of the self-service reset flow.
+Same symptom on /reset-password — worse there, because the middleware redirect
+dropped the token query param from password-reset emails.
+
+Root cause: `apps/dashboard/src/proxy.ts` PUBLIC_PATHS listed /login, /register,
+/invite but not /forgot-password, /reset-password, /verify-email. Unauthenticated
+requests fell through to the catch-all `NextResponse.redirect(/login)` at line
+124. The pages themselves under `src/app/(auth)/` were fine — just unreachable.
+
+Fix: Added the three missing routes to PUBLIC_PATHS, exported the constant,
+and added a structural guard test that reads `src/app/(auth)/` at runtime and
+fails if any directory is missing from PUBLIC_PATHS. This catches the entire
+class of "new auth page added, forgot to wire public-paths" drift going forward.
+
+No scope creep: did not refactor robots.ts (which has its own hardcoded list)
+into a shared constant — left as a follow-up if the drift recurs.
+
 Case-Only Diff Guard (PLA-1092, 2026-04-15)
 ====================================
 Problem: Canva (and occasionally Salesforce) re-case the same brand across

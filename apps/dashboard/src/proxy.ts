@@ -3,9 +3,12 @@ import { PLATFORM_IDS } from "@appranks/shared";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-const PUBLIC_PATHS = [
-  "/", "/login", "/register", "/invite", "/terms", "/privacy", "/health",
-  "/audit", "/changelog", "/contact", "/pricing",
+// Paths reachable without a session. Keep in sync with directories under
+// `src/app/(auth)/` — a test in `__tests__/middleware.test.ts` enforces this.
+export const PUBLIC_PATHS = [
+  "/", "/login", "/register", "/invite", "/forgot-password", "/reset-password",
+  "/verify-email", "/terms", "/privacy", "/health", "/audit", "/changelog",
+  "/contact", "/pricing",
 ];
 
 const VALID_PLATFORMS: string[] = PLATFORM_IDS;

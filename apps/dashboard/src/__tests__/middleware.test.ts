@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import { proxy } from "@/proxy";
+import { proxy, PUBLIC_PATHS } from "@/proxy";
 
 vi.mock("next/server", async () => {
   const actual = await vi.importActual<typeof import("next/server")>("next/server");
@@ -48,6 +50,44 @@ describe("proxy – root redirect", () => {
     await proxy(req);
     expect(NextResponse.redirect).not.toHaveBeenCalled();
     expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("proxy – auth routes are public (PLA-1093)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  for (const path of ["/forgot-password", "/reset-password", "/verify-email"]) {
+    it(`does not redirect anonymous ${path} to /login`, async () => {
+      const req = makeRequest(path);
+      await proxy(req);
+      expect(NextResponse.redirect).not.toHaveBeenCalled();
+      expect(NextResponse.next).toHaveBeenCalledTimes(1);
+    });
+  }
+
+  it("does not redirect /reset-password?token=... (preserves token query)", async () => {
+    const req = makeRequest("/reset-password?token=abc123");
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not redirect authenticated users on /forgot-password (not treated as login/register)", async () => {
+    const req = makeRequest("/forgot-password", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+  });
+
+  it("PUBLIC_PATHS covers every directory under src/app/(auth) (structural guard)", () => {
+    const authDir = join(__dirname, "..", "app", "(auth)");
+    const entries = readdirSync(authDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => `/${e.name}`);
+    for (const route of entries) {
+      expect(PUBLIC_PATHS).toContain(route);
+    }
   });
 });
 
