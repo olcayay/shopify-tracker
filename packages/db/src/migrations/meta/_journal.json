@@ -1037,6 +1037,13 @@
       "when": 1808294400000,
       "tag": "0147_scrape_runs_last_progress_at",
       "breakpoints": true
+    },
+    {
+      "idx": 148,
+      "version": "7",
+      "when": 1808380800000,
+      "tag": "0148_sync_platform_visibility_to_feature_flags",
+      "breakpoints": true
     }
   ]
 }

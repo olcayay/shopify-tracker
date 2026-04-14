@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql, and, desc } from "drizzle-orm";
+import { eq, sql, and, desc, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -14,13 +14,13 @@ import {
   accountTrackedFeatures,
   researchProjects,
   accountPlatforms,
-  platformVisibility,
   emailVerificationTokens,
   featureFlags,
   accountFeatureFlags,
   invitations,
 } from "@appranks/db";
-import { PLATFORM_IDS } from "@appranks/shared";
+import { PLATFORM_IDS, platformFeatureFlagSlug, type PlatformId } from "@appranks/shared";
+import { getVisiblePlatformsForAccount } from "../utils/platform-visibility.js";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
@@ -771,14 +771,20 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       FROM accounts a WHERE a.id = ${user.accountId}
     `);
 
-    // These are lightweight and independent — 3 parallel queries
-    const [enabledPlatformsResult, visibilityRows, enabledFeaturesResult] = await Promise.all([
-      db.select({ platform: accountPlatforms.platform, overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility }).from(accountPlatforms).where(eq(accountPlatforms.accountId, user.accountId)),
-      db.select().from(platformVisibility),
+    // 3 parallel lookups:
+    //   - subscription rows (account_platforms) for usage count
+    //   - visible platforms (subscription ∩ feature-flag, 3-tier for this user)
+    //   - enabled feature flags (for hasFeature checks)
+    const platformFlagSlugs = (PLATFORM_IDS as readonly string[]).map((p) =>
+      platformFeatureFlagSlug(p as PlatformId),
+    );
+    const [subscribedPlatformsResult, visiblePlatformsFromHelper, enabledFeaturesResult] = await Promise.all([
+      db
+        .select({ platform: accountPlatforms.platform })
+        .from(accountPlatforms)
+        .where(eq(accountPlatforms.accountId, user.accountId)),
+      getVisiblePlatformsForAccount(db, user.accountId, user.id),
       // Feature flags: user-level overrides > account-level > global
-      // 1. Start with globally enabled + account-level flags
-      // 2. Add user-level enabled flags
-      // 3. Subtract user-level disabled flags
       db.execute<{ slug: string }>(sql`
         SELECT DISTINCT slug FROM (
           SELECT ff.slug FROM feature_flags ff
@@ -801,22 +807,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     ]);
 
     const account = accountWithCounts;
-    const globalVisibility: Record<string, boolean> = {};
-    for (const row of visibilityRows) {
-      globalVisibility[row.platform] = row.isVisible;
-    }
 
-    // Determine effective enabled platforms
-    let effectivePlatforms: string[];
-    if (user.isSystemAdmin) {
-      // System admin sees all platforms
-      effectivePlatforms = PLATFORM_IDS as unknown as string[];
-    } else {
-      // Regular user: account platforms filtered by visibility
-      effectivePlatforms = enabledPlatformsResult
-        .filter((p) => globalVisibility[p.platform] === true || p.overrideGlobalVisibility === true)
-        .map((p) => p.platform);
-    }
+    // System admin sees all platforms; everyone else sees subscription ∩ flag
+    const effectivePlatforms: string[] = user.isSystemAdmin
+      ? (PLATFORM_IDS as unknown as string[])
+      : visiblePlatformsFromHelper;
 
     // Feature flags: system admins get ALL flags, regular users get computed set
     let enabledFeatures: string[];
@@ -825,6 +820,28 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       enabledFeatures = allFlags.map((f) => f.slug);
     } else {
       enabledFeatures = enabledFeaturesResult.map((r) => r.slug);
+    }
+
+    // For system admin UI: which platforms are *globally* launched (flag is_enabled=true, no overrides).
+    // Derived from platform feature flags, not a separate table.
+    let globalPlatformVisibility: Record<string, boolean> | undefined;
+    if (user.isSystemAdmin) {
+      const globalFlagRows = await db
+        .select({ slug: featureFlags.slug, isEnabled: featureFlags.isEnabled })
+        .from(featureFlags)
+        .where(inArray(featureFlags.slug, platformFlagSlugs));
+      const slugToPlatform = new Map<string, string>();
+      for (const p of PLATFORM_IDS as readonly string[]) {
+        slugToPlatform.set(platformFeatureFlagSlug(p as PlatformId), p);
+      }
+      globalPlatformVisibility = {};
+      for (const p of PLATFORM_IDS as readonly string[]) {
+        globalPlatformVisibility[p] = false;
+      }
+      for (const row of globalFlagRows as Array<{ slug: string; isEnabled: boolean }>) {
+        const p = slugToPlatform.get(row.slug);
+        if (p) globalPlatformVisibility[p] = row.isEnabled;
+      }
     }
 
     const response: Record<string, unknown> = {
@@ -859,16 +876,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           trackedFeatures: account.tracked_features_count,
           users: account.users_count,
           researchProjects: account.research_projects_count,
-          platforms: enabledPlatformsResult.length,
+          platforms: subscribedPlatformsResult.length,
         },
       },
       enabledPlatforms: effectivePlatforms,
       enabledFeatures,
     };
 
-    // Include global visibility map for system admin
-    if (user.isSystemAdmin) {
-      response.globalPlatformVisibility = globalVisibility;
+    if (globalPlatformVisibility) {
+      response.globalPlatformVisibility = globalPlatformVisibility;
     }
 
     // Include impersonation metadata if active

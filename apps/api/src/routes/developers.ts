@@ -56,12 +56,13 @@ export async function developerRoutes(app: FastifyInstance) {
 
       // Get account ID (may be null for unauthenticated)
       const accountId = (request as any).user?.accountId || null;
+      const userId = (request as any).user?.userId || undefined;
 
       // Resolve enabled + globally visible platforms for the user's account (system admins bypass)
       const isAdmin = (request as any).user?.isSystemAdmin === true;
       let allowedPlatforms: string[] = [];
       if (!isAdmin && accountId) {
-        allowedPlatforms = await getVisiblePlatformsForAccount(db, accountId);
+        allowedPlatforms = await getVisiblePlatformsForAccount(db, accountId, userId);
         if (allowedPlatforms.length === 0) {
           return { developers: [], pagination: { page, limit, total: 0, totalPages: 0 } };
         }
@@ -240,6 +241,7 @@ export async function developerRoutes(app: FastifyInstance) {
   // GET /api/developers/tracked — developers of user's tracked apps with their tracked apps
   app.get("/tracked", async (request) => {
     const accountId = (request as any).user?.accountId || null;
+    const userId = (request as any).user?.userId || undefined;
     if (!accountId) return { developers: [] };
 
     // Filter by enabled + globally visible platforms (system admins bypass)
@@ -247,7 +249,7 @@ export async function developerRoutes(app: FastifyInstance) {
     let platformFilterSql = sql``;
     let trackedAppsPlatformFilterSql = sql``;
     if (!isAdmin) {
-      const enabledPlatforms = await getVisiblePlatformsForAccount(db, accountId);
+      const enabledPlatforms = await getVisiblePlatformsForAccount(db, accountId, userId);
       if (enabledPlatforms.length === 0) return { developers: [] };
       platformFilterSql = sql`AND a.platform = ANY(${sqlArray(enabledPlatforms)})`;
       trackedAppsPlatformFilterSql = sql`AND ta.platform = ANY(${sqlArray(enabledPlatforms)})`;
@@ -323,6 +325,7 @@ export async function developerRoutes(app: FastifyInstance) {
   // GET /api/developers/competitors — developers of competitor apps
   app.get("/competitors", async (request) => {
     const accountId = (request as any).user?.accountId || null;
+    const userId = (request as any).user?.userId || undefined;
     if (!accountId) return { developers: [] };
 
     const requestedPlatform = (request.query as any).platform?.trim() || "";
@@ -332,7 +335,7 @@ export async function developerRoutes(app: FastifyInstance) {
     let platformFilterSql = sql``;
     let compAppsPlatformFilterSql = sql``;
     if (!isAdmin) {
-      const enabledPlatforms = await getVisiblePlatformsForAccount(db, accountId);
+      const enabledPlatforms = await getVisiblePlatformsForAccount(db, accountId, userId);
       if (enabledPlatforms.length === 0) return { developers: [] };
       const platforms = requestedPlatform
         ? enabledPlatforms.filter((p: string) => p === requestedPlatform)
@@ -478,6 +481,7 @@ export async function developerRoutes(app: FastifyInstance) {
     ) => {
       const slug = request.params.slug.toLowerCase();
       const accountId = (request as any).user?.accountId || null;
+      const userId = (request as any).user?.userId || undefined;
       const isAdmin = (request as any).user?.isSystemAdmin === true;
 
       // Get global developer
@@ -493,7 +497,7 @@ export async function developerRoutes(app: FastifyInstance) {
 
       let allowedPlatforms: string[] | null = null;
       if (!isAdmin && accountId) {
-        allowedPlatforms = await getVisiblePlatformsForAccount(db, accountId);
+        allowedPlatforms = await getVisiblePlatformsForAccount(db, accountId, userId);
         if (allowedPlatforms.length === 0) {
           return reply.code(404).send({ error: "Developer not found" });
         }

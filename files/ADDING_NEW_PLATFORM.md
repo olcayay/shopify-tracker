@@ -43,7 +43,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 
 ### Phase 2: Database
 - [ ] Create migration to seed `account_platforms` for existing accounts
-- [ ] Create migration to seed `platform_visibility` (hidden by default until tested)
+- [ ] Create migration to seed `feature_flags.platform-<name>` (disabled by default until launch) and optionally `platform_visibility.scraper_enabled`
 - [ ] Create migration to seed categories
 - [ ] Create migration to seed `scraper_configs` — one row per (new_platform, scraper_type) with `enabled=true, overrides='{}'`. Without this, the admin Scraper Config page (`/system-admin/scraper-management`) won't show the new platform's knobs. Pattern: `INSERT ... ON CONFLICT (platform, scraper_type) DO NOTHING`. See migration 0142 for the canonical CROSS JOIN seed pattern.
 - [ ] Update `packages/db/src/migrations/meta/_journal.json` with new migration entries
@@ -328,16 +328,30 @@ WHERE c.platform = 'newplatform' AND c.slug = 'category-one--sub-cat'
 ON CONFLICT DO NOTHING;
 ```
 
-**Migration 3: Platform visibility (`XXXX_seed_<name>_visibility.sql`)**
+**Migration 3: Launch gate + scraper toggle (`XXXX_seed_<name>_visibility.sql`)**
+
+Platform access is gated by the `feature_flags.platform-<name>` flag (3-tier: global, account, user). The legacy `platform_visibility.is_visible` column was removed in migration 0148 — only `scraper_enabled` remains there.
 
 ```sql
--- Hide by default until scraper is tested and data is populated
-INSERT INTO platform_visibility (platform, is_visible)
+-- Launch gate (hidden by default; flip is_enabled=true when ready for global launch)
+INSERT INTO feature_flags (slug, name, description, is_enabled)
+VALUES (
+  'platform-newplatform',
+  'Platform: newplatform',
+  'Access gate for newplatform marketplace data',
+  false
+)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Scraper switch (independent of launch state)
+INSERT INTO platform_visibility (platform, scraper_enabled)
 VALUES ('newplatform', false)
-ON CONFLICT (platform) DO UPDATE SET is_visible = false;
+ON CONFLICT (platform) DO UPDATE SET scraper_enabled = EXCLUDED.scraper_enabled;
 ```
 
-Set `is_visible = true` once the platform is ready for users.
+**Launch workflow:**
+- Early access (specific users): insert rows into `user_feature_flags` (or `account_feature_flags`).
+- Global launch: `UPDATE feature_flags SET is_enabled = true WHERE slug = 'platform-newplatform';`
 
 ### 3.3 Drizzle Migration Journal
 
@@ -1360,9 +1374,14 @@ Both workers use the same `process-job.ts` logic. The platform module handles it
 
 ## 8. Phase 7: Account Access Control
 
-### 8.1 Account Platforms Table
+Platform access uses two independent gates that are AND'ed together:
 
-`account_platforms` junction table controls which accounts can access which platforms:
+1. **Subscription** — `account_platforms` row: "this account has the platform in its package"
+2. **Launch / early-access gate** — `feature_flags.platform-<id>` (3-tier: global → account → user)
+
+### 8.1 Account Platforms Table (subscription)
+
+`account_platforms` junction table tracks which accounts have which platforms as part of their package (capped by `accounts.max_platforms`):
 
 ```sql
 CREATE TABLE account_platforms (
@@ -1374,19 +1393,17 @@ CREATE TABLE account_platforms (
 );
 ```
 
-### 8.2 Platform Visibility Table
+### 8.2 Launch / Early-Access Gate (feature flags)
 
-`platform_visibility` controls whether a platform is visible to regular users. Even if an account has platform access, the platform won't appear in the sidebar or overview page if `is_visible = false`.
+Whether a subscribed platform is actually visible to a user is controlled by the `feature_flags.platform-<id>` flag with 3-tier resolution:
 
-```sql
-CREATE TABLE platform_visibility (
-  platform varchar(20) PRIMARY KEY,
-  is_visible boolean NOT NULL DEFAULT false,
-  updated_at timestamp NOT NULL DEFAULT NOW()
-);
-```
+- `feature_flags.is_enabled = true` → **globally launched**, all subscribed accounts see it
+- `account_feature_flags` row → per-account override (early access for one customer)
+- `user_feature_flags` row → per-user override (early access / kill-switch for one user; `enabled=false` also supported)
 
-**Strategy:** Set `is_visible = false` initially while testing the scraper and populating data. Set to `true` once the platform is ready for production use. System admins can toggle this via the admin panel.
+This is the single source of truth since migration 0148. The legacy `platform_visibility.is_visible` column was removed; `platform_visibility` now only holds `scraper_enabled` (worker toggle, independent of UI access).
+
+**Strategy:** Create the platform flag with `is_enabled = false`. While building the platform, add rows to `user_feature_flags` for internal testers. When ready for global launch, flip `feature_flags.is_enabled = true` in one SQL statement — no other table changes needed.
 
 ### 8.3 Package Limits
 
@@ -2047,7 +2064,7 @@ test_newplatform() {
 |------|--------|
 | `packages/db/src/migrations/XXXX_seed_<name>_platform.sql` | Seed `account_platforms` for new platform |
 | `packages/db/src/migrations/XXXX_seed_<name>_categories.sql` | Seed categories and parent-child relationships |
-| `packages/db/src/migrations/XXXX_seed_<name>_visibility.sql` | Seed `platform_visibility` (hidden by default) |
+| `packages/db/src/migrations/XXXX_seed_<name>_visibility.sql` | Seed `feature_flags.platform-<name>` (disabled) and `platform_visibility.scraper_enabled` |
 | `packages/db/src/migrations/meta/_journal.json` | Add entries for all new migrations |
 
 ---

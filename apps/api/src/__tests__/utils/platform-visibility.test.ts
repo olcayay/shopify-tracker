@@ -6,41 +6,58 @@ import {
 
 describe("platform visibility utils", () => {
   describe("resolveVisiblePlatformsForAccount", () => {
-    it("keeps enabled platforms that are globally visible", () => {
-      expect(resolveVisiblePlatformsForAccount([
-        { platform: "shopify", override: false, isVisible: true },
-        { platform: "wix", override: false, isVisible: null },
-      ])).toEqual(["shopify", "wix"]);
+    it("intersects subscribed platforms with enabled flags", () => {
+      const subscribed = ["shopify", "canva", "wix"];
+      const enabled = new Set(["shopify", "canva"]);
+      expect(resolveVisiblePlatformsForAccount(subscribed, enabled)).toEqual([
+        "shopify",
+        "canva",
+      ]);
     });
 
-    it("filters globally hidden platforms without override", () => {
-      expect(resolveVisiblePlatformsForAccount([
-        { platform: "shopify", override: false, isVisible: true },
-        { platform: "wix", override: false, isVisible: false },
-      ])).toEqual(["shopify"]);
+    it("hides platforms whose flag is not enabled", () => {
+      const subscribed = ["shopify", "wix"];
+      const enabled = new Set<string>(["shopify"]);
+      expect(resolveVisiblePlatformsForAccount(subscribed, enabled)).toEqual(["shopify"]);
     });
 
-    it("keeps hidden platforms when account overrides global visibility", () => {
-      expect(resolveVisiblePlatformsForAccount([
-        { platform: "shopify", override: false, isVisible: true },
-        { platform: "wix", override: true, isVisible: false },
-      ])).toEqual(["shopify", "wix"]);
+    it("returns empty when no flags match subscription", () => {
+      expect(
+        resolveVisiblePlatformsForAccount(["wix"], new Set(["shopify"])),
+      ).toEqual([]);
+    });
+
+    it("returns empty when subscription is empty", () => {
+      expect(
+        resolveVisiblePlatformsForAccount([], new Set(["shopify", "canva"])),
+      ).toEqual([]);
+    });
+
+    it("never leaks platforms that are enabled but not subscribed", () => {
+      const subscribed = ["shopify"];
+      const enabled = new Set(["shopify", "canva", "hubspot"]);
+      expect(resolveVisiblePlatformsForAccount(subscribed, enabled)).toEqual(["shopify"]);
     });
   });
 
   describe("resolveGloballyVisiblePlatforms", () => {
-    it("filters only explicitly hidden platforms", () => {
-      expect(resolveGloballyVisiblePlatforms(
-        ["shopify", "wix", "bigcommerce"],
-        [
-          { platform: "wix", isVisible: false },
-          { platform: "shopify", isVisible: true },
-        ],
-      )).toEqual(["shopify", "bigcommerce"]);
+    it("keeps only platforms present in the global-enabled set", () => {
+      expect(
+        resolveGloballyVisiblePlatforms(
+          ["shopify", "wix", "bigcommerce"],
+          new Set(["shopify"]),
+        ),
+      ).toEqual(["shopify"]);
     });
 
-    it("returns all platforms when there are no visibility rows", () => {
-      expect(resolveGloballyVisiblePlatforms(["shopify", "wix"], [])).toEqual(["shopify", "wix"]);
+    it("returns empty when no platform is globally enabled", () => {
+      expect(resolveGloballyVisiblePlatforms(["shopify", "wix"], new Set())).toEqual([]);
+    });
+
+    it("returns all when every platform is globally enabled", () => {
+      expect(
+        resolveGloballyVisiblePlatforms(["shopify", "wix"], new Set(["shopify", "wix"])),
+      ).toEqual(["shopify", "wix"]);
     });
   });
 });

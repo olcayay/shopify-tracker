@@ -444,6 +444,10 @@ describe("GET /api/public/developers/:platform/:slug", () => {
         // Second select: platform developers
         return createChainable([MOCK_PLATFORM_DEV]);
       }
+      if (selectCallIdx === 3) {
+        // Third select: globally enabled platform feature flags
+        return createChainable([{ slug: "platform-shopify" }]);
+      }
       return origSelect(...args);
     };
 
@@ -480,6 +484,7 @@ describe("GET /api/public/developers/:platform/:slug", () => {
       selectCallIdx++;
       if (selectCallIdx === 1) return createChainable([MOCK_DEVELOPER]);
       if (selectCallIdx === 2) return createChainable([MOCK_PLATFORM_DEV]);
+      if (selectCallIdx === 3) return createChainable([{ slug: "platform-shopify" }]);
       return createChainable([]);
     };
 

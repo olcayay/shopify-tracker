@@ -1,3 +1,37 @@
+Platform Access Consolidation (2026-04-14)
+====================================
+Problem: Platform visibility for a user was gated by three overlapping tables —
+`account_platforms.override_global_visibility` + `platform_visibility.is_visible`
++ `feature_flags.platform-<id>`. Two parallel systems saying the same thing.
+New platforms required edits in three places and drift between them caused bugs
+(e.g. olcay@jotform.com had `user_feature_flags.platform-canva.enabled=true`
+but still couldn't see Canva because `platform_visibility.canva.is_visible=false`).
+
+Fix: `feature_flags` is now the single source of truth for platform access.
+- `/api/auth/me` computes `enabledPlatforms = account_platforms ∩ flag(3-tier)`
+  via new `getVisiblePlatformsForAccount(db, accountId, userId)` helper.
+- `apps/api/src/routes/public.ts` uses `resolveGloballyEnabledPlatforms` for
+  unauthenticated endpoints.
+- `apps/api/src/middleware/platform-access.ts` was already flag-based — no change.
+- `account_platforms` retained for subscription (paired with `accounts.max_platforms`).
+- `platform_visibility.scraper_enabled` retained for worker toggle (unrelated concern).
+
+Migration 0148 (Phase A):
+- UPSERT `feature_flags.platform-<id>` with is_enabled = platform_visibility.is_visible
+  (corrects drift; in prod this flips `platform-canva` from true → false, matching
+  reality since Canva is not globally launched).
+- Copy any `account_platforms.override_global_visibility=true` rows to
+  `account_feature_flags` (currently zero rows in prod — idempotent for dev envs).
+
+Follow-up (Phase B/C, separate commit after deploy rolls out):
+- DROP `platform_visibility.is_visible` + `account_platforms.override_global_visibility`
+  once new API code is live on all instances.
+
+Launch workflow going forward:
+- Early access: insert `user_feature_flags` or `account_feature_flags` row.
+- Global launch: `UPDATE feature_flags SET is_enabled=true WHERE slug='platform-<id>';`
+  Single flip, no data migration needed.
+
 Salesforce Platform Page Perf — Phase 1 (PLA-1069, 2026-04-13)
 ====================================
 Why: Salesforce overview blocked on /api/apps (3.99s) and

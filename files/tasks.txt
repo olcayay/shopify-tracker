@@ -1,3 +1,11 @@
+Platform Access Consolidation — feature flags as single source of truth (2026-04-14)
+  - Remove `platform_visibility.is_visible` + `account_platforms.override_global_visibility` gating
+  - `/api/auth/me`, developers routes, public routes all use `feature_flags.platform-<id>` (3-tier: global/account/user)
+  - `account_platforms` kept as subscription (max_platforms limit); `platform_visibility.scraper_enabled` kept for worker toggle
+  - Phase A migration 0148: sync `platform_visibility.is_visible` → `feature_flags.is_enabled` (corrects canva drift) + migrate overrides to account_feature_flags
+  - Phase B/C (follow-up after deploy rolls out): DROP legacy columns
+  - ADDING_NEW_PLATFORM.md updated: launch workflow = flip one `feature_flags` row ✅
+
 Rankings Chart Tooltip Fix (2026-04-13)
   PLA-1071: Position-flip when near right edge + dynamic max-height clamp ✅
 

@@ -247,17 +247,16 @@ describe("Developer routes", () => {
           };
         }
         if (selectCallIdx === 2) {
+          // getSubscribedPlatforms: select({platform}).from(accountPlatforms).where(...) → empty
           return {
             from: () => ({
-              leftJoin: () => ({
-                where: () => Promise.resolve([]),
-              }),
+              where: () => Promise.resolve([]),
             }),
           };
         }
         return {
           from: () => ({
-            where: () => ({
+            where: () => Object.assign(Promise.resolve([]), {
               limit: () => Promise.resolve([]),
             }),
           }),
