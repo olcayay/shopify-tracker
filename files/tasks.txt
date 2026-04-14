@@ -1,3 +1,12 @@
+App Updates Auto-Tag — finish PLA-1072 Part B (2026-04-14)
+  - Migration 0149: seed `false-empty-after` system label
+  - DB trigger `trg_tag_false_empty` auto-tags every new `app_field_changes` row
+    with empty/null/[] new_value — works for every insert path (card-pass,
+    detail-pass, any future reconciler) without application code changes
+  - Backfill tags the 6,133 existing pollution rows (developer: 5651, rating*: 458, pricing: 24)
+  - Prod dry-run verified: 6133 rows tagged + end-to-end trigger test passes
+  - UI already supports label filter + bulk-dismiss (no app code changes needed) ✅
+
 Platform Access Consolidation — feature flags as single source of truth (2026-04-14)
   - Remove `platform_visibility.is_visible` + `account_platforms.override_global_visibility` gating
   - `/api/auth/me`, developers routes, public routes all use `feature_flags.platform-<id>` (3-tier: global/account/user)
@@ -11,7 +20,7 @@ Rankings Chart Tooltip Fix (2026-04-13)
 
 Card-Refresh False Drift Fix (2026-04-13)
   PLA-1072 Part A: guard appIntroduction/developer + preserve detail-only fields ✅
-  PLA-1072 Part B: deferred — label backfill + bulk-dismiss UI (follow-up)
+  PLA-1072 Part B: shipped 2026-04-14 — migration 0149 seed + trigger + backfill ✅
 
 Salesforce Developer Preservation (2026-04-13)
   PLA-1070: parser warning on missing publisher + non-overwrite snapshot rule ✅

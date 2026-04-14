@@ -1,3 +1,50 @@
+App Updates Auto-Tag — PLA-1072 Part B (2026-04-14)
+====================================
+Problem: PLA-1072 Part A (commit bc1dd9f7, 2026-04-13) stopped the card-refresh
+scraper path from creating sahte "before populated → after empty" drift rows
+in `app_field_changes`. But Part B — labeling the existing pollution + auto-
+tagging any future false-empty inserts — was explicitly deferred. Result: of
+21,391 app_field_changes rows, 6,133 were false-empty (developer: 5651,
+averageRating: 229, ratingCount: 229, pricing: 24). `app_update_labels` table
+existed (migration 0135) but was empty — zero labels seeded, zero rows tagged.
+6,068 of those rows had already been dismiss_reason'd by manual triage but
+without a queryable grouping, future triage was impossible.
+
+Fix: Migration 0149 does three things in one idempotent migration:
+1. Seeds the `false-empty-after` system label.
+2. Installs a postgres trigger `trg_tag_false_empty` on AFTER INSERT of
+   app_field_changes: if `new_value IS NULL OR new_value = '' OR new_value = '[]'`
+   the trigger inserts a row into app_update_label_assignments (ON CONFLICT
+   DO NOTHING for safety).
+3. Backfills: tags all 6,133 existing false-empty rows in one CROSS JOIN.
+
+Why a DB trigger and not application-code hooks: 2 different scraper paths
+insert into app_field_changes today (card-pass in upsert-snapshot-from-card.ts
+and detail-pass in app-details-scraper.ts). Adding a post-insert hook to both
+doubles the surface area; any future third insertion path (reconciler, admin
+tool) would silently skip tagging. Trigger is the single source of truth
+independent of application code.
+
+Verification:
+- Prod dry-run in a transaction (rolled back): 6,133 rows would be tagged.
+- Trigger end-to-end test: synthetic INSERT with empty new_value → the
+  trigger auto-tagged the new row with `false-empty-after` within the same
+  transaction.
+- Backfill is idempotent via the (change_id, label_id) unique constraint.
+- `npm test` 5/5 green; migration-integrity test confirms journal + SQL file
+  consistency.
+
+After-deploy UX:
+- /system-admin/app-updates already supports labelId filter (system-admin.ts
+  line 4512) — the `false-empty-after` option appears in the filter dropdown
+  automatically once seeded.
+- Existing bulk-dismiss endpoint handles cleanup with zero new UI needed.
+- Of the 6,133 tagged rows, only ~65 are not already dismiss_reason'd — those
+  can be bulk-dismissed from the UI in a single action.
+
+Follow-up candidates: other system labels ('rescrape-recovered',
+'platform-renamed', etc.) can be seeded with the same INSERT + trigger pattern.
+
 Platform Access Consolidation (2026-04-14)
 ====================================
 Problem: Platform visibility for a user was gated by three overlapping tables —
