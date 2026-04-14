@@ -613,27 +613,55 @@ sudo docker stats --no-stream                      # resource usage
 
 ### 5.2 Monitoring Stack
 
+Two complementary log pipelines (PLA-1090): both are required for full coverage.
+
+| Pipeline | Retention | Query surface | Role |
+|---|---|---|---|
+| **GCP Ops Agent → Cloud Logging** | 30 days (`_Default` bucket, free ≤ 50 GiB/mo) | `gcloud logging read` | **Incident triage** — `docker logs` survives container restarts (deploy / preemption / OOM). Install via `infra/scripts/install-ops-agent.sh`. |
+| **Grafana Alloy → Loki (Grafana Cloud)** | Free tier ~50 GB/mo | LogQL in Grafana Explore + dashboards | **Long-term index** — cross-service grouping, user-facing incident dashboards. Requires `GRAFANA_LOKI_URL` / `GRAFANA_LOKI_USER` / `GRAFANA_CLOUD_TOKEN` in production `.env`; empty values mean Alloy silently ships nothing. |
+
+Neither alone is enough:
+- Without Ops Agent, all `docker logs` history is lost on container restart.
+- Without Loki credentials, Alloy is a noop and LogQL returns empty.
+
 ```mermaid
 graph TB
     subgraph "Each VM"
         Alloy[Grafana Alloy]
+        Ops[Google Cloud Ops Agent]
         Docker[Docker Containers]
         Alloy -->|Docker socket| Docker
+        Ops -->|Docker socket + syslog| Docker
     end
 
     subgraph "Grafana Cloud"
-        Loki[Loki<br/>Log aggregation]
+        Loki[Loki<br/>Log aggregation<br/>long-term index]
         Prom[Prometheus<br/>Metrics]
         Alerts[Alert Rules]
         Dashboard[Dashboards]
     end
 
+    subgraph "GCP"
+        CL[Cloud Logging<br/>30-day retention<br/>incident triage]
+    end
+
     Alloy -->|logs| Loki
     Alloy -->|metrics /metrics| Prom
+    Ops -->|stdout/stderr + syslog| CL
     Loki --> Alerts
     Prom --> Alerts
     Loki --> Dashboard
     Prom --> Dashboard
+```
+
+**Verify both pipelines are live** (also codified in the `health-check` skill):
+
+```bash
+# 1) Ops Agent → Cloud Logging
+gcloud logging read 'resource.type="gce_instance"' --limit 5 --freshness=2m
+
+# 2) Alloy → Loki (in Grafana Explore)
+{env="production", project="appranks"} | json
 ```
 
 ### 5.3 External Uptime Monitoring

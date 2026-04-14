@@ -6377,3 +6377,15 @@ PLA-1091 — /api/system-admin/platform-counts 500s fixed
   - `SUM(c.app_count)` on `categories` - `app_count` lives on `category_snapshots`, not `categories`. Replaced with LATERAL join to latest snapshot per category.
 - Added regression test `apps/api/src/__tests__/routes/system-admin.test.ts` that asserts response body shape (apps/keywords/categories arrays) so a status 200 with a degraded response still passes — but a column-mismatch SQL error would now fail the new assertion because the handler would return 500.
 - All packages green (5/5 turbo).
+
+PLA-1090 — Production log retention (partial: code-side artifacts only)
+- Full fix requires (a) SSH to 4 VMs to install Ops Agent, (b) paste Grafana Loki creds into prod .env. Both outside autopilot scope (infra + secrets).
+- This commit adds the in-repo pieces so the manual steps are one command each:
+  - `infra/scripts/install-ops-agent.sh` — idempotent installer for all 4 VMs via gcloud IAP SSH. Handles `--skip <host>` to bypass a specific VM. Uses the official Google install flow (add-google-cloud-ops-agent-repo.sh) which auto-detects existing installs and upgrades.
+  - `files/SYSTEM_ARCHITECTURE.md` §5.2 updated: explicit table documenting both pipelines (Ops Agent → Cloud Logging for incident triage, Alloy → Loki for long-term index), mermaid diagram shows both, verification commands for both pipelines.
+- Remaining manual steps (operator):
+  1. `./infra/scripts/install-ops-agent.sh` (grant VM service account `roles/logging.logWriter` first if missing)
+  2. Copy Grafana Loki creds from team password manager into `/opt/appranks/.env` on VM1 and VM3
+  3. `docker compose restart alloy` on VM1 + VM3
+  4. Smoke-test: `gcloud logging read ...` + `{env="production"} | json` in Grafana Explore
+- Did not: touch production VMs, modify secrets, install ops-agent in this session. Deliberate autopilot safety scope.
