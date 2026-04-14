@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and, inArray, ilike, isNull } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
 import { computeWeightedPowerScore, validatePlatformData, createLogger, PLATFORMS } from "@appranks/shared";
 import { slugsBodySchema } from "../schemas/apps.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
@@ -161,11 +161,15 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         ORDER BY app_id, scraped_at DESC
       `),
       db.execute(sql`
-        SELECT DISTINCT ON (app_id) app_id, detected_at
-        FROM app_field_changes
-        WHERE app_id IN (${sql.join(appIds2.map((id) => sql`${id}`), sql`,`)})
-          AND dismiss_reason IS NULL
-        ORDER BY app_id, detected_at DESC
+        SELECT DISTINCT ON (afc.app_id) afc.app_id, afc.detected_at
+        FROM app_field_changes afc
+        WHERE afc.app_id IN (${sql.join(appIds2.map((id) => sql`${id}`), sql`,`)})
+          AND NOT EXISTS (
+            SELECT 1 FROM app_update_label_assignments ula
+            JOIN app_update_labels aul ON aul.id = ula.label_id
+            WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE
+          )
+        ORDER BY afc.app_id, afc.detected_at DESC
       `),
     ]);
 
@@ -1065,7 +1069,16 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       return db
         .select()
         .from(appFieldChanges)
-        .where(and(eq(appFieldChanges.appId, changeApp.id), isNull(appFieldChanges.dismissReason)))
+        .where(
+          and(
+            eq(appFieldChanges.appId, changeApp.id),
+            sql`NOT EXISTS (
+              SELECT 1 FROM app_update_label_assignments ula
+              JOIN app_update_labels aul ON aul.id = ula.label_id
+              WHERE ula.change_id = ${appFieldChanges.id} AND aul.is_dismissal = TRUE
+            )`
+          )
+        )
         .orderBy(desc(appFieldChanges.detectedAt))
         .limit(maxLimit);
     }

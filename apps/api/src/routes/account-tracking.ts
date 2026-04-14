@@ -863,11 +863,15 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       // Changes
       (compAppIdsForBatch.length > 0
         ? db.execute(sql`
-            SELECT app_id, max(detected_at) AS detected_at
-            FROM app_field_changes
-            WHERE app_id = ANY(${sqlArray(compAppIdsForBatch)})
-              AND dismiss_reason IS NULL
-            GROUP BY app_id
+            SELECT afc.app_id, max(afc.detected_at) AS detected_at
+            FROM app_field_changes afc
+            WHERE afc.app_id = ANY(${sqlArray(compAppIdsForBatch)})
+              AND NOT EXISTS (
+                SELECT 1 FROM app_update_label_assignments ula
+                JOIN app_update_labels aul ON aul.id = ula.label_id
+                WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE
+              )
+            GROUP BY afc.app_id
           `)
         : Promise.resolve([])
       ),
@@ -1474,10 +1478,14 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         const changeRows = await db.execute(sql`
           SELECT c.*, a.slug AS app_slug
           FROM (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY app_id ORDER BY detected_at DESC) AS rn
-            FROM app_field_changes
-            WHERE app_id = ANY(${sqlArray(competitorAppIds)})
-              AND dismiss_reason IS NULL
+            SELECT afc.*, ROW_NUMBER() OVER (PARTITION BY afc.app_id ORDER BY afc.detected_at DESC) AS rn
+            FROM app_field_changes afc
+            WHERE afc.app_id = ANY(${sqlArray(competitorAppIds)})
+              AND NOT EXISTS (
+                SELECT 1 FROM app_update_label_assignments ula
+                JOIN app_update_labels aul ON aul.id = ula.label_id
+                WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE
+              )
           ) c
           INNER JOIN apps a ON a.id = c.app_id
           WHERE c.rn <= 3
@@ -1523,11 +1531,15 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       const lastChangeMap = new Map<number, string | null>();
       if (competitorAppIds.length > 0) {
         const changeRows: any[] = await db.execute(sql`
-          SELECT app_id, max(detected_at) AS detected_at
-          FROM app_field_changes
-          WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
-            AND dismiss_reason IS NULL
-          GROUP BY app_id
+          SELECT afc.app_id, max(afc.detected_at) AS detected_at
+          FROM app_field_changes afc
+          WHERE afc.app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+            AND NOT EXISTS (
+              SELECT 1 FROM app_update_label_assignments ula
+              JOIN app_update_labels aul ON aul.id = ula.label_id
+              WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE
+            )
+          GROUP BY afc.app_id
         `).then((res: any) => (res as any).rows ?? res);
         for (const r of changeRows) {
           lastChangeMap.set(r.app_id, r.detected_at);

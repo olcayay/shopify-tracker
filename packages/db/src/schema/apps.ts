@@ -110,11 +110,9 @@ export const appFieldChanges = pgTable(
     scrapeRunId: uuid("scrape_run_id")
       .notNull()
       .references(() => scrapeRuns.id),
-    dismissReason: varchar("dismiss_reason", { length: 50 }),
   },
   (table) => [
     index("idx_app_field_changes_app_id").on(table.appId, table.detectedAt),
-    index("idx_app_field_changes_dismiss_reason").on(table.dismissReason),
   ]
 );
 
@@ -122,6 +120,7 @@ export const appUpdateLabels = pgTable("app_update_labels", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull().unique(),
   color: varchar("color", { length: 7 }).notNull().default("#6b7280"),
+  isDismissal: boolean("is_dismissal").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

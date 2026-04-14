@@ -1860,8 +1860,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           WHERE competitor_app_id = "apps"."id"
         )`,
         lastChangeAt: sql<string | null>`(
-          SELECT max(detected_at) FROM app_field_changes
-          WHERE app_id = "apps"."id" AND dismiss_reason IS NULL
+          SELECT max(afc.detected_at) FROM app_field_changes afc
+          WHERE afc.app_id = "apps"."id"
+            AND NOT EXISTS (
+              SELECT 1 FROM app_update_label_assignments ula
+              JOIN app_update_labels aul ON aul.id = ula.label_id
+              WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE
+            )
         )`,
       })
       .from(apps);
@@ -4546,7 +4551,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       dateTo?: string;
       sortOrder?: string;
       labelId?: string;
-      dismissReason?: string;
+      dismissed?: string;
     };
 
     const page = Math.max(1, parseInt(query.page || "1", 10));
@@ -4578,12 +4583,21 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         )`
       );
     }
-    if (query.dismissReason === "none") {
-      conditions.push(sql`${appFieldChanges.dismissReason} IS NULL`);
-    } else if (query.dismissReason === "any") {
-      conditions.push(sql`${appFieldChanges.dismissReason} IS NOT NULL`);
-    } else if (query.dismissReason) {
-      conditions.push(eq(appFieldChanges.dismissReason, query.dismissReason));
+    // Dismissal-label-based status filter: active = no is_dismissal label;
+    // dismissed = has at least one is_dismissal label. Replaces the legacy
+    // dismiss_reason column filter.
+    if (query.dismissed === "active") {
+      conditions.push(sql`NOT EXISTS (
+        SELECT 1 FROM app_update_label_assignments ula
+        JOIN app_update_labels aul ON aul.id = ula.label_id
+        WHERE ula.change_id = ${appFieldChanges.id} AND aul.is_dismissal = TRUE
+      )`);
+    } else if (query.dismissed === "dismissed") {
+      conditions.push(sql`EXISTS (
+        SELECT 1 FROM app_update_label_assignments ula
+        JOIN app_update_labels aul ON aul.id = ula.label_id
+        WHERE ula.change_id = ${appFieldChanges.id} AND aul.is_dismissal = TRUE
+      )`);
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -4604,7 +4618,6 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         oldValue: appFieldChanges.oldValue,
         newValue: appFieldChanges.newValue,
         detectedAt: appFieldChanges.detectedAt,
-        dismissReason: appFieldChanges.dismissReason,
       })
       .from(appFieldChanges)
       .innerJoin(apps, eq(appFieldChanges.appId, apps.id))
@@ -4615,7 +4628,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     // Fetch labels for each change in the result set
     const changeIds = rows.map((r) => r.id);
-    let labelMap: Record<number, { id: number; name: string; color: string }[]> = {};
+    let labelMap: Record<number, { id: number; name: string; color: string; isDismissal: boolean }[]> = {};
     if (changeIds.length > 0) {
       const assignments = await db
         .select({
@@ -4623,6 +4636,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           labelId: appUpdateLabels.id,
           labelName: appUpdateLabels.name,
           labelColor: appUpdateLabels.color,
+          isDismissal: appUpdateLabels.isDismissal,
         })
         .from(appUpdateLabelAssignments)
         .innerJoin(appUpdateLabels, eq(appUpdateLabelAssignments.labelId, appUpdateLabels.id))
@@ -4630,7 +4644,12 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
       for (const a of assignments) {
         if (!labelMap[a.changeId]) labelMap[a.changeId] = [];
-        labelMap[a.changeId].push({ id: a.labelId, name: a.labelName, color: a.labelColor });
+        labelMap[a.changeId].push({
+          id: a.labelId,
+          name: a.labelName,
+          color: a.labelColor,
+          isDismissal: a.isDismissal,
+        });
       }
     }
 
@@ -4640,7 +4659,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }));
 
     // Get distinct field names, platforms, and all labels for filter dropdowns
-    const [distinctFields, distinctPlatforms, allLabels, distinctDismissReasons] = await Promise.all([
+    const [distinctFields, distinctPlatforms, allLabels] = await Promise.all([
       db
         .selectDistinct({ field: appFieldChanges.field })
         .from(appFieldChanges)
@@ -4654,11 +4673,6 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .select()
         .from(appUpdateLabels)
         .orderBy(appUpdateLabels.name),
-      db
-        .selectDistinct({ dismissReason: appFieldChanges.dismissReason })
-        .from(appFieldChanges)
-        .where(sql`${appFieldChanges.dismissReason} IS NOT NULL`)
-        .orderBy(appFieldChanges.dismissReason),
     ]);
 
     return {
@@ -4673,20 +4687,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         fields: distinctFields.map((r) => r.field),
         platforms: distinctPlatforms.map((r) => r.platform),
         labels: allLabels,
-        dismissReasons: distinctDismissReasons.map((r) => r.dismissReason).filter(Boolean) as string[],
       },
     };
-  });
-
-  // PATCH /api/system-admin/app-updates/:id/dismiss — set or clear dismiss reason
-  app.patch<{ Params: { id: string } }>("/app-updates/:id/dismiss", async (request, reply) => {
-    const id = parseInt(request.params.id, 10);
-    const { reason } = request.body as { reason: string | null };
-    await db
-      .update(appFieldChanges)
-      .set({ dismissReason: reason })
-      .where(eq(appFieldChanges.id, id));
-    return reply.code(200).send({ ok: true });
   });
 
   // DELETE /api/system-admin/app-updates/:id — permanently delete a single app update
@@ -4706,33 +4708,34 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
     // Delete label assignments first (FK constraint)
     await db.delete(appUpdateLabelAssignments).where(inArray(appUpdateLabelAssignments.changeId, ids));
-    const result = await db.delete(appFieldChanges).where(inArray(appFieldChanges.id, ids));
+    await db.delete(appFieldChanges).where(inArray(appFieldChanges.id, ids));
     return reply.code(200).send({ deleted: ids.length });
   });
 
-  // POST /api/system-admin/app-updates/bulk-dismiss — set dismiss_reason on multiple updates
-  app.post("/app-updates/bulk-dismiss", async (request, reply) => {
-    const { ids, reason } = request.body as { ids: number[]; reason: string };
-    if (!ids || ids.length === 0 || !reason) {
-      return reply.code(400).send({ error: "ids array and reason are required" });
-    }
-    await db
-      .update(appFieldChanges)
-      .set({ dismissReason: reason })
-      .where(inArray(appFieldChanges.id, ids));
-    return reply.code(200).send({ updated: ids.length });
-  });
-
-  // POST /api/system-admin/app-updates/bulk-restore — clear dismiss_reason on multiple updates
+  // POST /api/system-admin/app-updates/bulk-restore — remove every is_dismissal
+  // label from the specified change ids (un-dismiss). Replaces the legacy
+  // dismiss_reason reset.
   app.post("/app-updates/bulk-restore", async (request, reply) => {
     const { ids } = request.body as { ids: number[] };
     if (!ids || ids.length === 0) {
       return reply.code(400).send({ error: "ids array is required and must not be empty" });
     }
+    const dismissalLabelIds = await db
+      .select({ id: appUpdateLabels.id })
+      .from(appUpdateLabels)
+      .where(eq(appUpdateLabels.isDismissal, true));
+    if (dismissalLabelIds.length === 0) {
+      return reply.code(200).send({ restored: 0 });
+    }
+    const labelIds = dismissalLabelIds.map((l) => l.id);
     await db
-      .update(appFieldChanges)
-      .set({ dismissReason: null })
-      .where(inArray(appFieldChanges.id, ids));
+      .delete(appUpdateLabelAssignments)
+      .where(
+        and(
+          inArray(appUpdateLabelAssignments.changeId, ids),
+          inArray(appUpdateLabelAssignments.labelId, labelIds)
+        )
+      );
     return reply.code(200).send({ restored: ids.length });
   });
 

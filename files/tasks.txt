@@ -1294,3 +1294,5 @@ PLA-1091: /api/system-admin/platform-counts 500 fix — rewrite 3 SQL queries to
 PLA-1090: log retention — in-repo scaffolding (install-ops-agent.sh + SYSTEM_ARCHITECTURE.md §5.2 doc with two-pipeline coverage) ⚠ partial: manual infra steps remain for operator (Ops Agent install on 4 VMs + Loki creds)
 
 PLA-1088: canva icon 403 — partial UI fallback in keywords-app-icon via onError → initial placeholder (single component only; real fix Options A/B pending as separate feature work) ⚠ partial
+
+PLA-1094: Unify `app_field_changes.dismiss_reason` into the labels system — added `app_update_labels.is_dismissal` + seeded 5 dismissal labels + backfilled assignments (0152); drop column (0153); replaced 8 `dismiss_reason IS NULL` read filters with NOT EXISTS dismissal-label subquery across overview-highlights / apps / account-tracking / system-admin routes; deleted `/app-updates/:id/dismiss` + `/bulk-dismiss` endpoints; rewrote `/bulk-restore` to strip dismissal labels; dashboard page Status column collapsed into Labels column (grouped "Dismiss as" / "Label" dropdown, destructive-ring for dismissal pills) ✅

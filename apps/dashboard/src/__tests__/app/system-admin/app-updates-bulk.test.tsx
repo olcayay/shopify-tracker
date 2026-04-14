@@ -24,6 +24,19 @@ function mockOkResponse(data: unknown) {
   return { ok: true, json: () => Promise.resolve(data) };
 }
 
+const titleSubtitleConflictLabel = {
+  id: 101,
+  name: "title-subtitle-conflict",
+  color: "#ef4444",
+  isDismissal: true,
+};
+const duplicateLabel = {
+  id: 102,
+  name: "duplicate",
+  color: "#dc2626",
+  isDismissal: true,
+};
+
 const mockApiResponse = {
   data: [
     {
@@ -35,7 +48,6 @@ const mockApiResponse = {
       oldValue: "Old subtitle",
       newValue: "New subtitle",
       detectedAt: "2026-04-11T10:00:00Z",
-      dismissReason: null,
       labels: [],
     },
     {
@@ -47,8 +59,7 @@ const mockApiResponse = {
       oldValue: "App Two",
       newValue: "Real subtitle",
       detectedAt: "2026-04-11T09:00:00Z",
-      dismissReason: "title-subtitle-conflict",
-      labels: [],
+      labels: [titleSubtitleConflictLabel],
     },
     {
       id: 3,
@@ -59,16 +70,14 @@ const mockApiResponse = {
       oldValue: "Old Name",
       newValue: "New Name",
       detectedAt: "2026-04-11T08:00:00Z",
-      dismissReason: "duplicate",
-      labels: [],
+      labels: [duplicateLabel],
     },
   ],
   pagination: { page: 1, limit: 50, total: 3, totalPages: 1 },
   filters: {
     fields: ["appCardSubtitle", "name"],
     platforms: ["shopify", "wix"],
-    labels: [],
-    dismissReasons: ["title-subtitle-conflict", "duplicate"],
+    labels: [titleSubtitleConflictLabel, duplicateLabel],
   },
 };
 
@@ -250,23 +259,29 @@ describe("AppUpdatesPage — bulk operations", () => {
     expect(screen.getByText(/Permanently delete this update for "App One"/)).toBeInTheDocument();
   });
 
-  it("shows dismiss reason badges for dismissed items", async () => {
-    render(<AppUpdatesPage />);
-    await waitFor(() => {
-      expect(screen.getByText("title-subtitle-conflict")).toBeInTheDocument();
-      expect(screen.getByText("duplicate")).toBeInTheDocument();
-    });
-  });
-
-  it("dismiss filter dropdown includes available reasons", async () => {
+  it("renders dismissal labels as pills on dismissed rows", async () => {
     render(<AppUpdatesPage />);
     await waitFor(() => {
       expect(screen.getByText("App One")).toBeInTheDocument();
     });
+    // Label appears twice: once as a pill on the row, once as an <option> in
+    // the label filter dropdown. The pill carries the tooltip set only on
+    // dismissal pills.
+    const pills = screen
+      .getAllByText("title-subtitle-conflict")
+      .filter((el) => el.tagName === "SPAN");
+    expect(pills).toHaveLength(1);
+    expect(pills[0].getAttribute("title")).toMatch(/Dismissal label/);
+  });
 
-    // The dropdown has dismiss filter options
-    const options = screen.getAllByText("All Status");
-    expect(options.length).toBeGreaterThanOrEqual(1);
+  it("status filter dropdown exposes Active / Dismissed options", async () => {
+    render(<AppUpdatesPage />);
+    await waitFor(() => {
+      expect(screen.getByText("App One")).toBeInTheDocument();
+    });
+    expect(screen.getByText("All Status")).toBeInTheDocument();
+    expect(screen.getByText(/Active \(no dismissal label\)/)).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Dismissed" })).toBeInTheDocument();
   });
 
   it("clear selection button works", async () => {

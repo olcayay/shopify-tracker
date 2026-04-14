@@ -6555,3 +6555,13 @@ PLA-1088 — Canva icon 403 — partial UI fallback (graceful degradation only)
 - No scraper changes (would need to evaluate impact on all platforms before setting iconUrl=null for canva).
 - No backend proxy endpoint (Option B).
 - Dashboard tests green (2302/2302).
+
+PLA-1094 — Unify dismiss_reason into labels system
+- Problem: system-admin app-updates page had two parallel tagging systems (new `app_update_labels` junction + legacy `app_field_changes.dismiss_reason` TEXT column) that duplicated intent but exposed two separate columns ("Labels" and "Status") with distinct write paths. User asked to merge them.
+- Migration 0152: add `is_dismissal BOOLEAN` to `app_update_labels`; mark existing `false-empty-after` + `case-only-diff` auto-labels as dismissal; seed 5 new dismissal labels (`duplicate`, `false-positive`, `scraper-error`, `irrelevant`, `title-subtitle-conflict`) with red palette; backfill junction rows from every non-null `dismiss_reason`.
+- Migration 0153: drop `idx_app_field_changes_dismiss_reason` + `dismiss_reason` column. Also removed legacy ALTER block from `packages/db/src/migrate.ts` (lines that re-created the column as a safety net).
+- Read filters (8 sites) replaced with identical `NOT EXISTS (SELECT 1 FROM app_update_label_assignments ula JOIN app_update_labels aul ON aul.id=ula.label_id WHERE ula.change_id=afc.id AND aul.is_dismissal=TRUE)`. Index `idx_app_update_label_assignments_change` covers the correlated lookup — smoke-checked query plan is still sub-ms on 21k-row prod table.
+- Write endpoints: deleted `PATCH /:id/dismiss` + `POST /bulk-dismiss`; `POST /bulk-restore` now deletes every dismissal-label assignment on the selected change ids (single-query, fetches `isDismissal=true` label ids once up front). The per-row "+" dropdown in the dashboard is the sole dismissal entry point — shows "Dismiss as" group + "Label" group.
+- Dashboard UI: Status column removed; Labels column widened to 200px; dismissal pills get `ring-1 ring-inset ring-destructive/40` + tooltip "Dismissal label — hides row from active views". Filter row collapsed — single Status dropdown with `All / Active / Dismissed` (backed by new `?dismissed=active|dismissed` query param). `bulk-restore` button shows when any selected row carries a dismissal label.
+- Deploy order: 0152 is safe alone (additive, backfill idempotent). 0153 drops the column so API code MUST be deployed first. Journal order handles this for fresh DBs; on prod the sequence is: merge → API deploy (picks up new schema that no longer reads dismiss_reason) → migrations run → 0153 drops column.
+- Full test suite green: dashboard 2308/2308, API + all packages 0 failures. No scraper code touched — smoke test not required per project rule.

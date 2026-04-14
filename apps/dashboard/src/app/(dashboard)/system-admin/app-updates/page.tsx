@@ -127,6 +127,7 @@ interface UpdateLabel {
   id: number;
   name: string;
   color: string;
+  isDismissal: boolean;
 }
 
 interface AppUpdate {
@@ -138,7 +139,6 @@ interface AppUpdate {
   oldValue: string | null;
   newValue: string | null;
   detectedAt: string;
-  dismissReason: string | null;
   labels: UpdateLabel[];
 }
 
@@ -154,7 +154,6 @@ interface ApiResponse {
     fields: string[];
     platforms: string[];
     labels: UpdateLabel[];
-    dismissReasons: string[];
   };
 }
 
@@ -222,14 +221,20 @@ function LabelDropdown({
 
   const currentIds = new Set(currentLabels.map((l) => l.id));
   const unassigned = allLabels.filter((l) => !currentIds.has(l.id));
+  const dismissalChoices = unassigned.filter((l) => l.isDismissal);
+  const regularChoices = unassigned.filter((l) => !l.isDismissal);
 
   return (
     <div className="relative inline-flex flex-wrap items-center gap-1" ref={ref}>
       {currentLabels.map((l) => (
         <span
           key={l.id}
-          className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0 text-[10px] font-medium text-white"
+          className={cn(
+            "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0 text-[10px] font-medium text-white",
+            l.isDismissal && "ring-1 ring-inset ring-destructive/40"
+          )}
           style={{ backgroundColor: l.color }}
+          title={l.isDismissal ? "Dismissal label — hides row from active views" : undefined}
         >
           {l.name}
           <button
@@ -247,23 +252,54 @@ function LabelDropdown({
         <Plus className="h-3 w-3" />
       </button>
       {open && unassigned.length > 0 && (
-        <div className="absolute top-7 left-0 z-50 bg-popover border rounded-md shadow-md py-1 min-w-[120px]">
-          {unassigned.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => {
-                onAssign(changeId, l.id);
-                setOpen(false);
-              }}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-accent text-left"
-            >
-              <span
-                className="h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: l.color }}
-              />
-              {l.name}
-            </button>
-          ))}
+        <div className="absolute top-7 left-0 z-50 bg-popover border rounded-md shadow-md py-1 min-w-[160px]">
+          {dismissalChoices.length > 0 && (
+            <>
+              <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                Dismiss as
+              </div>
+              {dismissalChoices.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => {
+                    onAssign(changeId, l.id);
+                    setOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-accent text-left"
+                >
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: l.color }}
+                  />
+                  {l.name}
+                </button>
+              ))}
+            </>
+          )}
+          {regularChoices.length > 0 && (
+            <>
+              {dismissalChoices.length > 0 && <div className="my-1 border-t" />}
+              <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                Label
+              </div>
+              {regularChoices.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => {
+                    onAssign(changeId, l.id);
+                    setOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-accent text-left"
+                >
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: l.color }}
+                  />
+                  {l.name}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -291,8 +327,7 @@ export default function AppUpdatesPage() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [labelFilter, setLabelFilter] = useState("");
-  const [dismissFilter, setDismissFilter] = useState("");
-  const [availableDismissReasons, setAvailableDismissReasons] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"" | "active" | "dismissed">("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [page, setPage] = useState(1);
 
@@ -331,7 +366,7 @@ export default function AppUpdatesPage() {
       if (effectiveDateRange?.from) params.set("dateFrom", effectiveDateRange.from);
       if (effectiveDateRange?.to) params.set("dateTo", effectiveDateRange.to);
       if (labelFilter) params.set("labelId", labelFilter);
-      if (dismissFilter) params.set("dismissReason", dismissFilter);
+      if (statusFilter) params.set("dismissed", statusFilter);
 
       const res = await fetchWithAuth(
         `/api/system-admin/app-updates?${params}`
@@ -343,7 +378,6 @@ export default function AppUpdatesPage() {
         setAvailableFields(json.filters.fields);
         setAvailablePlatforms(json.filters.platforms);
         setAllLabels(json.filters.labels);
-        setAvailableDismissReasons(json.filters.dismissReasons || []);
       }
     } finally {
       setLoading(false);
@@ -358,7 +392,7 @@ export default function AppUpdatesPage() {
     effectiveDateRange?.from,
     effectiveDateRange?.to,
     labelFilter,
-    dismissFilter,
+    statusFilter,
   ]);
 
   useEffect(() => {
@@ -368,7 +402,7 @@ export default function AppUpdatesPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [platform, field, datePreset, customFrom, customTo, labelFilter, dismissFilter]);
+  }, [platform, field, datePreset, customFrom, customTo, labelFilter, statusFilter]);
 
   const toggleSort = () => {
     setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
@@ -500,7 +534,9 @@ export default function AppUpdatesPage() {
     });
     setData((prev) =>
       prev.map((row) =>
-        selectedIds.has(row.id) ? { ...row, dismissReason: null } : row
+        selectedIds.has(row.id)
+          ? { ...row, labels: row.labels.filter((l) => !l.isDismissal) }
+          : row
       )
     );
     setSelectedIds(new Set());
@@ -519,20 +555,6 @@ export default function AppUpdatesPage() {
         setData((prev) => prev.filter((row) => row.id !== id));
       },
     });
-  };
-
-  // Dismiss reason actions
-  const handleDismiss = async (changeId: number, reason: string | null) => {
-    await fetchWithAuth(`/api/system-admin/app-updates/${changeId}/dismiss`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
-    });
-    setData((prev) =>
-      prev.map((row) =>
-        row.id === changeId ? { ...row, dismissReason: reason } : row
-      )
-    );
   };
 
   const SortIcon = sortOrder === "desc" ? ArrowDown : ArrowUp;
@@ -600,18 +622,13 @@ export default function AppUpdatesPage() {
               ))}
             </select>
             <select
-              value={dismissFilter}
-              onChange={(e) => setDismissFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "" | "active" | "dismissed")}
               className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Status</option>
-              <option value="none">Active (no dismiss)</option>
-              <option value="any">Dismissed (any reason)</option>
-              {availableDismissReasons.map((r) => (
-                <option key={r} value={r}>
-                  Dismissed: {r}
-                </option>
-              ))}
+              <option value="active">Active (no dismissal label)</option>
+              <option value="dismissed">Dismissed</option>
             </select>
           </div>
 
@@ -757,8 +774,8 @@ export default function AppUpdatesPage() {
                       <SortIcon className="h-3.5 w-3.5" />
                     </button>
                   </TableHead>
-                  <TableHead className="w-[120px]">Labels</TableHead>
-                  <TableHead className="w-[140px]">Status</TableHead>
+                  <TableHead className="w-[200px]">Labels</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -841,43 +858,13 @@ export default function AppUpdatesPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          {row.dismissReason ? (
-                            <div className="flex items-center gap-1">
-                              <Badge variant="destructive" className="text-[10px]">
-                                {row.dismissReason}
-                              </Badge>
-                              <button
-                                onClick={() => handleDismiss(row.id, null)}
-                                className="text-muted-foreground hover:text-foreground"
-                                title="Restore (clear dismiss)"
-                              >
-                                <RotateCcw className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ) : (
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                if (e.target.value) handleDismiss(row.id, e.target.value);
-                              }}
-                              className="h-7 rounded border border-input bg-background px-1.5 text-[10px] ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
-                            >
-                              <option value="">Active</option>
-                              <option value="duplicate">Duplicate</option>
-                              <option value="false-positive">False Positive</option>
-                              <option value="scraper-error">Scraper Error</option>
-                              <option value="irrelevant">Irrelevant</option>
-                            </select>
-                          )}
-                          <button
-                            onClick={() => handleSingleDelete(row.id, row.appName)}
-                            className="text-muted-foreground hover:text-destructive"
-                            title="Delete permanently"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleSingleDelete(row.id, row.appName)}
+                          className="text-muted-foreground hover:text-destructive"
+                          title="Delete permanently"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -903,7 +890,7 @@ export default function AppUpdatesPage() {
               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
               Delete Selected
             </Button>
-            {data.some((r) => selectedIds.has(r.id) && r.dismissReason) && (
+            {data.some((r) => selectedIds.has(r.id) && r.labels.some((l) => l.isDismissal)) && (
               <Button
                 variant="outline"
                 size="sm"

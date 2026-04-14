@@ -77,7 +77,11 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
           FROM app_field_changes afc
           WHERE afc.app_id = ANY(${sqlArray(appIds)})
             AND afc.detected_at >= NOW() - INTERVAL '48 hours'
-            AND afc.dismiss_reason IS NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM app_update_label_assignments ula
+              JOIN app_update_labels aul ON aul.id = ula.label_id
+              WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE
+            )
           ORDER BY afc.detected_at DESC
           LIMIT 20
         `),
@@ -170,7 +174,11 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
           JOIN apps a ON a.id = afc.app_id
           WHERE afc.app_id = ANY(${sqlArray(compIds)})
             AND afc.detected_at >= NOW() - INTERVAL '48 hours'
-            AND afc.dismiss_reason IS NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM app_update_label_assignments ula
+              JOIN app_update_labels aul ON aul.id = ula.label_id
+              WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE
+            )
           ORDER BY afc.detected_at DESC
           LIMIT 20
         `);
