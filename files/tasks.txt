@@ -1233,3 +1233,5 @@ consolidate & Title-Case canonical pricing model labels across platforms (core r
 short-TTL cache for /api/auth/me + PATCH /me invalidation to guard against Cloudflare 524 under heavy category-page load (PLA-1078) ✅
 
 supersede duplicate `running` scrape_runs rows sharing the same (queue, jobId) on every cleanup cycle (PLA-1081) ✅
+
+progress-aware staleness for scrape_runs cleanup — no more killing healthy long-running scrapes (PLA-1081 follow-up) ✅

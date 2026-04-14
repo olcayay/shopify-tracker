@@ -5,22 +5,36 @@ import { createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("cleanup-stale-runs");
 
-/** Per-scraper-type timeout in hours for "running" state before marking as stale */
-const STALE_TIMEOUT_HOURS: Record<string, number> = {
-  category: 4,
-  app_details: 3,
-  keyword_search: 2,
-  keyword_suggestions: 2,
-  reviews: 2,
-  featured_apps: 2,
-  backfill_categories: 3,
-  compute_app_scores: 1,
-  compute_review_metrics: 1,
-  compute_similarity_scores: 1,
-  weekly_summary: 2,
+/**
+ * Per-scraper-type progress-stall threshold in minutes. A running row is
+ * considered stale only when `last_progress_at` has not advanced for this
+ * long — a healthy long run keeps bumping the heartbeat every few seconds
+ * via the `tr_scrape_runs_touch_last_progress` trigger, so we no longer
+ * kill genuinely-advancing multi-hour runs (PLA-1081 follow-up).
+ *
+ * Values are per single-item budgets × a generous safety factor: the slowest
+ * observed single-app scrape is ~1 minute, so 20 minutes catches real stalls
+ * while being resilient to transient rate-limit backoffs and long individual
+ * category page loads.
+ */
+const STALL_MINUTES: Record<string, number> = {
+  category: 30,
+  app_details: 20,
+  keyword_search: 20,
+  keyword_suggestions: 20,
+  reviews: 20,
+  featured_apps: 20,
+  backfill_categories: 30,
+  compute_app_scores: 15,
+  compute_review_metrics: 15,
+  compute_similarity_scores: 15,
+  weekly_summary: 20,
 };
 
-const DEFAULT_TIMEOUT_HOURS = 2;
+const DEFAULT_STALL_MINUTES = 20;
+
+/** Absolute ceiling: even without progress signal, flip after this long. */
+const ABSOLUTE_MAX_HOURS = 24;
 
 /** Scraper types that should be retried when found stale (scheduled batch jobs) */
 const RETRYABLE_TYPES = new Set([
@@ -87,11 +101,23 @@ export async function supersedeDuplicateRunningRuns(db: Database): Promise<numbe
  * Called at worker startup and periodically (every 15 min).
  */
 export async function cleanupStaleRuns(db: Database): Promise<CleanupResult> {
-  // Build per-type CASE expression for dynamic timeout
-  const caseExprParts = Object.entries(STALE_TIMEOUT_HOURS)
-    .map(([type, hours]) => `WHEN scraper_type = '${type}' THEN interval '${hours} hours'`)
+  // Progress-aware staleness (PLA-1081 follow-up): a run is stale only when
+  // its last_progress_at heartbeat (auto-bumped by a DB trigger when metadata
+  // changes) has not advanced for per-type STALL_MINUTES — or an absolute
+  // ceiling ABSOLUTE_MAX_HOURS catches runs that somehow stopped heartbeating
+  // entirely. Starts-only threshold is gone: a healthy long-running scrape
+  // keeps touching the row every few seconds, so multi-hour advancing runs
+  // are no longer killed by a fixed time budget.
+  const stallCaseParts = Object.entries(STALL_MINUTES)
+    .map(([type, mins]) => `WHEN scraper_type = '${type}' THEN interval '${mins} minutes'`)
     .join(" ");
-  const caseExpr = `CASE ${caseExprParts} ELSE interval '${DEFAULT_TIMEOUT_HOURS} hours' END`;
+  const stallCase = `CASE ${stallCaseParts} ELSE interval '${DEFAULT_STALL_MINUTES} minutes' END`;
+  const staleFilter = `status = 'running'
+      AND (triggered_by IS NULL OR triggered_by != 'smoke-test')
+      AND (
+        (last_progress_at IS NOT NULL AND last_progress_at < now() - (${stallCase}))
+        OR started_at < now() - interval '${ABSOLUTE_MAX_HOURS} hours'
+      )`;
 
   // Smoke-test runs: 5 minute timeout (they should finish in < 2 minutes)
   await db
@@ -114,20 +140,16 @@ export async function cleanupStaleRuns(db: Database): Promise<CleanupResult> {
       metadata: scrapeRuns.metadata,
     })
     .from(scrapeRuns)
-    .where(
-      sql.raw(`status = 'running' AND (triggered_by IS NULL OR triggered_by != 'smoke-test') AND started_at < now() - (${caseExpr})`)
-    );
+    .where(sql.raw(staleFilter));
 
   const runningResult = await db
     .update(scrapeRuns)
     .set({
       status: "failed",
       completedAt: new Date(),
-      error: "stale run: marked as failed by cleanup on worker startup",
+      error: "stale run: no progress in STALL_MINUTES (progress-aware cleanup)",
     })
-    .where(
-      sql.raw(`status = 'running' AND (triggered_by IS NULL OR triggered_by != 'smoke-test') AND started_at < now() - (${caseExpr})`)
-    );
+    .where(sql.raw(staleFilter));
 
   const pendingResult = await db
     .update(scrapeRuns)

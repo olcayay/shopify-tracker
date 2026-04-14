@@ -41,6 +41,12 @@ export const scrapeRuns = pgTable(
     /** PLA-1066: pointer to the original run when this row was created by a
      *  BullMQ stall-retry of an existing jobId. NULL on first attempts. */
     parentRunId: uuid("parent_run_id"),
+    /** PLA-1081 follow-up: auto-updated to now() by the DB trigger
+     *  `tr_scrape_runs_touch_last_progress` on any UPDATE that mutates
+     *  `metadata` for a running row. Lets cleanupStaleRuns flip a row
+     *  only when progress has genuinely stalled, not just because a long
+     *  run exceeded a fixed time budget. */
+    lastProgressAt: timestamp("last_progress_at").defaultNow(),
   },
   (table) => [
     index("idx_scrape_runs_type_started").on(table.scraperType, table.startedAt),

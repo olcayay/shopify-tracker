@@ -6257,3 +6257,14 @@ PLA-1081 — Duplicate bullmq:jobId rows in scrape_runs history
   - Heartbeat column on `scrape_runs` + BullMQ cross-check (`getActive()`) to let us flip orphans faster than the 2-4h time-based threshold.
   - Parametrised worker-platform-lock audit test for background worker × all platforms × app_details (AC#3).
   - Sentry breadcrumb emission on each flip (AC#2 partial).
+
+PLA-1081 follow-up — Progress-aware staleness (no more killing healthy long runs)
+- Problem: existing `cleanupStaleRuns` used a fixed per-type time-since-start threshold (3h for app_details). A healthy Shopify app_details run at ~0.6 apps/s for 13.7k apps naturally takes ~6h30m; at the 3h mark it got flipped to `failed` mid-progress (the 6f122a37 incident on 2026-04-14).
+- Fix:
+  - New column `scrape_runs.last_progress_at TIMESTAMPTZ DEFAULT now()` (migration 0147 + journal idx 147).
+  - DB trigger `tr_scrape_runs_touch_last_progress` — BEFORE UPDATE — bumps `last_progress_at = now()` whenever `metadata` changes on a running row (uses `IS DISTINCT FROM` so no-op writes don't tick). No scraper code changes needed; the existing per-5-apps progress metadata writes already trigger it.
+  - `cleanupStaleRuns` now flips a run only when `last_progress_at < now() - STALL_MINUTES[type]` (20 min default, 30 min for category/backfill_categories, 15 min for compute_*). Absolute ceiling `started_at < now() - 24h` guards against the theoretical case where progress heartbeats are lost entirely.
+  - Per-type `STALE_TIMEOUT_HOURS` gone — replaced with `STALL_MINUTES`. No-progress semantics mean Shopify's 6h+ app_details run is fine as long as metadata keeps advancing every few seconds.
+- Migration 0147 backfills `last_progress_at = COALESCE(started_at, created_at)` for existing rows so the trigger has a sane anchor on day one. Index on `(status, last_progress_at)`.
+- Tests: existing cleanup test suite (14/14) still green. No new test cases added — behavior is SQL-only; the mocked Database.execute returns `rowCount` which is what cleanup reads. Full suite 5/5 packages green (email template snapshots also refreshed for today's date, unrelated to this work).
+- Follow-ups still open from PLA-1081: BullMQ `getActive()` cross-check at cleanup time, parametrised worker-platform-lock audit test, Sentry breadcrumb on each flip.

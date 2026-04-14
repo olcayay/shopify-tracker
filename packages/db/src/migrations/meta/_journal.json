@@ -1030,6 +1030,13 @@
       "when": 1808208000000,
       "tag": "0146_pricing_model_title_case",
       "breakpoints": true
+    },
+    {
+      "idx": 147,
+      "version": "7",
+      "when": 1808294400000,
+      "tag": "0147_scrape_runs_last_progress_at",
+      "breakpoints": true
     }
   ]
 }
