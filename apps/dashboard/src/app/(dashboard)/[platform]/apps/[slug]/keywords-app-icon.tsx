@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
+import { useState } from "react";
 
 // --- App icon with selection state (same as compare page) ---
 export function AppIcon({
@@ -15,6 +16,13 @@ export function AppIcon({
   onClick?: () => void;
   isMain?: boolean;
 }) {
+  // PLA-1088: Canva CDN (thirdparty-public-apps-media.canva-apps.com) 403s
+  // external requests even with Referer, so stored iconUrls render as broken
+  // images for all canva apps. Track load failures and fall through to the
+  // initial-letter placeholder once an <img> errors.
+  const [imgFailed, setImgFailed] = useState(false);
+  const canShowImage = !!app.iconUrl && !imgFailed;
+
   return (
     <div className="group relative flex flex-col items-center">
       <button
@@ -28,8 +36,13 @@ export function AppIcon({
           isMain && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background cursor-default"
         )}
       >
-        {app.iconUrl ? (
-          <img src={app.iconUrl} alt={app.name} className="rounded-lg h-10 w-10" />
+        {canShowImage ? (
+          <img
+            src={app.iconUrl!}
+            alt={app.name}
+            className="rounded-lg h-10 w-10"
+            onError={() => setImgFailed(true)}
+          />
         ) : (
           <div className="rounded-lg bg-muted flex items-center justify-center text-xs font-bold h-10 w-10 uppercase">
             {app.name?.charAt(0) || "?"}

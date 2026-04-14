@@ -6389,3 +6389,11 @@ PLA-1090 — Production log retention (partial: code-side artifacts only)
   3. `docker compose restart alloy` on VM1 + VM3
   4. Smoke-test: `gcloud logging read ...` + `{env="production"} | json` in Grafana Explore
 - Did not: touch production VMs, modify secrets, install ops-agent in this session. Deliberate autopilot safety scope.
+
+PLA-1088 — Canva icon 403 — partial UI fallback (graceful degradation only)
+- Real fix is Option A (self-host icons on GCS + Caddy) or Option B (server-side image proxy). Both need new infra and multi-file pipelines; outside this autopilot iteration's scope.
+- Small visible-breakage hardening landed now: `apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/keywords-app-icon.tsx` now tracks `imgFailed` via `<img onError>` and falls through to the initial-letter placeholder when the CDN 403s. User sees "J" (from uppercase fallback in PLA-1087) instead of a broken-image glyph on canva app keywords page.
+- Scope intentionally tiny: only this single component — roughly the surface that matches the task's reporter URL. Other img paths (developer page, compare, etc.) still render broken-image for canva until a shared `<AppIconImage>` helper is introduced. That refactor is too large for autopilot.
+- No scraper changes (would need to evaluate impact on all platforms before setting iconUrl=null for canva).
+- No backend proxy endpoint (Option B).
+- Dashboard tests green (2302/2302).
