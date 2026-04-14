@@ -1051,6 +1051,13 @@
       "when": 1808467200000,
       "tag": "0149_seed_app_update_labels_and_autotag",
       "breakpoints": true
+    },
+    {
+      "idx": 150,
+      "version": "7",
+      "when": 1808553600000,
+      "tag": "0150_drop_legacy_platform_visibility_columns",
+      "breakpoints": true
     }
   ]
 }

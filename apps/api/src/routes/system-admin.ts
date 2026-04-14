@@ -43,7 +43,7 @@ import {
   appUpdateLabels,
   appUpdateLabelAssignments,
 } from "@appranks/db";
-import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
+import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks, platformFeatureFlagSlug, type PlatformId } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
@@ -276,12 +276,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       pkg = found ?? null;
     }
 
-    // Enabled platforms with override info
+    // Subscribed platforms for this account
     const enabledPlatformsList = await db
-      .select({
-        platform: accountPlatforms.platform,
-        overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility,
-      })
+      .select({ platform: accountPlatforms.platform })
       .from(accountPlatforms)
       .where(eq(accountPlatforms.accountId, id));
 
@@ -297,6 +294,18 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .innerJoin(featureFlags, eq(featureFlags.id, accountFeatureFlags.featureFlagId))
       .where(eq(accountFeatureFlags.accountId, id));
 
+    // Per-account platform overrides = account_feature_flags rows for `platform-<id>` slugs.
+    // Present = this account has early access even when the platform is globally hidden.
+    const platformFlagSet = new Set(
+      accountFlags
+        .filter((f) => f.slug.startsWith("platform-"))
+        .map((f) => f.slug),
+    );
+    const platformOverrides: Record<string, boolean> = {};
+    for (const p of enabledPlatformsList.map((x) => x.platform)) {
+      platformOverrides[p] = platformFlagSet.has(platformFeatureFlagSlug(p as PlatformId));
+    }
+
     return {
       ...account,
       package: pkg,
@@ -307,10 +316,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       trackedFeatures: trackedFeaturesList,
       researchProjects: researchProjectsCount.count,
       enabledPlatforms: enabledPlatformsList.map((p) => p.platform),
-      platformOverrides: enabledPlatformsList.reduce((acc, p) => {
-        acc[p.platform] = p.overrideGlobalVisibility;
-        return acc;
-      }, {} as Record<string, boolean>),
+      platformOverrides,
       featureFlags: accountFlags,
     };
   });
@@ -2718,18 +2724,25 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // ── Platform Visibility ─────────────────────────────────────────────
 
-  // GET /api/system-admin/platform-visibility — get global visibility for all platforms
+  // GET /api/system-admin/platform-visibility — return each platform's global launch state,
+  // sourced from feature_flags.platform-<id>.is_enabled (single source of truth).
   app.get("/platform-visibility", async () => {
-    const rows = await db.select().from(platformVisibility);
+    const slugs = PLATFORM_IDS.map((p) => platformFeatureFlagSlug(p as PlatformId));
+    const rows = await db
+      .select({ slug: featureFlags.slug, isEnabled: featureFlags.isEnabled })
+      .from(featureFlags)
+      .where(inArray(featureFlags.slug, slugs));
+    const enabledSlugs = new Set(rows.filter((r) => r.isEnabled).map((r) => r.slug));
     const result: Record<string, boolean> = {};
     for (const pid of PLATFORM_IDS) {
-      const row = rows.find((r) => r.platform === pid);
-      result[pid] = row?.isVisible ?? false;
+      result[pid] = enabledSlugs.has(platformFeatureFlagSlug(pid as PlatformId));
     }
     return result;
   });
 
-  // PATCH /api/system-admin/platform-visibility/:platform — toggle global visibility
+  // PATCH /api/system-admin/platform-visibility/:platform — toggle the global launch flag.
+  // Flips feature_flags.platform-<id>.is_enabled (single source of truth). A missing flag
+  // is auto-created so the admin UI stays usable for newly-added platforms.
   app.patch<{ Params: { platform: string } }>(
     "/platform-visibility/:platform",
     async (request, reply) => {
@@ -2742,12 +2755,25 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "isVisible boolean is required" });
       }
 
+      const slug = platformFeatureFlagSlug(platform as PlatformId);
+      const now = new Date();
       await db
-        .insert(platformVisibility)
-        .values({ platform, isVisible, updatedAt: new Date() })
+        .insert(featureFlags)
+        .values({
+          slug,
+          name: `Platform: ${platform}`,
+          description: `Access gate for ${platform} marketplace data`,
+          isEnabled: isVisible,
+          activatedAt: isVisible ? now : null,
+          deactivatedAt: isVisible ? null : now,
+        })
         .onConflictDoUpdate({
-          target: platformVisibility.platform,
-          set: { isVisible, updatedAt: new Date() },
+          target: featureFlags.slug,
+          set: {
+            isEnabled: isVisible,
+            activatedAt: isVisible ? now : sql`${featureFlags.activatedAt}`,
+            deactivatedAt: isVisible ? sql`${featureFlags.deactivatedAt}` : now,
+          },
         });
 
       return { platform, isVisible };
@@ -2756,16 +2782,26 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // ── Scraper Enable/Disable ──────────────────────────────────────────
 
-  // GET /api/system-admin/scraper/platforms — return all platform visibility + scraper status
+  // GET /api/system-admin/scraper/platforms — per-platform launch + scraper status.
+  // isVisible sourced from feature_flags.platform-<id> (single source of truth); scraperEnabled
+  // stays on platform_visibility (unrelated concern: whether the worker runs for that platform).
   app.get("/scraper/platforms", async () => {
-    const rows = await db.select().from(platformVisibility);
+    const slugs = PLATFORM_IDS.map((p) => platformFeatureFlagSlug(p as PlatformId));
+    const [scraperRows, flagRows] = await Promise.all([
+      db.select().from(platformVisibility),
+      db
+        .select({ slug: featureFlags.slug, isEnabled: featureFlags.isEnabled })
+        .from(featureFlags)
+        .where(inArray(featureFlags.slug, slugs)),
+    ]);
+    const enabledSlugs = new Set(flagRows.filter((r) => r.isEnabled).map((r) => r.slug));
     const result: Array<{ platform: string; isVisible: boolean; scraperEnabled: boolean }> = [];
     for (const pid of PLATFORM_IDS) {
-      const row = rows.find((r) => r.platform === pid);
+      const scraperRow = scraperRows.find((r) => r.platform === pid);
       result.push({
         platform: pid,
-        isVisible: row?.isVisible ?? false,
-        scraperEnabled: row?.scraperEnabled ?? true,
+        isVisible: enabledSlugs.has(platformFeatureFlagSlug(pid as PlatformId)),
+        scraperEnabled: scraperRow?.scraperEnabled ?? true,
       });
     }
     return result;
@@ -3128,7 +3164,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
       await db
         .insert(platformVisibility)
-        .values({ platform, isVisible: current?.isVisible ?? false, scraperEnabled: newState, updatedAt: new Date() })
+        .values({ platform, scraperEnabled: newState, updatedAt: new Date() })
         .onConflictDoUpdate({
           target: platformVisibility.platform,
           set: { scraperEnabled: newState, updatedAt: new Date() },
@@ -3138,7 +3174,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
-  // PATCH /api/system-admin/accounts/:id/platforms/:platform/override — toggle per-account override
+  // PATCH /api/system-admin/accounts/:id/platforms/:platform/override — toggle per-account
+  // early-access to a globally-hidden platform. Writes an account_feature_flags row for the
+  // `platform-<id>` slug (presence = override ON).
   app.patch<{ Params: { id: string; platform: string } }>(
     "/accounts/:id/platforms/:platform/override",
     async (request, reply) => {
@@ -3151,21 +3189,47 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "override boolean is required" });
       }
 
-      const result = await db
-        .update(accountPlatforms)
-        .set({ overrideGlobalVisibility: override })
+      // Account must already subscribe to the platform
+      const [sub] = await db
+        .select({ platform: accountPlatforms.platform })
+        .from(accountPlatforms)
         .where(
           and(
             eq(accountPlatforms.accountId, id),
-            eq(accountPlatforms.platform, platform)
-          )
-        )
-        .returning();
-
-      if (result.length === 0) {
+            eq(accountPlatforms.platform, platform),
+          ),
+        );
+      if (!sub) {
         return reply
           .code(404)
           .send({ error: "Platform not enabled for this account" });
+      }
+
+      const slug = platformFeatureFlagSlug(platform as PlatformId);
+      const [flag] = await db
+        .select({ id: featureFlags.id })
+        .from(featureFlags)
+        .where(eq(featureFlags.slug, slug));
+      if (!flag) {
+        return reply
+          .code(404)
+          .send({ error: `Feature flag ${slug} not found` });
+      }
+
+      if (override) {
+        await db
+          .insert(accountFeatureFlags)
+          .values({ accountId: id, featureFlagId: flag.id })
+          .onConflictDoNothing();
+      } else {
+        await db
+          .delete(accountFeatureFlags)
+          .where(
+            and(
+              eq(accountFeatureFlags.accountId, id),
+              eq(accountFeatureFlags.featureFlagId, flag.id),
+            ),
+          );
       }
 
       return { platform, override };

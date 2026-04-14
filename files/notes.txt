@@ -1,3 +1,50 @@
+Platform Access — Phase B/C DROP legacy columns (PLA-1082, 2026-04-14)
+====================================
+Problem: Phase A (fe5baff0, migration 0148, earlier today) moved the platform
+access gate to feature_flags.platform-<id> and stopped the API from reading
+platform_visibility.is_visible + account_platforms.override_global_visibility.
+But the columns stayed in the schema and the system-admin endpoints still
+read/wrote them. Drift risk: a future engineer could flip the column and be
+silently ignored (or worse, the scraper could regress to reading it).
+
+Fix: migration 0150 DROPs both columns. Before the DROP, every remaining
+read/write was re-routed to feature flags:
+
+  apps/api/src/routes/system-admin.ts
+    - GET /accounts/:id    platformOverrides map derived from the existing
+                           accountFeatureFlags query (rows whose slug starts
+                           with `platform-`) instead of a separate column read.
+    - GET /platform-visibility  reads feature_flags.platform-<id>.is_enabled.
+    - PATCH /platform-visibility/:platform  UPSERTs the feature flag row
+                                            (auto-creates if missing so the
+                                            admin UI stays usable on a new
+                                            platform).
+    - GET /scraper/platforms  isVisible sourced from feature_flags;
+                              scraperEnabled stays on platform_visibility.
+    - PATCH /scraper/platform/:platform/toggle  no longer writes isVisible;
+                                                only touches scraperEnabled.
+    - PATCH /accounts/:id/platforms/:platform/override  INSERTs (override=true)
+                                                        or DELETEs (override=false)
+                                                        an account_feature_flags row.
+
+  packages/db/src/schema/platform-visibility.ts  — drop isVisible field.
+  packages/db/src/schema/account-platforms.ts    — drop overrideGlobalVisibility.
+  apps/api/src/__tests__/routes/auth.test.ts     — clean up three mock rows.
+
+Verification:
+- Prod dry-run (rolled back): 0 account_platforms rows with
+  override_global_visibility=true, so the column DROP is lossless. Both
+  ALTER TABLE statements executed cleanly; resulting schemas verified via
+  information_schema.columns.
+- `npm test` 5/5 green (1859 api + 2617 scraper + rest).
+- Dashboard pages that call these endpoints (system-admin/scraper page,
+  system-admin/accounts/[id] page) unchanged — same response shapes.
+
+Rollback: ADD COLUMN both columns back with their old defaults. Data is
+recoverable by mapping feature_flags.platform-<id>.is_enabled →
+platform_visibility.is_visible and EXISTS(account_feature_flags row) →
+account_platforms.override_global_visibility.
+
 App Updates Auto-Tag — PLA-1072 Part B (2026-04-14)
 ====================================
 Problem: PLA-1072 Part A (commit bc1dd9f7, 2026-04-13) stopped the card-refresh

@@ -1,3 +1,12 @@
+Platform Access — Phase B/C: DROP legacy columns (PLA-1082, 2026-04-14)
+  - `platform_visibility.is_visible` → DROP (now feature_flags.platform-<id>.is_enabled)
+  - `account_platforms.override_global_visibility` → DROP (now account_feature_flags row)
+  - `GET /platform-visibility`, `GET /scraper/platforms`, `GET /accounts/:id` — isVisible/platformOverrides sourced from feature flags
+  - `PATCH /platform-visibility/:platform` — UPSERTs feature_flags row
+  - `PATCH /accounts/:id/platforms/:platform/override` — insert/delete account_feature_flags row
+  - Drizzle schemas cleaned up; migration 0150 DROPs both columns
+  - Prod dry-run verified: 0 override=true rows; kolon drop'u güvenli ✅
+
 App Updates Auto-Tag — finish PLA-1072 Part B (2026-04-14)
   - Migration 0149: seed `false-empty-after` system label
   - DB trigger `trg_tag_false_empty` auto-tags every new `app_field_changes` row
