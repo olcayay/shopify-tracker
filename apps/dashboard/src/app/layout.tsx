@@ -10,6 +10,7 @@ import { ShortcutsHelp } from "@/components/shortcuts-help";
 import { CommandPalette } from "@/components/command-palette";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { FeatureFlagsProvider } from "@/contexts/feature-flags-context";
+import { UnhandledRejectionLogger } from "@/components/unhandled-rejection-logger";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,6 +69,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <UnhandledRejectionLogger />
         <Suspense>
           <Analytics />
         </Suspense>
