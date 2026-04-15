@@ -25,6 +25,7 @@ import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
 import { cacheGet, cacheDel } from "../utils/cache.js";
+import { withTimeout } from "../utils/with-timeout.js";
 import { sendWelcomeEmail, sendPasswordResetEmail, sendLoginAlertEmail, sendVerificationEmail } from "../lib/email-enqueue.js";
 import {
   registerSchema,
@@ -91,6 +92,19 @@ function hashUserAgent(ua: string | undefined): string | null {
 // 30s balances freshness (plan / feature-flag changes become visible within
 // a reload) against the cost of rebuilding the response on every nav click.
 const AUTH_ME_TTL_SECONDS = 30;
+
+// PLA-1097: hard cap on /auth/me build time. Under DB pool pressure the
+// cache-miss fetcher (6-subquery consolidated count + 3 parallel lookups)
+// could hang indefinitely. 6s leaves client retry budget inside the
+// dashboard's 10s AbortController window.
+const AUTH_ME_BUILD_TIMEOUT_MS = 6_000;
+
+class AuthMeTimeoutError extends Error {
+  constructor() {
+    super("auth-me-timeout");
+    this.name = "AuthMeTimeoutError";
+  }
+}
 
 export function authMeCacheKey(userId: string, realAdminUserId: string | null): string {
   return `auth-me:${userId}:${realAdminUserId ?? "none"}`;
@@ -702,11 +716,27 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const cacheKey = authMeCacheKey(request.user.userId, request.user.realAdmin?.userId ?? null);
-    const cached = await cacheGet<Record<string, unknown> | { __notFound: true }>(
-      cacheKey,
-      async () => buildAuthMeResponse(request),
-      AUTH_ME_TTL_SECONDS,
-    );
+    let cached: Record<string, unknown> | { __notFound: true };
+    try {
+      cached = await cacheGet<Record<string, unknown> | { __notFound: true }>(
+        cacheKey,
+        async () =>
+          withTimeout(
+            buildAuthMeResponse(request),
+            AUTH_ME_BUILD_TIMEOUT_MS,
+            () => new AuthMeTimeoutError(),
+          ),
+        AUTH_ME_TTL_SECONDS,
+      );
+    } catch (err) {
+      if (err instanceof AuthMeTimeoutError) {
+        request.log.warn({ userId: request.user.userId }, "auth-me timeout");
+        return reply
+          .code(503)
+          .send({ error: "Service temporarily unavailable, please retry" });
+      }
+      throw err;
+    }
 
     if (cached && typeof cached === "object" && "__notFound" in cached) {
       return reply.code(404).send({ error: "User not found" });

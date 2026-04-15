@@ -349,10 +349,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setImpersonation(null);
       return;
     }
+    const fetchMe = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      try {
+        return await fetch(`${API_BASE}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
     try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      let res: Response;
+      try {
+        res = await fetchMe();
+        // Retry once on timeout/5xx — covers transient DB pool pressure (PLA-1097)
+        if (res.status >= 500) {
+          res = await fetchMe();
+        }
+      } catch {
+        res = await fetchMe();
+      }
+
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
