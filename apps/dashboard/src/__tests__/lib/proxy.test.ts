@@ -6,6 +6,11 @@ const mockRedirect = vi.fn((url: URL) => ({
   url: url.toString(),
   cookies: { set: vi.fn() },
 }));
+const mockRewrite = vi.fn((url: URL) => ({
+  type: "rewrite",
+  url: url.toString(),
+  cookies: { set: vi.fn() },
+}));
 const mockNext = vi.fn(() => ({
   type: "next",
   cookies: { set: vi.fn() },
@@ -14,16 +19,19 @@ const mockNext = vi.fn(() => ({
 vi.mock("next/server", () => ({
   NextResponse: {
     redirect: (url: URL) => mockRedirect(url),
+    rewrite: (url: URL) => mockRewrite(url),
     next: () => mockNext(),
   },
 }));
 
 function createMockRequest(pathname: string, cookies: Record<string, string> = {}) {
+  const url = new URL(`http://localhost:3000${pathname}`);
   return {
     nextUrl: {
       pathname,
+      clone: () => new URL(url.toString()),
     },
-    url: `http://localhost:3000${pathname}`,
+    url: url.toString(),
     cookies: {
       get: (name: string) => {
         const value = cookies[name];
@@ -278,5 +286,82 @@ describe("proxy routing", () => {
     const req = createMockRequest("/pricing") as any;
     await proxy(req);
     expect(mockNext).toHaveBeenCalled();
+  });
+
+  // ─── PLA-1110: bare app-detail routing must rewrite, not redirect ──────
+  // A 307 redirect trips ERR_QUIC_PROTOCOL_ERROR at Cloudflare on the RSC
+  // prefetch target, producing a 1–2 minute hang then "network error". The
+  // rewrite keeps the URL stable and avoids the second HTTP/3 round-trip.
+  describe("bare /{platform}/apps/{slug} routing (PLA-1110)", () => {
+    it("rewrites to /v2/ by default (cookie unset)", async () => {
+      const { proxy } = await import("@/proxy");
+      const req = createMockRequest("/shopify/apps/jotform-ai-chatbot") as any;
+      await proxy(req);
+      expect(mockRedirect).not.toHaveBeenCalled();
+      expect(mockRewrite).toHaveBeenCalledOnce();
+      const rewriteUrl = mockRewrite.mock.calls[0][0] as URL;
+      expect(rewriteUrl.pathname).toBe("/shopify/apps/v2/jotform-ai-chatbot");
+    });
+
+    it("rewrites to /v1/ when app-layout-version=v1 cookie is set", async () => {
+      const { proxy } = await import("@/proxy");
+      const req = createMockRequest("/shopify/apps/jotform-ai-chatbot", {
+        "app-layout-version": "v1",
+      }) as any;
+      await proxy(req);
+      expect(mockRedirect).not.toHaveBeenCalled();
+      expect(mockRewrite).toHaveBeenCalledOnce();
+      const rewriteUrl = mockRewrite.mock.calls[0][0] as URL;
+      expect(rewriteUrl.pathname).toBe("/shopify/apps/v1/jotform-ai-chatbot");
+    });
+
+    it("preserves nested subpath on v1 rewrite (e.g. /keywords)", async () => {
+      const { proxy } = await import("@/proxy");
+      const req = createMockRequest("/shopify/apps/jotform-ai-chatbot/keywords", {
+        "app-layout-version": "v1",
+      }) as any;
+      await proxy(req);
+      expect(mockRewrite).toHaveBeenCalledOnce();
+      const rewriteUrl = mockRewrite.mock.calls[0][0] as URL;
+      expect(rewriteUrl.pathname).toBe("/shopify/apps/v1/jotform-ai-chatbot/keywords");
+    });
+
+    it("applies mapV1PathToV2 for v2 default (e.g. /keywords → /visibility/keywords)", async () => {
+      const { proxy } = await import("@/proxy");
+      const req = createMockRequest("/shopify/apps/jotform-ai-chatbot/keywords") as any;
+      await proxy(req);
+      expect(mockRewrite).toHaveBeenCalledOnce();
+      const rewriteUrl = mockRewrite.mock.calls[0][0] as URL;
+      expect(rewriteUrl.pathname).toBe("/shopify/apps/v2/jotform-ai-chatbot/visibility/keywords");
+    });
+
+    it("does not rewrite already-prefixed /v2/ paths (negative lookahead)", async () => {
+      const { proxy } = await import("@/proxy");
+      const req = createMockRequest("/shopify/apps/v2/jotform-ai-chatbot") as any;
+      await proxy(req);
+      expect(mockRewrite).not.toHaveBeenCalled();
+      // Falls through to auth — no access_token → redirect to /login
+      expect(mockRedirect).toHaveBeenCalledOnce();
+      const redirectUrl = mockRedirect.mock.calls[0][0] as URL;
+      expect(redirectUrl.pathname).toBe("/login");
+    });
+
+    it("does not rewrite already-prefixed /v1/ paths (negative lookahead)", async () => {
+      const { proxy } = await import("@/proxy");
+      const req = createMockRequest("/shopify/apps/v1/jotform-ai-chatbot") as any;
+      await proxy(req);
+      expect(mockRewrite).not.toHaveBeenCalled();
+    });
+
+    it("never issues a 307 redirect for the bare app-detail pattern", async () => {
+      // Guard test: regression of PLA-1110. A redirect here is what triggers
+      // Cloudflare's ERR_QUIC_PROTOCOL_ERROR on RSC prefetch.
+      const { proxy } = await import("@/proxy");
+      const req = createMockRequest("/shopify/apps/some-app", {
+        "app-layout-version": "v1",
+      }) as any;
+      await proxy(req);
+      expect(mockRedirect).not.toHaveBeenCalled();
+    });
   });
 });

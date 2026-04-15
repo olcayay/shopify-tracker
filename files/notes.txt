@@ -6657,3 +6657,12 @@ PLA-1105 notes
 - Instrumentation is additive-only: four `mark()` calls wrap the main query + 3 parallel waves + the one-off keyword lookup. Zero cost when flag is off; logs structured fields (`accountId`, `platform`, `totalMs`, `phases`, `competitorCount`) when flag is `1` or `true`. Output goes to Fastify's request logger so it lands in existing log pipelines.
 - Two tests guard the flag: one verifies default-off doesn't spam, one verifies `=1` doesn't crash the handler path.
 - Next steps (for the ticket): enable `DEBUG_SLOW_QUERIES=1` in prod briefly, capture a few /shopify/competitors hits, identify the worst wave, then target Phase 2 at the real offender. Leaving PLA-1105 in review with these notes.
+
+PLA-1110 notes
+- Root cause: `proxy.ts` lines 76-92 used `NextResponse.redirect()` (307) to route bare `/{platform}/apps/{slug}` to `/v1/` or `/v2/` based on `app-layout-version` cookie. The redirect fired for RSC prefetches too. The redirected HTTP/3 RSC request hit `ERR_QUIC_PROTOCOL_ERROR` at Cloudflare. Next.js router hung, eventually surfaced route-level `error.tsx` → "Something went wrong / network error" after 1-2 min.
+- Fix: switched to `NextResponse.rewrite()`. URL stays at bare `/{platform}/apps/{slug}`; middleware internally serves v1 or v2 tree per cookie. No second HTTP/3 round-trip. No QUIC interaction.
+- Downstream fix: `useLayoutVersion()` previously sniffed the URL for `/apps/v1/`. With rewrite, URL stays bare regardless of tree. Changed hook to read the `app-layout-version` cookie directly via `useSyncExternalStore` (SSR-safe default "v2"). Cookie mutations trigger full reload via `classic-view-link.tsx` / `classic-view-banner.tsx`, so no subscription needed.
+- `change-heatmap.tsx` and `unified-change-log.tsx` also sniff `/v2/` from path to pick link prefix. Kept as-is — their fallback (bare `/{platform}/apps`) now works correctly via the middleware rewrite.
+- Tests updated: 7 new proxy tests (v1/v2 rewrite branches + RSC regression guard + negative-lookahead passthrough). `useLayoutVersion` test rewritten to drive via cookies. Old middleware.test.ts "redirect" block flipped to "rewrite" expectations (per the "tests encoding wrong behavior" feedback rule — never block a correct fix with a test that asserts the bug).
+- Scope kept tight: didn't add RSC-header guard since rewrite alone solves the QUIC issue; adding both would be defensive but add complexity.
+- Verified: 223 dashboard tests green including all new coverage.

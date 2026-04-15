@@ -73,22 +73,25 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  // Redirect bare app detail pages to v1 or v2 based on user preference cookie
+  // Route bare app detail pages to v1 or v2 based on user preference cookie.
   // Pattern: /{platform}/apps/{slug} and sub-routes, but NOT /apps/v2/ or /apps/v1/
+  //
+  // NOTE: this MUST be a rewrite (not a redirect). A 307 redirect fires for RSC
+  // prefetches too, and the redirected HTTP/3 RSC request fails at Cloudflare
+  // with ERR_QUIC_PROTOCOL_ERROR — the user-visible symptom is a 1–2 minute
+  // hang followed by the route-level error boundary rendering "network error".
+  // See PLA-1110. A rewrite keeps the URL stable and serves the v1/v2 content
+  // internally without an extra HTTP round-trip.
   const appDetailMatch = pathname.match(/^\/([^/]+)\/apps\/(?!v2\/)(?!v1\/)([^/]+)(\/.*)?$/);
   if (appDetailMatch && VALID_PLATFORMS.includes(appDetailMatch[1])) {
     const [, plat, appSlug, rest = ""] = appDetailMatch;
     const layoutPref = request.cookies.get("app-layout-version")?.value;
-    if (layoutPref === "v1") {
-      return NextResponse.redirect(
-        new URL(`/${plat}/apps/v1/${appSlug}${rest}`, request.url)
-      );
-    }
-    // Default: v2
-    const v2Path = mapV1PathToV2(rest);
-    return NextResponse.redirect(
-      new URL(`/${plat}/apps/v2/${appSlug}${v2Path}`, request.url)
-    );
+    const target = layoutPref === "v1"
+      ? `/${plat}/apps/v1/${appSlug}${rest}`
+      : `/${plat}/apps/v2/${appSlug}${mapV1PathToV2(rest)}`;
+    const url = request.nextUrl.clone();
+    url.pathname = target;
+    return NextResponse.rewrite(url);
   }
 
   const accessToken = request.cookies.get("access_token")?.value;

@@ -1,16 +1,38 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
 
 type LayoutVersion = "v1" | "v2";
 
+const COOKIE_RE = /(?:^|;\s*)app-layout-version=(v1|v2)/;
+
+function readCookie(): LayoutVersion {
+  if (typeof document === "undefined") return "v2";
+  const match = document.cookie.match(COOKIE_RE);
+  return match?.[1] === "v1" ? "v1" : "v2";
+}
+
+// Static subscription — cookie changes in this codebase trigger a full reload
+// (see `classic-view-link.tsx` / `classic-view-banner.tsx`), so we don't need
+// to observe cookie mutations.
+function subscribe(): () => void {
+  return () => {};
+}
+
+function getServerSnapshot(): LayoutVersion {
+  return "v2";
+}
+
 /**
- * Detects the current layout version from the URL path.
- * Returns "v1" if the path contains /apps/v1/, otherwise "v2".
+ * Returns the user's selected layout version from the `app-layout-version`
+ * cookie (default: v2). Previously sniffed the URL for `/apps/v1/`, but
+ * PLA-1110 switched the middleware from redirect → rewrite, so the URL
+ * now stays at the bare `/apps/{slug}` form regardless of which tree is
+ * rendered internally. Reading the cookie is the source of truth that
+ * middleware also uses.
  */
 export function useLayoutVersion(): LayoutVersion {
-  const pathname = usePathname();
-  return pathname.includes("/apps/v1/") ? "v1" : "v2";
+  return useSyncExternalStore(subscribe, readCookie, getServerSnapshot);
 }
 
 /**

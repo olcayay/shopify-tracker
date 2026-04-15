@@ -1,10 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
-import { buildAppLink } from "@/hooks/use-layout-version";
+import { describe, it, expect, afterEach } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { buildAppLink, useLayoutVersion } from "@/hooks/use-layout-version";
 
-// Mock next/navigation for useLayoutVersion
-vi.mock("next/navigation", () => ({
-  usePathname: vi.fn(),
-}));
+function setCookie(value: string | null) {
+  if (value == null) {
+    document.cookie = "app-layout-version=; path=/; max-age=0";
+  } else {
+    document.cookie = `app-layout-version=${value}; path=/`;
+  }
+}
 
 describe("buildAppLink", () => {
   it("builds v1 link with subpath", () => {
@@ -45,27 +49,34 @@ describe("buildAppLink", () => {
 });
 
 describe("useLayoutVersion", () => {
-  it("returns v1 when pathname includes /apps/v1/", async () => {
-    const { usePathname } = await import("next/navigation");
-    (usePathname as any).mockReturnValue("/shopify/apps/v1/my-app/reviews");
-
-    const { useLayoutVersion } = await import("@/hooks/use-layout-version");
-    expect(useLayoutVersion()).toBe("v1");
+  afterEach(() => {
+    setCookie(null);
   });
 
-  it("returns v2 when pathname includes /apps/v2/", async () => {
-    const { usePathname } = await import("next/navigation");
-    (usePathname as any).mockReturnValue("/shopify/apps/v2/my-app");
-
-    const { useLayoutVersion } = await import("@/hooks/use-layout-version");
-    expect(useLayoutVersion()).toBe("v2");
+  // PLA-1110: hook now reads the `app-layout-version` cookie (previously
+  // sniffed the URL, which broke when middleware switched from redirect →
+  // rewrite and the URL no longer contained /v1/ or /v2/).
+  it("returns v1 when app-layout-version=v1 cookie is set", () => {
+    setCookie("v1");
+    const { result } = renderHook(() => useLayoutVersion());
+    expect(result.current).toBe("v1");
   });
 
-  it("returns v2 for unknown paths", async () => {
-    const { usePathname } = await import("next/navigation");
-    (usePathname as any).mockReturnValue("/shopify/apps/my-app");
+  it("returns v2 when app-layout-version=v2 cookie is set", () => {
+    setCookie("v2");
+    const { result } = renderHook(() => useLayoutVersion());
+    expect(result.current).toBe("v2");
+  });
 
-    const { useLayoutVersion } = await import("@/hooks/use-layout-version");
-    expect(useLayoutVersion()).toBe("v2");
+  it("defaults to v2 when cookie is unset", () => {
+    setCookie(null);
+    const { result } = renderHook(() => useLayoutVersion());
+    expect(result.current).toBe("v2");
+  });
+
+  it("defaults to v2 when cookie has an unknown value", () => {
+    document.cookie = "app-layout-version=bogus; path=/";
+    const { result } = renderHook(() => useLayoutVersion());
+    expect(result.current).toBe("v2");
   });
 });

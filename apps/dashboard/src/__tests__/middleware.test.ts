@@ -160,49 +160,72 @@ describe("proxy – cross-platform developer profile rewrite", () => {
   });
 });
 
-describe("proxy – v1 to v2 app detail redirect", () => {
+describe("proxy – bare app detail routing (PLA-1110: rewrite, not redirect)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("redirects v1 app detail to v2", async () => {
+  // PLA-1110: a 307 redirect here triggers ERR_QUIC_PROTOCOL_ERROR at
+  // Cloudflare on the RSC prefetch. Rewrites keep the URL stable and avoid
+  // the second HTTP/3 round-trip. These tests guard the rewrite branch.
+  it("rewrites bare app detail to v2 (default, no cookie)", async () => {
     const req = makeRequest("/shopify/apps/formful", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
     await proxy(req);
-    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
-    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
-    expect(redirectUrl.pathname).toBe("/shopify/apps/v2/formful");
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.rewrite).toHaveBeenCalledTimes(1);
+    const rewriteUrl = (NextResponse.rewrite as any).mock.calls[0][0] as URL;
+    expect(rewriteUrl.pathname).toBe("/shopify/apps/v2/formful");
   });
 
-  it("maps v1 keywords tab to v2 visibility/keywords", async () => {
+  it("maps v1 keywords tab to v2 visibility/keywords on rewrite", async () => {
     const req = makeRequest("/shopify/apps/formful/keywords", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
     await proxy(req);
-    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
-    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
-    expect(redirectUrl.pathname).toBe("/shopify/apps/v2/formful/visibility/keywords");
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.rewrite).toHaveBeenCalledTimes(1);
+    const rewriteUrl = (NextResponse.rewrite as any).mock.calls[0][0] as URL;
+    expect(rewriteUrl.pathname).toBe("/shopify/apps/v2/formful/visibility/keywords");
   });
 
-  it("maps v1 competitors to v2 intel/competitors", async () => {
+  it("maps v1 competitors to v2 intel/competitors on rewrite", async () => {
     const req = makeRequest("/salesforce/apps/test-app/competitors", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
     await proxy(req);
-    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
-    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
-    expect(redirectUrl.pathname).toBe("/salesforce/apps/v2/test-app/intel/competitors");
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.rewrite).toHaveBeenCalledTimes(1);
+    const rewriteUrl = (NextResponse.rewrite as any).mock.calls[0][0] as URL;
+    expect(rewriteUrl.pathname).toBe("/salesforce/apps/v2/test-app/intel/competitors");
   });
 
-  it("does not redirect v2 URLs", async () => {
+  it("rewrites to v1 when app-layout-version=v1 cookie is set", async () => {
+    const req = makeRequest("/shopify/apps/formful", {
+      access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc",
+      "app-layout-version": "v1",
+    });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.rewrite).toHaveBeenCalledTimes(1);
+    const rewriteUrl = (NextResponse.rewrite as any).mock.calls[0][0] as URL;
+    expect(rewriteUrl.pathname).toBe("/shopify/apps/v1/formful");
+  });
+
+  it("does not rewrite already-prefixed v2 URLs", async () => {
     const req = makeRequest("/shopify/apps/v2/formful", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
     await proxy(req);
-    const calls = (NextResponse.redirect as any).mock.calls;
-    if (calls.length > 0) {
-      expect((calls[0][0] as URL).pathname).not.toContain("/apps/v2/formful");
-    }
+    const rewriteCalls = (NextResponse.rewrite as any).mock.calls;
+    expect(rewriteCalls.length).toBe(0);
   });
 
-  it("does not redirect v1 URLs", async () => {
+  it("does not rewrite already-prefixed v1 URLs", async () => {
     const req = makeRequest("/shopify/apps/v1/formful", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
     await proxy(req);
-    const calls = (NextResponse.redirect as any).mock.calls;
-    const redirectedToV2 = calls.some((c: any) => (c[0] as URL).pathname.includes("/apps/v2/"));
-    expect(redirectedToV2).toBe(false);
+    const rewriteCalls = (NextResponse.rewrite as any).mock.calls;
+    expect(rewriteCalls.length).toBe(0);
+  });
+
+  it("NEVER issues a 307 redirect for bare app detail (regression guard for PLA-1110)", async () => {
+    const req = makeRequest("/shopify/apps/formful", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    // A redirect here would fire for RSC prefetches too, causing Cloudflare
+    // to fail the HTTP/3 redirected request with ERR_QUIC_PROTOCOL_ERROR.
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
   });
 });
