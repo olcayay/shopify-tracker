@@ -609,6 +609,46 @@ describe("System admin routes", () => {
       expect(Array.isArray(body.keywords)).toBe(true);
       expect(Array.isArray(body.categories)).toBe(true);
     });
+
+    // PLA-1098: the keyword-counts query used to LEFT JOIN keyword_snapshots
+    // and COUNT(*), which multiplied each tracked keyword by its snapshot
+    // count (~55x inflation on prod). Guard against the same bug class across
+    // all three sibling queries by inspecting the source SQL directly — a
+    // mock DB can't reproduce row-multiplication without heavy fixtures.
+    it("platform-counts SQL does not multiply keyword rows by snapshots", async () => {
+      const { readFileSync } = await import("node:fs");
+      const { fileURLToPath } = await import("node:url");
+      const { dirname, resolve } = await import("node:path");
+      const here = dirname(fileURLToPath(import.meta.url));
+      const source = readFileSync(
+        resolve(here, "../../routes/system-admin.ts"),
+        "utf-8"
+      );
+
+      // Extract only the platform-counts handler block so unrelated queries
+      // (scraper freshness, etc.) don't trigger false positives.
+      const handlerMatch = source.match(
+        /app\.get\("\/platform-counts".*?\n  \}\);/s
+      );
+      expect(handlerMatch, "platform-counts handler not found").toBeTruthy();
+      const handler = handlerMatch![0];
+
+      // The bug: `LEFT JOIN keyword_snapshots … GROUP BY` in the SAME query
+      // as `COUNT(*)` inflates counts.
+      const bugPattern =
+        /LEFT JOIN\s+keyword_snapshots[\s\S]{0,400}?GROUP BY\s+tk\.platform/i;
+      expect(bugPattern.test(handler)).toBe(false);
+
+      // Siblings (appCounts uses EXISTS; catCounts uses LATERAL LIMIT 1) —
+      // make sure neither regresses into a non-bounded join either.
+      expect(/LEFT JOIN\s+app_snapshots/i.test(handler)).toBe(false);
+      // catCounts LATERAL … LIMIT 1 is safe, but a plain LEFT JOIN
+      // category_snapshots without LIMIT 1 would be a bug.
+      const catLeftJoin = handler.match(/LEFT JOIN\s+category_snapshots/gi) || [];
+      for (const _ of catLeftJoin) {
+        expect(/LATERAL[\s\S]*?LIMIT\s+1/i.test(handler)).toBe(true);
+      }
+    });
   });
 
   // -----------------------------------------------------------------------

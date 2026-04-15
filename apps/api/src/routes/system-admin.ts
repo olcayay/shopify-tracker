@@ -2259,13 +2259,18 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           MAX(a.updated_at)::text AS last_scraped_at
         FROM apps a GROUP BY a.platform
       `),
+      // PLA-1098: drop LEFT JOIN keyword_snapshots — it multiplied each keyword
+      // row by its snapshot count, inflating total/active by ~55x. Use a
+      // correlated subquery for last_scraped_at so counts stay per-keyword.
       db.execute<{ platform: string; total: number; active: number; last_scraped_at: string | null }>(sql`
         SELECT tk.platform,
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE tk.is_active = true)::int AS active,
-          MAX(ks.scraped_at)::text AS last_scraped_at
+          (SELECT MAX(ks.scraped_at)::text
+             FROM keyword_snapshots ks
+             INNER JOIN tracked_keywords tk2 ON tk2.id = ks.keyword_id
+            WHERE tk2.platform = tk.platform) AS last_scraped_at
         FROM tracked_keywords tk
-        LEFT JOIN keyword_snapshots ks ON ks.keyword_id = tk.id
         GROUP BY tk.platform
       `),
       db.execute<{ platform: string; total: number; total_apps: number; starred: number }>(sql`
