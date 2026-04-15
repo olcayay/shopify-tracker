@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { getMetadataLimits } from "@appranks/shared";
 import { CharBadge, EditorField, mod } from "./shared";
 import { formatNumber } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 
 export interface SalesforceAppData {
   slug: string;
@@ -353,16 +354,16 @@ export function SalesforcePreview({
     return { title, description: rest.join("\n").trim() };
   });
 
-  const isFreemium = pricingModelType?.toLowerCase().includes("free") || pricingModelType?.toLowerCase().includes("freemium");
-  const pricingLabel = pricingModelType
-    ? pricingModelType.charAt(0).toUpperCase() + pricingModelType.slice(1)
-    : "Free";
+  // PLA-1109: use canonical label instead of ad-hoc charAt-uppercase.
+  const normalizedPricing = displayPricingModel(pricingModelType);
+  const isFreemium = normalizedPricing === "Freemium" || normalizedPricing === "Free Trial";
+  const pricingLabel = normalizedPricing === "\u2014" ? "Free" : normalizedPricing;
 
   // Build pricing description text
   let pricingDescription = "";
   if (isFreemium) {
     pricingDescription = "Payment required to increase usage, users, or features. Discounts available for nonprofits.";
-  } else if (pricingModelType?.toLowerCase().includes("paid")) {
+  } else if (normalizedPricing === "Paid") {
     pricingDescription = "This listing requires payment.";
   }
 

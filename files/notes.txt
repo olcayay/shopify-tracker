@@ -6630,3 +6630,14 @@ PLA-1106 notes
 - Per-resource state pattern avoids needing a state-machine reducer; each branch of `loadData` is `fetch → setData → setXxxLoading(false) → flipInitial()`. Errors swallowed to `[]`/`null` as before — the per-card empty-state renders the same friendly copy.
 - Admin cards (systemStats, recentRuns) already conditionally render via `{systemStats && ...}` so adding `adminStatsLoading` wasn't strictly needed for visual correctness, but it keeps the hook set symmetrical and ready if we later want an admin-card skeleton.
 - Regression test deliberately hangs `/api/account/starred-features` forever. Before the fix this caused `await Promise.all(...)` to never resolve → whole page blank → "Fast App" never renders. After the fix apps resolves → flip → render → "Fast App" visible while starred-features card shows its skeleton.
+
+PLA-1108 notes
+- Audit found TWO bugs in organization/page.tsx, not one — the reporter only flagged line 307 but 486-487 had the same em-dash escape bug in different table cells. The bug-fix prevention rule explicitly says to scan for variations; the repo-scanner regression test now catches any future occurrence.
+- Didn't touch `competitor-watch-card.tsx:96` or `review-pulse-card.tsx:105` — both already use the correct `{"\u00B7"}` expression form (precedent cited in the ticket).
+- Heuristic in the scanner test: after stripping quoted/template strings, flag `\u[0-9A-Fa-f]{4}` sitting between `}` or `>` and `{` or `<`. Simple enough to reason about, specific enough to not false-positive on JS code.
+
+PLA-1109 notes
+- Deliberate scope split: applied to all user-facing dashboard render sites (the ticket's "observed on /developers/jotform, /competitors" coverage) and JSON-LD. Deferred `(marketing)/...` pages and `competitor-row.tsx` abbreviation-map cleanup as a follow-up — those need a fuller test-update pass that risks regressing SEO snapshots if done in the same commit.
+- Salesforce preview: removed ad-hoc `charAt(0).toUpperCase()` per the "no duplicate components" rule. Chose to keep `pricingLabel = normalized === "—" ? "Free" : normalized` because the existing UI always shows *some* pricing label in the card preview — emitting an em-dash there would regress the visual vs. current behavior for rows with null pricing (which default to "Free" today).
+- JSON-LD: normalize via `normalizePricingModel()` directly (not `displayPricingModel()`) so the field is omitted on null rather than emitting `"—"`. SEO structured data should never ship a human-only placeholder.
+- Follow-up: marketing pages (`(marketing)/...`), `competitor-row.tsx` abbreviation map, and adding a CI grep-guard that fails the build on new raw `pricingHint` renders remain open — worth a `pricing-display` label if we want to track them as a set.

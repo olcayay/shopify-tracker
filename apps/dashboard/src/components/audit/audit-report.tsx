@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { AuditReport as AuditReportType, AuditSection, AuditCheck, AuditRecommendation, PlatformId } from "@appranks/shared";
 import { cn } from "@/lib/utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 import {
   ChevronDown,
   ChevronUp,
@@ -261,7 +262,7 @@ export function AuditReport({ report, platform }: { report: AuditReportType; pla
             {report.app.pricingHint && (
               <>
                 <span>·</span>
-                <span>{report.app.pricingHint}</span>
+                <span>{displayPricingModel(report.app.pricingHint)}</span>
               </>
             )}
           </div>

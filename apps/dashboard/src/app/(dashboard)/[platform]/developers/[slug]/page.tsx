@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Globe, Star, Bookmark, ArrowRight } from "lucide-react";
 import { formatNumber, formatMonthYear } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 import { SortableHeader } from "@/components/ui/sortable-header";
@@ -408,7 +409,7 @@ export default function PlatformDeveloperPage() {
                       )}
                     </TableCell>
                     <TableCell className="w-[160px] text-muted-foreground text-sm truncate max-w-[160px]">
-                      {app.pricingHint || "-"}
+                      {displayPricingModel(app.pricingHint)}
                     </TableCell>
                     {hasInstalls && (
                       <TableCell className="text-right w-[100px]">

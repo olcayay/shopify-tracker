@@ -304,7 +304,7 @@ export default function OrganizationPage() {
             )}
           </CardTitle>
           <CardDescription>
-            {account?.name}{account?.company ? ` \u00B7 ${account.company}` : ""} \u00B7 {user?.role}
+            {account?.name}{account?.company ? ` \u00B7 ${account.company}` : ""}{" \u00B7 "}{user?.role}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -483,8 +483,8 @@ export default function OrganizationPage() {
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDate(inv.createdAt)}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">\u2014</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">\u2014</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{"\u2014"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{"\u2014"}</TableCell>
                       {canManageMembers && (
                         <TableCell>
                           <div className="flex gap-1">

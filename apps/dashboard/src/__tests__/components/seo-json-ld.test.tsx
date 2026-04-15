@@ -33,7 +33,9 @@ describe("JSON-LD Components", () => {
       expect(data.author.name).toBe("Acme Inc");
       expect(data.aggregateRating.ratingValue).toBe(4.5);
       expect(data.aggregateRating.ratingCount).toBe(100);
-      expect(data.offers.description).toBe("Free plan available");
+      // PLA-1109: raw pricing strings are normalized to the canonical
+      // label before emission. "Free plan available" → "Freemium".
+      expect(data.offers.description).toBe("Freemium");
     });
 
     it("omits optional fields when not provided", () => {

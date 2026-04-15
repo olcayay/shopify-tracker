@@ -265,12 +265,13 @@ describe("CrossPlatformCompetitorsPage", () => {
     });
   });
 
-  it("renders pricing hints", async () => {
+  it("renders canonical pricing labels (PLA-1109)", async () => {
     setupFetchMocks();
     render(<CrossPlatformCompetitorsPage />);
     await waitFor(() => {
+      // "Free" stays "Free"; "$25/mo" normalizes to "Paid".
       expect(screen.getByText("Free")).toBeInTheDocument();
-      expect(screen.getByText("$25/mo")).toBeInTheDocument();
+      expect(screen.getByText("Paid")).toBeInTheDocument();
     });
   });
 

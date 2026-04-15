@@ -211,12 +211,14 @@ describe("CrossPlatformAppsPage", () => {
     });
   });
 
-  it("renders pricing hints", async () => {
+  it("renders canonical pricing labels (PLA-1109)", async () => {
     setupFetchMocks();
     render(<CrossPlatformAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("Free plan available")).toBeInTheDocument();
-      expect(screen.getByText("$10/mo")).toBeInTheDocument();
+      // Raw "Free plan available" → canonical "Freemium"
+      expect(screen.getByText("Freemium")).toBeInTheDocument();
+      // Dynamic "$10/mo" → canonical "Paid"
+      expect(screen.getByText("Paid")).toBeInTheDocument();
     });
   });
 

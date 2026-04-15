@@ -5,7 +5,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock("@appranks/shared", () => ({
+vi.mock("@appranks/shared", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@appranks/shared")>()),
   PLATFORMS: {
     shopify: { id: "shopify", name: "Shopify" },
     salesforce: { id: "salesforce", name: "Salesforce" },

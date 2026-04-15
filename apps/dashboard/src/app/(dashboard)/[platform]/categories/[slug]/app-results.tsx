@@ -19,6 +19,7 @@ import {
 import { CompetitorButton } from "@/components/competitor-button";
 import { useFormatDate } from "@/lib/format-date";
 import { formatNumber } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -359,7 +360,7 @@ export function CategoryAppResults({
                     )}
                     {caps.hasPricing && (
                       <TableCell className="text-sm text-muted-foreground">
-                        {app.pricing_hint || "\u2014"}
+                        {displayPricingModel(app.pricing_hint)}
                       </TableCell>
                     )}
                     {caps.hasPricing && (

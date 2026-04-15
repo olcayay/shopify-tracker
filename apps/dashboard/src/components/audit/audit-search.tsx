@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
+import { displayPricingModel } from "@/lib/pricing-display";
 
 interface SearchResult {
   slug: string;
@@ -120,7 +121,7 @@ export function AuditSearch() {
                         {"\u2605"} {Number(app.averageRating).toFixed(1)}
                       </span>
                     )}
-                    {app.pricingHint && <span>{app.pricingHint}</span>}
+                    {app.pricingHint && <span>{displayPricingModel(app.pricingHint)}</span>}
                   </div>
                 </div>
               </button>

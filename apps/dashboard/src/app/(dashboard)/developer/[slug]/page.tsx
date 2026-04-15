@@ -18,6 +18,7 @@ import { Globe, Star, Bookmark } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 import { formatNumber } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 
 interface DeveloperProfile {
   developer: {
@@ -265,7 +266,7 @@ export default function CrossPlatformDeveloperPage() {
                             : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground text-sm truncate">
-                          {app.pricingHint || <span className="text-muted-foreground">-</span>}
+                          {displayPricingModel(app.pricingHint)}
                         </TableCell>
                         {hasInstalls && (
                           <TableCell className="text-right">

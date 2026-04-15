@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatNumber, formatMonthYear } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 import {
   Table,
   TableBody,
@@ -456,7 +457,7 @@ export function CompetitorTable({
                       <span className={animate}>
                         {comp.minPaidPrice != null
                           ? `$${comp.minPaidPrice}/mo`
-                          : comp.pricingHint || "\u2014"}
+                          : displayPricingModel(comp.pricingHint)}
                       </span>
                     )}
                   </TableCell>

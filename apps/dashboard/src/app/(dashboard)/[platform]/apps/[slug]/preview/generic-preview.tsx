@@ -5,6 +5,7 @@
 import Image from "next/image";
 import { Star, Globe, Tag, Calendar, Download, CheckCircle2 } from "lucide-react";
 import { formatNumber, formatMonthYear } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 
 interface GenericPreviewProps {
   app: any;
@@ -57,7 +58,7 @@ export function GenericPreview({ app, platformName }: GenericPreviewProps) {
               )}
               {app.pricingHint && (
                 <span className="flex items-center gap-1 text-muted-foreground">
-                  <Tag className="h-3.5 w-3.5" /> {app.pricingHint}
+                  <Tag className="h-3.5 w-3.5" /> {displayPricingModel(app.pricingHint)}
                 </span>
               )}
               {app.activeInstalls != null && (

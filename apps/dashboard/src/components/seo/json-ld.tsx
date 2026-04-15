@@ -3,6 +3,8 @@
  * Each component renders a <script type="application/ld+json"> tag.
  */
 
+import { normalizePricingModel } from "@appranks/shared";
+
 interface JsonLdProps {
   data: Record<string, unknown>;
 }
@@ -62,12 +64,16 @@ export function AppJsonLd({
     };
   }
 
-  if (pricingHint) {
+  // PLA-1109: emit the canonical pricing label in structured data, not the raw
+  // scraped string. Keep the field absent when normalization yields null rather
+  // than leaking an em-dash into JSON-LD.
+  const normalizedPricing = normalizePricingModel(pricingHint);
+  if (normalizedPricing) {
     data.offers = {
       "@type": "Offer",
       price: "0",
       priceCurrency: "USD",
-      description: pricingHint,
+      description: normalizedPricing,
     };
   }
 

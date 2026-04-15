@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatMonthYear } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 import {
   Table,
   TableBody,
@@ -408,7 +409,7 @@ export default function ResearchCompetitorsPage() {
                               <span className={animate}>
                                 {comp.minPaidPrice != null
                                   ? `$${comp.minPaidPrice}/mo`
-                                  : comp.pricingHint || "\u2014"}
+                                  : displayPricingModel(comp.pricingHint)}
                               </span>
                             )}
                           </TableCell>

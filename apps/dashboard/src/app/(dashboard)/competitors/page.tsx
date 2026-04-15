@@ -18,6 +18,7 @@ import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Group
 import { TableSkeleton } from "@/components/skeletons";
 import { GlobalAppSearch } from "@/components/global-app-search";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
+import { displayPricingModel } from "@/lib/pricing-display";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
@@ -413,7 +414,7 @@ export default function CrossPlatformCompetitorsPage() {
           ) : "—"}
         </TableCell>
         <TableCell className="text-muted-foreground">{comp.ratingCount ?? "—"}</TableCell>
-        <TableCell className="text-xs text-muted-foreground">{comp.pricingHint || "—"}</TableCell>
+        <TableCell className="text-xs text-muted-foreground">{displayPricingModel(comp.pricingHint)}</TableCell>
       </>
     );
   }

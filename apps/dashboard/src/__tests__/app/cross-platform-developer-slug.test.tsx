@@ -268,12 +268,13 @@ describe("CrossPlatformDeveloperPage — unified columns", () => {
       expect(screen.getByText("App A")).toBeInTheDocument();
     });
 
-    // Rating, Reviews, and Pricing should all show "-"
+    // Rating and Reviews show hyphen; Pricing shows em-dash (PLA-1109
+    // canonical placeholder via displayPricingModel).
     const row = screen.getByText("App A").closest("tr")!;
     const cells = row.querySelectorAll("td");
     // cells: App, Rating, Reviews, Pricing (no Installs since none have it)
     expect(cells[1].textContent).toBe("-");
     expect(cells[2].textContent).toBe("-");
-    expect(cells[3].textContent).toBe("-");
+    expect(cells[3].textContent).toBe("\u2014");
   });
 });

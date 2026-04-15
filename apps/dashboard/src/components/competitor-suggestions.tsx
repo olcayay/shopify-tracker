@@ -8,6 +8,7 @@ import { Sparkles, Plus, Check, ChevronDown, ChevronUp, Brain, Loader2, RefreshC
 import { ExternalLink } from "@/components/ui/external-link";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { formatNumber } from "@/lib/format-utils";
+import { displayPricingModel } from "@/lib/pricing-display";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -423,7 +424,7 @@ export function CompetitorSuggestions({
                     {/* Pricing */}
                     {s.pricingHint && (
                       <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                        {s.pricingHint}
+                        {displayPricingModel(s.pricingHint)}
                       </span>
                     )}
                   </div>

@@ -18,6 +18,7 @@ import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { GlobalAppSearch } from "@/components/global-app-search";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
+import { displayPricingModel } from "@/lib/pricing-display";
 import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
@@ -165,7 +166,7 @@ export default function CrossPlatformAppsPage() {
           ) : "—"}
         </TableCell>
         <TableCell className="text-muted-foreground">{app.ratingCount ?? "—"}</TableCell>
-        <TableCell className="text-xs text-muted-foreground">{app.pricingHint || "—"}</TableCell>
+        <TableCell className="text-xs text-muted-foreground">{displayPricingModel(app.pricingHint)}</TableCell>
       </TableRow>
     );
   }
