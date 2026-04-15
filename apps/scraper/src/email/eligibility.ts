@@ -6,10 +6,65 @@ import {
   emailLogs,
   featureFlags,
   accountFeatureFlags,
+  userFeatureFlags,
 } from "@appranks/db";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("email:eligibility");
+
+/**
+ * Resolve a feature flag for a (user, account) pair using the 3-tier
+ * precedence documented on the schema:
+ *
+ *   user_feature_flags (override)  >  account_feature_flags  >  not enabled
+ *
+ * Returns `true` if the flag is enabled for this user in this account,
+ * `false` otherwise. User-level `enabled=false` explicitly overrides an
+ * account-level enable (intended semantics for gradual rollout / opt-out).
+ *
+ * PLA-1099: previously the email pipeline only consulted account_feature_flags
+ * and silently dropped emails for users enabled via the admin UI at the
+ * user scope. Centralized here so other future gates (ads, AI, etc.) reuse
+ * the same resolution and can't repeat the bug class.
+ */
+export async function isFeatureFlagEnabledForUser(
+  db: any,
+  slug: string,
+  userId: string,
+  accountId: string
+): Promise<boolean> {
+  // 1. User-level override (on or off — both win over account).
+  const [userRow] = await db
+    .select({ enabled: userFeatureFlags.enabled })
+    .from(userFeatureFlags)
+    .innerJoin(featureFlags, eq(featureFlags.id, userFeatureFlags.featureFlagId))
+    .where(
+      and(
+        eq(userFeatureFlags.userId, userId),
+        eq(featureFlags.slug, slug)
+      )
+    )
+    .limit(1);
+
+  if (userRow) {
+    return userRow.enabled === true;
+  }
+
+  // 2. Fallback to account-level enablement.
+  const [accountRow] = await db
+    .select({ id: accountFeatureFlags.id })
+    .from(accountFeatureFlags)
+    .innerJoin(featureFlags, eq(featureFlags.id, accountFeatureFlags.featureFlagId))
+    .where(
+      and(
+        eq(accountFeatureFlags.accountId, accountId),
+        eq(featureFlags.slug, slug)
+      )
+    )
+    .limit(1);
+
+  return !!accountRow;
+}
 
 export interface EligibilityResult {
   eligible: boolean;
@@ -36,22 +91,29 @@ export async function checkEligibility(
 ): Promise<EligibilityResult> {
   const { emailType, userId, accountId } = params;
 
-  // 0. Feature flag gate: account must have email_alerts_enabled
-  const [flagRow] = await db
-    .select({ id: accountFeatureFlags.id })
-    .from(accountFeatureFlags)
-    .innerJoin(featureFlags, eq(featureFlags.id, accountFeatureFlags.featureFlagId))
-    .where(
-      and(
-        eq(accountFeatureFlags.accountId, accountId),
-        eq(featureFlags.slug, "email_alerts_enabled")
-      )
-    )
-    .limit(1);
+  // 0. Feature flag gate: the flag must be enabled for this (user, account)
+  // pair. PLA-1099: user-level overrides take precedence over account-level
+  // per schema comment — admin UI writes to both tables but the consumer
+  // used to only check the account scope, silently blocking user-enabled
+  // accounts.
+  const flagEnabled = await isFeatureFlagEnabledForUser(
+    db,
+    "email_alerts_enabled",
+    userId,
+    accountId
+  );
 
-  if (!flagRow) {
-    log.warn("email blocked by feature flag", { emailType, accountId, flag: "email_alerts_enabled" });
-    return { eligible: false, skipReason: `feature flag 'email_alerts_enabled' not enabled for account ${accountId}` };
+  if (!flagEnabled) {
+    log.warn("email blocked by feature flag", {
+      emailType,
+      userId,
+      accountId,
+      flag: "email_alerts_enabled",
+    });
+    return {
+      eligible: false,
+      skipReason: `feature flag 'email_alerts_enabled' not enabled for user ${userId} (account ${accountId})`,
+    };
   }
 
   // 1. Is email type enabled globally?

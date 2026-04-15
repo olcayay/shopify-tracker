@@ -21,8 +21,20 @@ function createMockDb(responses: any[][]) {
   return { select: chainable, __callIndex: () => callIndex };
 }
 
-/** Shorthand: a passing feature flag response (stage 0) */
+/**
+ * Shorthand responses for the feature-flag gate (stage 0 of checkEligibility).
+ *
+ * Order matters: the gate first queries `user_feature_flags`; if no row is
+ * returned it falls back to `account_feature_flags`. So tests always supply
+ * NO_USER_FLAG first, then either FLAG_ENABLED or the user-level overrides.
+ *
+ * PLA-1099: before the fix the gate was a single query against
+ * account_feature_flags; now it's up to two.
+ */
+const NO_USER_FLAG: any[] = [];
 const FLAG_ENABLED = [{ id: "flag-1" }];
+const USER_FLAG_ENABLED = [{ enabled: true }];
+const USER_FLAG_DISABLED = [{ enabled: false }];
 
 const BASE_PARAMS = {
   emailType: "email_daily_digest",
@@ -32,19 +44,64 @@ const BASE_PARAMS = {
 };
 
 describe("checkEligibility", () => {
-  it("returns eligible=false when feature flag is not enabled for account", async () => {
+  it("returns eligible=false when neither user nor account has the flag", async () => {
     const db = createMockDb([
-      [],  // 0. no feature flag → blocked
+      NO_USER_FLAG, // no user-level override
+      [],           // no account-level row either → blocked
     ]);
 
     const result = await checkEligibility(db, BASE_PARAMS);
     expect(result.eligible).toBe(false);
     expect(result.skipReason).toContain("feature flag");
     expect(result.skipReason).toContain("account-1"); // includes accountId for debugging
+    expect(result.skipReason).toContain("user-1"); // includes userId for debugging (PLA-1099)
+  });
+
+  // PLA-1099: user-level enable must pass the gate even when the account
+  // has no row. Previously the consumer ignored user_feature_flags.
+  it("returns eligible=true when user-level flag is enabled (no account row)", async () => {
+    const db = createMockDb([
+      USER_FLAG_ENABLED, // user-level override enables the flag
+      // account-level lookup is skipped because the user row exists
+      [],
+      [],
+      [],
+    ]);
+
+    const result = await checkEligibility(db, BASE_PARAMS);
+    expect(result.eligible).toBe(true);
+  });
+
+  // PLA-1099: user-level disable overrides account-level enable.
+  it("returns eligible=false when user-level flag is explicitly disabled", async () => {
+    const db = createMockDb([
+      USER_FLAG_DISABLED, // user override wins, account-level is not consulted
+    ]);
+
+    const result = await checkEligibility(db, BASE_PARAMS);
+    expect(result.eligible).toBe(false);
+    expect(result.skipReason).toContain("feature flag");
+  });
+
+  // PLA-1099 regression: legacy behavior — no user-level row, account-level
+  // enabled → still eligible. Ensures the refactor didn't break the
+  // existing path.
+  it("returns eligible=true with account-level enablement when no user row (regression)", async () => {
+    const db = createMockDb([
+      NO_USER_FLAG,
+      FLAG_ENABLED,
+      [],
+      [],
+      [],
+    ]);
+
+    const result = await checkEligibility(db, BASE_PARAMS);
+    expect(result.eligible).toBe(true);
   });
 
   it("returns eligible=true when all checks pass (no configs)", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,  // 0. feature flag enabled
       [],  // 1. no global config → not disabled
       [],  // 2. no account override
@@ -57,6 +114,7 @@ describe("checkEligibility", () => {
 
   it("returns eligible=false when email type is globally disabled", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [{ enabled: false, frequencyLimitHours: null }],  // disabled globally
     ]);
@@ -68,6 +126,7 @@ describe("checkEligibility", () => {
 
   it("passes when email type is globally enabled", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [{ enabled: true, frequencyLimitHours: null }],
       [],  // no account override
@@ -80,6 +139,7 @@ describe("checkEligibility", () => {
 
   it("returns eligible=false when account has disabled this type", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [],  // global: no config (allowed)
       [{ enabled: false }],  // account override: disabled
@@ -92,6 +152,7 @@ describe("checkEligibility", () => {
 
   it("returns eligible=false when user opted out", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [],  // global: ok
       [],  // account: ok
@@ -105,6 +166,7 @@ describe("checkEligibility", () => {
 
   it("returns eligible=false when frequency cap hit", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [{ enabled: true, frequencyLimitHours: 24 }],  // 24h frequency cap
       [],  // account: ok
@@ -119,6 +181,7 @@ describe("checkEligibility", () => {
 
   it("passes frequency cap when no recent sends", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [{ enabled: true, frequencyLimitHours: 24 }],
       [],
@@ -132,6 +195,7 @@ describe("checkEligibility", () => {
 
   it("returns eligible=false when dedup key matches", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [],  // global: ok
       [],  // account: ok
@@ -149,6 +213,7 @@ describe("checkEligibility", () => {
 
   it("skips dedup check when no deduplicationKey provided", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [],  // global: ok
       [],  // account: ok
@@ -163,6 +228,7 @@ describe("checkEligibility", () => {
   it("checks all stages in order", async () => {
     // All pass (including daily limit check for alert emails)
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,                                   // feature flag
       [{ enabled: true, frequencyLimitHours: 12 }],   // global config
       [{ enabled: true }],   // account override enabled
@@ -182,6 +248,7 @@ describe("checkEligibility", () => {
 
   it("returns eligible=false when daily alert email limit is reached", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [],  // global: ok
       [],  // account: ok
@@ -199,6 +266,7 @@ describe("checkEligibility", () => {
 
   it("bypasses daily limit when skipDailyLimit is true", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [],  // global: ok
       [],  // account: ok
@@ -256,6 +324,7 @@ describe("checkEligibility", () => {
 
   it("skips daily limit check for non-alert email types", async () => {
     const db = createMockDb([
+      NO_USER_FLAG,
       FLAG_ENABLED,
       [],  // global: ok
       [],  // account: ok
