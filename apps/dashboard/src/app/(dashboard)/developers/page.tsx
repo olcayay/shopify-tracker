@@ -14,13 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark, Users, Swords } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
 import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
+import { DeveloperTopSection } from "@/components/developer-top-section";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
@@ -50,6 +51,7 @@ interface TrackedDeveloper {
   name: string;
   platformCount: number;
   platforms: string[];
+  totalApps: number;
   isStarred: boolean;
   trackedApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
 }
@@ -60,6 +62,7 @@ interface CompetitorDeveloper {
   name: string;
   platformCount: number;
   platforms: string[];
+  totalApps: number;
   isStarred: boolean;
   competitorApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
 }
@@ -124,39 +127,13 @@ function filterCompetitorDeveloperForVisiblePlatforms(
   };
 }
 
-function DeveloperSectionEmpty({
-  icon: Icon,
-  title,
-  description,
-  ctaLabel,
-  ctaHref,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  ctaLabel: string;
-  ctaHref: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-        <Icon className="h-6 w-6 text-muted-foreground" />
-      </div>
-      <h3 className="font-semibold text-sm mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-sm mb-4">{description}</p>
-      <Link href={ctaHref}>
-        <Button variant="outline" size="sm">{ctaLabel}</Button>
-      </Link>
-    </div>
-  );
-}
-
 export default function DevelopersPage() {
   const { fetchWithAuth } = useAuth();
   const { accessiblePlatforms: enabledPlatforms } = usePlatformAccess();
   const [data, setData] = useState<DeveloperResponse | null>(null);
   const [trackedDevs, setTrackedDevs] = useState<TrackedDeveloper[]>([]);
   const [competitorDevs, setCompetitorDevs] = useState<CompetitorDeveloper[]>([]);
+  const [topLoading, setTopLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -191,6 +168,7 @@ export default function DevelopersPage() {
   // Fetch tracked + competitor developers once
   useEffect(() => {
     (async () => {
+      setTopLoading(true);
       try {
         const [trackedRes, competitorRes] = await Promise.all([
           fetchWithAuth("/api/developers/tracked"),
@@ -204,7 +182,9 @@ export default function DevelopersPage() {
           const body = await competitorRes.json();
           setCompetitorDevs(body.developers ?? []);
         }
-      } catch { /* ignore */ }
+      } catch { /* ignore */ } finally {
+        setTopLoading(false);
+      }
     })();
   }, [fetchWithAuth]);
 
@@ -369,6 +349,9 @@ export default function DevelopersPage() {
           </Link>
         </TableCell>
         <TableCell>{renderAppsCell(dev)}</TableCell>
+        <TableCell className="text-muted-foreground text-right tabular-nums">
+          {dev.appCount}
+        </TableCell>
         {viewMode === "list" && (
           <>
             <TableCell>
@@ -391,16 +374,17 @@ export default function DevelopersPage() {
     );
   }
 
-  const groupedColCount = 3;
-  const flatColCount = 5;
+  const groupedColCount = 4;
+  const flatColCount = 6;
 
   const renderGroupedHeaders = () => (
     <>
       <TableHead className="w-10"></TableHead>
       <TableHead>Developer</TableHead>
-      <TableHead>
-        <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
-          Apps <ArrowUpDown className="h-3 w-3" />
+      <TableHead>Apps</TableHead>
+      <TableHead className="w-28 text-right">
+        <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 justify-end hover:text-foreground ml-auto">
+          App Count <ArrowUpDown className="h-3 w-3" />
         </button>
       </TableHead>
     </>
@@ -413,147 +397,49 @@ export default function DevelopersPage() {
         <p className="text-sm text-muted-foreground">Browse all developers across platforms</p>
       </div>
 
-      {/* My Developers section — developers of tracked apps */}
-      <div className="rounded-lg border bg-card">
-        <div className="flex items-center gap-2 px-4 py-3 border-b">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold text-sm">My Developers</h2>
-          <span className="text-xs text-muted-foreground">Developers of your tracked apps</span>
-        </div>
-        {visibleTrackedDevs.length === 0 ? (
-          <DeveloperSectionEmpty
-            icon={Users}
-            title="No tracked app developers yet"
-            description="Start tracking apps to see their developers here. You'll be able to monitor all the apps each developer builds across platforms."
-            ctaLabel="Browse Apps"
-            ctaHref="/overview"
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Developer</TableHead>
-                <TableHead>My Tracked Apps</TableHead>
-                <TableHead>Platforms</TableHead>
-                <TableHead className="w-36 text-right">Platform Count</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleTrackedDevs.map((dev) => (
-                <TableRow key={dev.id}>
-                  <TableCell>
-                    <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
-                      {dev.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {dev.trackedApps.map((app) => (
-                        <Link
-                          key={`${app.platform}-${app.slug}`}
-                          href={`/${app.platform}/apps/${app.slug}`}
-                          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
-                          title={app.name}
-                        >
-                          {app.iconUrl && (
-                            <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
-                          )}
-                          <span className="truncate max-w-[120px]">{app.name}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {dev.platforms
-                        .filter((p) => enabledPlatforms.length === 0 || enabledPlatforms.includes(p as PlatformId))
-                        .map((p) => (
-                          <PlatformBadgeCell key={p} platform={p} />
-                        ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right">
-                    {enabledPlatforms.length > 0
-                      ? dev.platforms.filter((p) => enabledPlatforms.includes(p as PlatformId)).length
-                      : dev.platformCount}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+      <DeveloperTopSection
+        variant="tracked"
+        items={visibleTrackedDevs.map((d) => ({
+          id: d.id,
+          slug: d.slug,
+          name: d.name,
+          platforms: d.platforms,
+          platformCount: d.platformCount,
+          totalApps: d.totalApps,
+          isStarred: d.isStarred,
+          apps: d.trackedApps,
+        }))}
+        loading={topLoading}
+        emptyTitle="No tracked app developers yet"
+        emptyDescription="Start tracking apps to see their developers here. You'll be able to monitor all the apps each developer builds across platforms."
+        emptyCtaLabel="Browse Apps"
+        emptyCtaHref="/overview"
+        developerHref={(slug) => `/developers/${slug}`}
+        storageKeyPrefix="developers"
+        enabledPlatforms={enabledPlatforms}
+      />
 
-      {/* Competitor Developers section — developers of competitor apps */}
-      <div className="rounded-lg border bg-card">
-        <div className="flex items-center gap-2 px-4 py-3 border-b">
-          <Swords className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold text-sm">Competitor Developers</h2>
-          <span className="text-xs text-muted-foreground">Developers behind your competitors&apos; apps</span>
-        </div>
-        {visibleCompetitorDevs.length === 0 ? (
-          <DeveloperSectionEmpty
-            icon={Swords}
-            title="No competitor developers yet"
-            description="Add competitors to your tracked apps and their developers will appear here. Track what your competitors' developers are building."
-            ctaLabel="View Competitors"
-            ctaHref="/competitors"
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Developer</TableHead>
-                <TableHead>Competitor Apps</TableHead>
-                <TableHead>Platforms</TableHead>
-                <TableHead className="w-36 text-right">Platform Count</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleCompetitorDevs.map((dev) => (
-                <TableRow key={dev.id}>
-                  <TableCell>
-                    <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
-                      {dev.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {dev.competitorApps.map((app) => (
-                        <Link
-                          key={`${app.platform}-${app.slug}`}
-                          href={`/${app.platform}/apps/${app.slug}`}
-                          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
-                          title={app.name}
-                        >
-                          {app.iconUrl && (
-                            <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
-                          )}
-                          <span className="truncate max-w-[120px]">{app.name}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {dev.platforms
-                        .filter((p) => enabledPlatforms.length === 0 || enabledPlatforms.includes(p as PlatformId))
-                        .map((p) => (
-                          <PlatformBadgeCell key={p} platform={p} />
-                        ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right">
-                    {enabledPlatforms.length > 0
-                      ? dev.platforms.filter((p) => enabledPlatforms.includes(p as PlatformId)).length
-                      : dev.platformCount}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+      <DeveloperTopSection
+        variant="competitor"
+        items={visibleCompetitorDevs.map((d) => ({
+          id: d.id,
+          slug: d.slug,
+          name: d.name,
+          platforms: d.platforms,
+          platformCount: d.platformCount,
+          totalApps: d.totalApps,
+          isStarred: d.isStarred,
+          apps: d.competitorApps,
+        }))}
+        loading={topLoading}
+        emptyTitle="No competitor developers yet"
+        emptyDescription="Add competitors to your tracked apps and their developers will appear here. Track what your competitors' developers are building."
+        emptyCtaLabel="View Competitors"
+        emptyCtaHref="/competitors"
+        developerHref={(slug) => `/developers/${slug}`}
+        storageKeyPrefix="developers"
+        enabledPlatforms={enabledPlatforms}
+      />
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">
@@ -605,14 +491,15 @@ export default function DevelopersPage() {
                       Developer <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
-                  <TableHead className="w-72">
-                    <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
-                      Apps <ArrowUpDown className="h-3 w-3" />
+                  <TableHead className="w-72">Apps</TableHead>
+                  <TableHead className="w-28 text-right">
+                    <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 justify-end hover:text-foreground ml-auto">
+                      App Count <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
                   <TableHead className="w-56">Platforms</TableHead>
                   <TableHead className="w-36 text-right">
-                    <button onClick={() => toggleSort("platforms")} className="flex items-center gap-1 justify-end hover:text-foreground">
+                    <button onClick={() => toggleSort("platforms")} className="flex items-center gap-1 justify-end hover:text-foreground ml-auto">
                       Platform Count <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
@@ -621,7 +508,7 @@ export default function DevelopersPage() {
               <TableBody>
                 {developers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       {emptyMessage}
                     </TableCell>
                   </TableRow>

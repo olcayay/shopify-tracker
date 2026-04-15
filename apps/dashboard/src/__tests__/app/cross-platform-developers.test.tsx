@@ -156,7 +156,9 @@ describe("DevelopersPage (cross-platform)", () => {
   it("shows loading skeleton initially", () => {
     mockFetchWithAuth.mockImplementation(() => new Promise(() => {}));
     render(<DevelopersPage />);
-    expect(screen.getByTestId("table-skeleton")).toBeInTheDocument();
+    // PLA-1101: My/Competitor top sections now render their own table-skeleton
+    // placeholders too while loading, so >=1 skeleton is expected.
+    expect(screen.getAllByTestId("table-skeleton").length).toBeGreaterThanOrEqual(1);
   });
 
   it("calls fetchWithAuth for developers endpoint", async () => {
@@ -199,9 +201,11 @@ describe("DevelopersPage (cross-platform)", () => {
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    // Platform count column
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    // Platform count "2" for Acme, "1" for Widget Co — PLA-1100 added an
+    // App Count column that can duplicate these numbers, so assert presence
+    // via getAllByText rather than getByText.
+    expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders search input", async () => {
