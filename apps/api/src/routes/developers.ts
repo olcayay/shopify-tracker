@@ -120,106 +120,150 @@ export async function developerRoutes(app: FastifyInstance) {
       // DESC sorts on the new aggregate columns.
       const orderSQL = sql.raw(`(asd.id IS NOT NULL) DESC, ${orderColumn} ${order === "desc" ? "DESC" : "ASC"} NULLS LAST`);
 
-      const platformJoinFilter = platforms.length > 0
-        ? sql`AND pd.platform = ANY(${sqlArray(platforms)})`
-        : sql``;
-      const devAppsPlatformFilter = platforms.length > 0
-        ? sql`WHERE a.platform = ANY(${sqlArray(platforms)})`
+      // Two-phase query (PLA-1103):
+      //   Phase 1 — rank, filter, paginate using developer_platform_stats MV.
+      //     The MV pre-aggregates per-(developer, platform) app_count and
+      //     re-aggregable rating sums so sort-by-apps becomes an index lookup
+      //     instead of re-joining platform_developers × apps × app_snapshots on
+      //     every request. Averages are recomputed from sum/count so multi-
+      //     platform filters produce correct weighted results.
+      //   Phase 2 — only for the returned 25 IDs, compute top_apps and
+      //     app_counts_by_platform via the latest-snapshot join. Bounded to 25
+      //     developers so the expensive LATERAL stays cheap.
+      // Before: ~7s on /shopify/developers?sort=apps. Target: <500ms.
+      const mvPlatformFilter = platforms.length > 0
+        ? sql`WHERE platform = ANY(${sqlArray(platforms)})`
         : sql``;
 
-      // Get paginated results using lateral join for latest developer name per app.
-      // Previous CTE approach materialized all latest snapshots and cross-joined
-      // platform_developers × apps per platform, producing millions of intermediate rows
-      // that exceeded the 30s statement timeout on the micro DB instance.
-      const rows: any[] = await db.execute(sql`
-        WITH dev_apps AS (
-          SELECT pd.global_developer_id, a.id AS app_id, a.slug, a.name, a.icon_url, a.platform,
-                 a.average_rating, a.rating_count, a.launched_date
-          FROM apps a
-          JOIN LATERAL (
-            SELECT s.developer->>'name' AS dev_name
-            FROM app_snapshots s
-            WHERE s.app_id = a.id
-            ORDER BY s.scraped_at DESC
-            LIMIT 1
-          ) ls ON ls.dev_name IS NOT NULL
-          JOIN platform_developers pd ON pd.platform = a.platform AND pd.name = ls.dev_name
-          ${devAppsPlatformFilter}
-        ),
-        dev_app_counts AS (
-          SELECT global_developer_id, COUNT(DISTINCT app_id) AS app_count
-          FROM dev_apps
-          GROUP BY global_developer_id
-        ),
-        dev_platform_app_counts AS (
-          -- Per-platform app count so the frontend can recalc after client-side
-          -- platform filtering without being capped by top_apps' LIMIT 10.
-          -- See PLA-1102.
-          SELECT global_developer_id,
-            jsonb_object_agg(platform, app_count) AS app_counts_by_platform
-          FROM (
-            SELECT global_developer_id, platform, COUNT(DISTINCT app_id) AS app_count
-            FROM dev_apps
-            GROUP BY global_developer_id, platform
-          ) d
-          GROUP BY global_developer_id
-        ),
-        dev_stats AS (
-          -- One row per (developer, app) so apps with ratings but no reviews (or
-          -- vice-versa) still contribute to both aggregates where they apply.
-          -- avg_rating excludes apps with 0 or null rating_count (unreviewed
-          -- apps shouldn't drag the average down to 0 / N/A).
+      const phase1Rows: any[] = await db.execute(sql`
+        WITH dev_stats_filtered AS (
           SELECT
             global_developer_id,
-            AVG(rating_count)::numeric(12,2) AS avg_review_count,
-            AVG(average_rating) FILTER (WHERE rating_count IS NOT NULL AND rating_count > 0)::numeric(3,2) AS avg_rating,
-            MIN(launched_date) AS first_launch_date,
-            MAX(launched_date) AS last_launch_date
-          FROM (
-            SELECT DISTINCT ON (global_developer_id, app_id)
-              global_developer_id, app_id, average_rating, rating_count, launched_date
-            FROM dev_apps
-          ) d
-          GROUP BY global_developer_id
-        ),
-        dev_top_apps AS (
-          SELECT global_developer_id,
-            COALESCE(jsonb_agg(jsonb_build_object(
-              'icon_url', icon_url, 'name', name, 'slug', slug, 'platform', platform
-            ) ORDER BY name) FILTER (WHERE rn <= 10), '[]'::jsonb) AS top_apps
-          FROM (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY global_developer_id ORDER BY name) AS rn
-            FROM (SELECT DISTINCT ON (global_developer_id, slug) global_developer_id, icon_url, name, slug, platform FROM dev_apps WHERE icon_url IS NOT NULL) d
-          ) ranked
+            SUM(app_count)::int AS app_count,
+            COUNT(DISTINCT platform)::int AS platform_count,
+            ARRAY_AGG(platform ORDER BY platform) AS platforms,
+            -- Re-derive weighted averages from sum/count so platform-subset
+            -- filters produce arithmetically correct results.
+            CASE WHEN SUM(count_rating_count) > 0
+              THEN (SUM(sum_rating_count)::numeric / NULLIF(SUM(count_rating_count), 0))::numeric(12,2)
+              ELSE NULL
+            END AS avg_review_count,
+            CASE WHEN SUM(count_avg_rating) > 0
+              THEN (SUM(sum_avg_rating) / NULLIF(SUM(count_avg_rating), 0))::numeric(3,2)
+              ELSE NULL
+            END AS avg_rating,
+            MIN(first_launch_date) AS first_launch_date,
+            MAX(last_launch_date) AS last_launch_date
+          FROM developer_platform_stats
+          ${mvPlatformFilter}
           GROUP BY global_developer_id
         )
         SELECT
           g.id, g.slug, g.name, g.website,
-          COUNT(DISTINCT pd.platform) AS platform_count,
-          COUNT(DISTINCT pd.id) AS link_count,
-          ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
-          COALESCE(dta.top_apps, '[]'::jsonb) AS top_apps,
-          COALESCE(dac.app_count, 0) AS app_count,
-          COALESCE(dpac.app_counts_by_platform, '{}'::jsonb) AS app_counts_by_platform,
-          ds.avg_review_count,
-          ds.avg_rating,
-          ds.first_launch_date,
-          ds.last_launch_date,
+          COALESCE(dsf.app_count, 0) AS app_count,
+          COALESCE(dsf.platform_count, 0) AS platform_count,
+          COALESCE(dsf.platforms, '{}'::text[]) AS platforms,
+          dsf.avg_review_count,
+          dsf.avg_rating,
+          dsf.first_launch_date,
+          dsf.last_launch_date,
           CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
         FROM global_developers g
-        LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id ${platformJoinFilter}
-        LEFT JOIN dev_app_counts dac ON dac.global_developer_id = g.id
-        LEFT JOIN dev_platform_app_counts dpac ON dpac.global_developer_id = g.id
-        LEFT JOIN dev_top_apps dta ON dta.global_developer_id = g.id
-        LEFT JOIN dev_stats ds ON ds.global_developer_id = g.id
+        LEFT JOIN dev_stats_filtered dsf ON dsf.global_developer_id = g.id
         LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id
           AND asd.account_id = ${accountId}
         ${whereClause}
-        GROUP BY g.id, asd.id, dac.app_count, dpac.app_counts_by_platform, dta.top_apps,
-                 ds.avg_review_count, ds.avg_rating, ds.first_launch_date, ds.last_launch_date
         ORDER BY ${orderSQL}
         LIMIT ${limit} OFFSET ${offset}
       `);
+
+      // Phase 2: fetch top_apps + app_counts_by_platform only for the page IDs.
+      // Skipping the LATERAL join entirely when the page is empty avoids a
+      // pointless empty-array-parameter round trip.
+      const pageIds = phase1Rows.map((r: any) => Number(r.id));
+      const topAppsByDev = new Map<number, any[]>();
+      const countsByDev = new Map<number, Record<string, number>>();
+      if (pageIds.length > 0) {
+        const phase2PlatformFilter = platforms.length > 0
+          ? sql`AND a.platform = ANY(${sqlArray(platforms)})`
+          : sql``;
+        const phase2Rows: any[] = await db.execute(sql`
+          WITH dev_apps AS (
+            SELECT pd.global_developer_id, a.id AS app_id, a.slug, a.name, a.icon_url, a.platform
+            FROM apps a
+            JOIN LATERAL (
+              SELECT s.developer->>'name' AS dev_name
+              FROM app_snapshots s
+              WHERE s.app_id = a.id
+              ORDER BY s.scraped_at DESC
+              LIMIT 1
+            ) ls ON ls.dev_name IS NOT NULL
+            JOIN platform_developers pd ON pd.platform = a.platform AND pd.name = ls.dev_name
+            WHERE pd.global_developer_id = ANY(${sqlArray(pageIds)})
+            ${phase2PlatformFilter}
+          ),
+          dedup AS (
+            SELECT DISTINCT ON (global_developer_id, app_id)
+              global_developer_id, app_id, slug, name, icon_url, platform
+            FROM dev_apps
+          ),
+          per_platform AS (
+            SELECT global_developer_id, platform, COUNT(DISTINCT app_id) AS c
+            FROM dedup GROUP BY global_developer_id, platform
+          ),
+          counts AS (
+            SELECT global_developer_id,
+              jsonb_object_agg(platform, c) AS app_counts_by_platform
+            FROM per_platform
+            GROUP BY global_developer_id
+          ),
+          ranked AS (
+            SELECT global_developer_id, icon_url, name, slug, platform,
+              ROW_NUMBER() OVER (PARTITION BY global_developer_id ORDER BY name) AS rn
+            FROM (
+              SELECT DISTINCT ON (global_developer_id, slug)
+                global_developer_id, icon_url, name, slug, platform
+              FROM dedup
+              WHERE icon_url IS NOT NULL
+            ) d
+          ),
+          top AS (
+            SELECT global_developer_id,
+              jsonb_agg(jsonb_build_object(
+                'icon_url', icon_url, 'name', name, 'slug', slug, 'platform', platform
+              ) ORDER BY name) FILTER (WHERE rn <= 10) AS top_apps
+            FROM ranked
+            GROUP BY global_developer_id
+          )
+          SELECT
+            g.id AS global_developer_id,
+            COALESCE(t.top_apps, '[]'::jsonb) AS top_apps,
+            COALESCE(c.app_counts_by_platform, '{}'::jsonb) AS app_counts_by_platform
+          FROM global_developers g
+          LEFT JOIN top t ON t.global_developer_id = g.id
+          LEFT JOIN counts c ON c.global_developer_id = g.id
+          WHERE g.id = ANY(${sqlArray(pageIds)})
+        `);
+        for (const r of phase2Rows) {
+          const devId = Number(r.global_developer_id);
+          topAppsByDev.set(devId, Array.isArray(r.top_apps) ? r.top_apps : []);
+          const counts = r.app_counts_by_platform && typeof r.app_counts_by_platform === "object"
+            ? Object.fromEntries(
+                Object.entries(r.app_counts_by_platform as Record<string, unknown>)
+                  .map(([k, v]) => [k, Number(v) || 0])
+              )
+            : {};
+          countsByDev.set(devId, counts);
+        }
+      }
+
+      // Merge phase-2 results onto phase-1 rows for uniform downstream mapping.
+      const rows = phase1Rows.map((r: any) => ({
+        ...r,
+        top_apps: topAppsByDev.get(Number(r.id)) ?? [],
+        app_counts_by_platform: countsByDev.get(Number(r.id)) ?? {},
+        link_count: Number(r.platform_count || 0),
+      }));
 
       return {
         developers: rows.map((r: any) => ({

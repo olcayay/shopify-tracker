@@ -16,7 +16,7 @@ import { resolveConfig } from "./config-resolver.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
 import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
 import { recordSuccess, recordFailure, getCircuitState } from "./circuit-breaker.js";
-import { afterKeywordScrape, afterCategoryScrape, afterReviewScrape } from "./events/post-scrape-events.js";
+import { afterKeywordScrape, afterCategoryScrape, afterReviewScrape, refreshDeveloperPlatformStats } from "./events/post-scrape-events.js";
 import {
   HTTP_DEFAULT_DELAY_MS,
   HTTP_DEFAULT_MAX_CONCURRENCY,
@@ -310,6 +310,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         // Event detection: category ranking changes (skip in smoke tests)
         if (triggeredBy !== "smoke-test") {
           try { await afterCategoryScrape(db, platform, job.id!); } catch {}
+          // Keep /api/developers aggregates fresh (PLA-1103).
+          try { await refreshDeveloperPlatformStats(db); } catch {}
         }
 
         break;
@@ -473,6 +475,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         // Event detection: keyword ranking changes (skip in smoke tests)
         if (triggeredBy !== "smoke-test") {
           try { await afterKeywordScrape(db, platform, job.id!); } catch {}
+          // Keep /api/developers aggregates fresh (PLA-1103).
+          try { await refreshDeveloperPlatformStats(db); } catch {}
         }
 
         break;

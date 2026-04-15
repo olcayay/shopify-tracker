@@ -14,7 +14,7 @@ vi.mock("../../events/event-dispatcher.js", () => ({
   dispatchAll: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { afterKeywordScrape, afterReviewScrape, afterCategoryScrape } from "../../events/post-scrape-events.js";
+import { afterKeywordScrape, afterReviewScrape, afterCategoryScrape, refreshDeveloperPlatformStats } from "../../events/post-scrape-events.js";
 
 // ---------------------------------------------------------------------------
 // Mock DB helper — tracks query arguments to verify inArray usage
@@ -269,6 +269,30 @@ describe("post-scrape-events", () => {
       await expect(
         afterCategoryScrape(db, "shopify", "job-err-2")
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("refreshDeveloperPlatformStats (PLA-1103)", () => {
+    it("issues REFRESH MATERIALIZED VIEW CONCURRENTLY", async () => {
+      const execute = vi.fn().mockResolvedValue([]);
+      const db: any = { execute };
+
+      await refreshDeveloperPlatformStats(db);
+
+      expect(execute).toHaveBeenCalledTimes(1);
+      // Inspect the SQL template passed to execute — drizzle wraps it in a
+      // structured object; serialise and search for the key phrase.
+      const call = execute.mock.calls[0][0];
+      const serialised = JSON.stringify(call);
+      expect(serialised).toContain("REFRESH MATERIALIZED VIEW CONCURRENTLY developer_platform_stats");
+    });
+
+    it("does not throw if refresh fails (post-scrape hook must be resilient)", async () => {
+      const db: any = {
+        execute: vi.fn().mockRejectedValue(new Error("MV missing")),
+      };
+
+      await expect(refreshDeveloperPlatformStats(db)).resolves.toBeUndefined();
     });
   });
 });

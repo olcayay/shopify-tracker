@@ -365,6 +365,30 @@ export async function afterCategoryScrape(
   }
 }
 
+/**
+ * Refresh the developer_platform_stats materialized view so /api/developers
+ * sort-by-apps / avgRating / firstLaunch / lastLaunch stays fresh.
+ *
+ * CONCURRENTLY avoids read-side locking; it requires the unique index on
+ * (global_developer_id, platform) created in migration 0155. Falls back to a
+ * blocking refresh only if the MV is missing (e.g. first deploy before
+ * migration runs).
+ *
+ * Called from post-scrape hooks (category + keyword batches). Safe to call
+ * more often — Postgres serialises concurrent REFRESHes.
+ *
+ * PLA-1103.
+ */
+export async function refreshDeveloperPlatformStats(db: any): Promise<void> {
+  try {
+    const t1 = Date.now();
+    await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY developer_platform_stats`);
+    log.info("refreshed developer_platform_stats", { durationMs: Date.now() - t1 });
+  } catch (err) {
+    log.error("refreshDeveloperPlatformStats failed", { error: String(err) });
+  }
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 async function getAppMetrics(db: any, appId: number): Promise<AppMetrics | null> {
