@@ -619,8 +619,21 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
+    // Per-phase timing instrumentation for Phase 1 measurement (PLA-1105).
+    // Each request issues ~12 DB round-trips grouped into 4 parallel waves; the
+    // slowest query in each wave bounds the wall time. Enabling DEBUG_SLOW_QUERIES
+    // surfaces which wave dominates so we can target Phase 2 fixes at the real
+    // offender instead of guessing. Zero cost when the flag is off.
+    const debugSlow = process.env.DEBUG_SLOW_QUERIES === "1" || process.env.DEBUG_SLOW_QUERIES === "true";
+    const t0 = Date.now();
+    const phaseTimings: Record<string, number> = {};
+    const mark = (phase: string, start: number) => {
+      if (debugSlow) phaseTimings[phase] = Date.now() - start;
+    };
+
     // Need to join twice: once for competitor app, once for tracked app slug
     const competitorAppsAlias = apps;
+    const t_main = Date.now();
     const rows = await db
       .select({
         appSlug: apps.slug,
@@ -639,6 +652,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       .innerJoin(sql`apps ta`, sql`ta.id = ${accountCompetitorApps.trackedAppId}`)
       .where(and(eq(accountCompetitorApps.accountId, accountId), eq(apps.platform, platform)))
       .orderBy(asc(accountCompetitorApps.sortOrder));
+    mark("main", t_main);
 
     if (rows.length === 0) return [];
 
@@ -648,11 +662,13 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     const compIdToSlug = new Map<number, string>();
     for (const r of rows) compIdToSlug.set(r._appId, r.appSlug);
 
+    const t_keywords = Date.now();
     const accountKeywords = await db
       .select({ keywordId: accountTrackedKeywords.keywordId })
       .from(accountTrackedKeywords)
       .where(eq(accountTrackedKeywords.accountId, accountId));
     const trackedKeywordIds = [...new Set(accountKeywords.map((k) => k.keywordId))];
+    mark("keywords", t_keywords);
 
     // Run ranked keywords, ad counts, and featured counts in parallel
     const rankedKeywordMap = new Map<string, number>();
@@ -663,6 +679,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     if (competitorAppIds.length > 0) {
       const appIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `);
 
+      const t_wave1 = Date.now();
       const [rankedData, adCounts, featuredCounts] = await Promise.all([
         // Ranked keyword counts
         (trackedKeywordIds.length > 0
@@ -707,6 +724,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           .groupBy(apps.slug),
       ]);
 
+      mark("wave1_ranked_ads_featured", t_wave1);
       for (const r of rankedData) rankedKeywordMap.set(r.app_slug, r.ranked_keywords);
       for (const ac of adCounts) adKeywordMap.set(ac.appSlug, ac.count);
       for (const fc of featuredCounts) featuredCountMap.set(fc.appSlug, fc.sectionCount);
@@ -724,6 +742,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       const compIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `);
       const pairIdList = sql.join(allPairIds.map((id) => sql`${id}`), sql`, `);
 
+      const t_wave2 = Date.now();
       const [catRankRows, rsCounts, simRows, velRows] = await Promise.all([
         // Category rankings
         db.execute(sql`
@@ -778,6 +797,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         `).then((res: any) => ((res as any).rows ?? res) as any[]).catch(() => [] as any[]),
       ]);
 
+      mark("wave2_catrank_revsim_sim_vel", t_wave2);
       for (const r of catRankRows) {
         const arr = categoryRankingMap.get(r.app_slug) ?? [];
         arr.push({ categorySlug: r.category_slug, categoryTitle: r.category_title, position: r.position, prevPosition: r.prev_position ?? null, appCount: r.app_count ?? null });
@@ -800,6 +820,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     const compAppIdsForBatch = rows.map((r) => r._appId).filter((id): id is number => id != null);
     const compIdListForBatch = compAppIdsForBatch.length > 0 ? sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `) : null;
 
+    const t_wave3 = Date.now();
     const [visRows, powRows, snapshotRows, changeRows] = await Promise.all([
       // Visibility scores
       (compIdListForBatch
@@ -877,6 +898,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       ),
     ]);
 
+    mark("wave3_vis_power_snap_changes", t_wave3);
     for (const r of visRows) {
       visibilityMap.set(`${r.tracked_app_slug}:${r.app_slug}`, {
         visibilityScore: r.visibility_score, keywordCount: r.keyword_count, visibilityRaw: parseFloat(String(r.visibility_raw)),
@@ -933,6 +955,13 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         similarityScore: similarityMap.get(row.trackedAppSlug)?.get(row.appSlug) ?? null,
       };
     });
+
+    if (debugSlow) {
+      request.log.info(
+        { accountId, platform, totalMs: Date.now() - t0, phases: phaseTimings, competitorCount: rows.length },
+        "GET /api/account/competitors timing"
+      );
+    }
 
     return result;
   });

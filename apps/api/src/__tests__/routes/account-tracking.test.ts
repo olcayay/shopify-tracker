@@ -944,6 +944,33 @@ describe("GET /api/account/competitors", () => {
     });
     expect(res.statusCode).toBe(200);
   });
+
+  // PLA-1105: per-phase timing instrumentation must be fully gated behind
+  // DEBUG_SLOW_QUERIES — no log spam in prod by default, no measurable cost.
+  it("does not log phase timings when DEBUG_SLOW_QUERIES is unset", async () => {
+    const prev = process.env.DEBUG_SLOW_QUERIES;
+    delete process.env.DEBUG_SLOW_QUERIES;
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/competitors?platform=shopify",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    if (prev != null) process.env.DEBUG_SLOW_QUERIES = prev;
+  });
+
+  it("succeeds when DEBUG_SLOW_QUERIES=1 (no crash from timing code path)", async () => {
+    const prev = process.env.DEBUG_SLOW_QUERIES;
+    process.env.DEBUG_SLOW_QUERIES = "1";
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/competitors?platform=shopify",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    if (prev != null) process.env.DEBUG_SLOW_QUERIES = prev;
+    else delete process.env.DEBUG_SLOW_QUERIES;
+  });
 });
 
 // ==========================================================================
