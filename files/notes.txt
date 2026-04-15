@@ -6624,3 +6624,9 @@ PLA-1102 notes
 - Chose Option A from the ticket (return a per-platform count from the API). Option B would have been to remove the top_apps LIMIT 10 or double-query; both have cost/complexity we don't need. jsonb_object_agg is O(apps) and reuses the already-materialized dev_apps CTE — no extra table scans.
 - Guard rail: appCount falls back to dev.appCount when appCountsByPlatform is empty. This means a rollback of the API change won't silently zero out the sort column on the frontend.
 - Response shape is additive (new field only), safe for any other consumer.
+
+PLA-1106 notes
+- Kept the initial full-page skeleton (stat skeletons + one table skeleton) — it's only shown while *every* fetch is pending. As soon as any resource lands, the page renders and remaining sections show inline TableSkeleton.
+- Per-resource state pattern avoids needing a state-machine reducer; each branch of `loadData` is `fetch → setData → setXxxLoading(false) → flipInitial()`. Errors swallowed to `[]`/`null` as before — the per-card empty-state renders the same friendly copy.
+- Admin cards (systemStats, recentRuns) already conditionally render via `{systemStats && ...}` so adding `adminStatsLoading` wasn't strictly needed for visual correctness, but it keeps the hook set symmetrical and ready if we later want an admin-card skeleton.
+- Regression test deliberately hangs `/api/account/starred-features` forever. Before the fix this caused `await Promise.all(...)` to never resolve → whole page blank → "Fast App" never renders. After the fix apps resolves → flip → render → "Fast App" visible while starred-features card shows its skeleton.

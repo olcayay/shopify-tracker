@@ -107,6 +107,17 @@ export default function OverviewPage() {
   const [appCategories, setAppCategories] = useState<Record<string, { title: string; slug: string; position: number | null }[]>>({});
   const [systemStats, setSystemStats] = useState<any>(null);
   const [recentRuns, setRecentRuns] = useState<any[]>([]);
+  // Per-resource loading states (PLA-1106): a single slow endpoint no longer
+  // blocks the whole overview — each card renders independently once its
+  // own fetch resolves. `loading` stays true until *any* fetch returns, so
+  // the initial full-page skeleton is still shown instead of a jarring blank.
+  const [appsLoading, setAppsLoading] = useState(true);
+  const [keywordsLoading, setKeywordsLoading] = useState(true);
+  const [competitorsLoading, setCompetitorsLoading] = useState(true);
+  const [featuresLoading, setFeaturesLoading] = useState(true);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [adminStatsLoading, setAdminStatsLoading] = useState(true);
+  const [adminRunsLoading, setAdminRunsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -175,54 +186,108 @@ export default function OverviewPage() {
   }
 
   async function loadData() {
+    // PLA-1106: fire each fetch independently and flip per-resource loading
+    // state, so a single slow endpoint (e.g. /api/account/starred-features
+    // hanging) does not block the rest of the page. The global `loading`
+    // flag flips off as soon as the FIRST fetch resolves — the initial
+    // full-page skeleton is swapped for per-card skeletons for anything
+    // still pending.
     setLoading(true);
-    const promises: Promise<any>[] = [
-      fetchWithAuth("/api/apps").then((r) => (r.ok ? r.json() : [])),
-      fetchWithAuth("/api/keywords").then((r) => (r.ok ? r.json() : [])),
-      fetchWithAuth("/api/account/competitors").then((r) =>
-        r.ok ? r.json() : []
-      ),
-      fetchWithAuth("/api/account/starred-features").then((r) =>
-        r.ok ? r.json() : []
-      ),
-      fetchWithAuth("/api/account/starred-categories").then((r) =>
-        r.ok ? r.json() : []
-      ),
-    ];
-
+    setAppsLoading(true);
+    setKeywordsLoading(true);
+    setCompetitorsLoading(true);
+    setFeaturesLoading(true);
+    setCategoriesLoading(true);
     if (user?.isSystemAdmin) {
-      promises.push(
-        fetchWithAuth("/api/system-admin/stats").then((r) =>
-          r.ok ? r.json() : null
-        ),
-        fetchWithAuth("/api/system-admin/scraper/runs?limit=10").then((r) =>
-          r.ok ? r.json() : []
-        )
-      );
+      setAdminStatsLoading(true);
+      setAdminRunsLoading(true);
     }
 
-    const results = await Promise.all(promises);
-    const loadedApps = results[0] || [];
-    setApps(loadedApps);
-    setKeywords(results[1] || []);
-    setCompetitors(results[2] || []);
-    setFeatures(results[3] || []);
-    setCategories(results[4] || []);
-    if (user?.isSystemAdmin) {
-      setSystemStats(results[5]);
-      setRecentRuns(results[6] || []);
-    }
-    setLoading(false);
+    let anyFlipped = false;
+    const flipInitial = () => {
+      if (!anyFlipped) {
+        anyFlipped = true;
+        setLoading(false);
+      }
+    };
 
-    // Fetch categories in background (non-blocking — page already rendered)
-    const appSlugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
-    if (appSlugs.length > 0) {
-      fetchWithAuth("/api/apps/categories", {
-        method: "POST",
-        body: JSON.stringify({ slugs: appSlugs }),
-      }).then(async (catRes) => {
-        if (catRes.ok) setAppCategories(await catRes.json());
-      }).catch(() => {});
+    const safeJson = async <T,>(res: Response, fallback: T): Promise<T> =>
+      res.ok ? ((await res.json()) as T) : fallback;
+
+    // Apps — chained: once loaded, kicks off background categories fetch.
+    fetchWithAuth("/api/apps")
+      .then((r) => safeJson<any[]>(r, []))
+      .catch(() => [])
+      .then((loadedApps) => {
+        setApps(loadedApps);
+        setAppsLoading(false);
+        flipInitial();
+        const appSlugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
+        if (appSlugs.length > 0) {
+          fetchWithAuth("/api/apps/categories", {
+            method: "POST",
+            body: JSON.stringify({ slugs: appSlugs }),
+          })
+            .then(async (catRes) => {
+              if (catRes.ok) setAppCategories(await catRes.json());
+            })
+            .catch(() => {});
+        }
+      });
+
+    fetchWithAuth("/api/keywords")
+      .then((r) => safeJson<any[]>(r, []))
+      .catch(() => [])
+      .then((d) => {
+        setKeywords(d);
+        setKeywordsLoading(false);
+        flipInitial();
+      });
+
+    fetchWithAuth("/api/account/competitors")
+      .then((r) => safeJson<any[]>(r, []))
+      .catch(() => [])
+      .then((d) => {
+        setCompetitors(d);
+        setCompetitorsLoading(false);
+        flipInitial();
+      });
+
+    fetchWithAuth("/api/account/starred-features")
+      .then((r) => safeJson<any[]>(r, []))
+      .catch(() => [])
+      .then((d) => {
+        setFeatures(d);
+        setFeaturesLoading(false);
+        flipInitial();
+      });
+
+    fetchWithAuth("/api/account/starred-categories")
+      .then((r) => safeJson<any[]>(r, []))
+      .catch(() => [])
+      .then((d) => {
+        setCategories(d);
+        setCategoriesLoading(false);
+        flipInitial();
+      });
+
+    if (user?.isSystemAdmin) {
+      fetchWithAuth("/api/system-admin/stats")
+        .then((r) => safeJson<any>(r, null))
+        .catch(() => null)
+        .then((d) => {
+          setSystemStats(d);
+          setAdminStatsLoading(false);
+          flipInitial();
+        });
+      fetchWithAuth("/api/system-admin/scraper/runs?limit=10")
+        .then((r) => safeJson<any[]>(r, []))
+        .catch(() => [])
+        .then((d) => {
+          setRecentRuns(d);
+          setAdminRunsLoading(false);
+          flipInitial();
+        });
     }
   }
 
@@ -325,7 +390,9 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {apps.length === 0 ? (
+          {appsLoading ? (
+            <TableSkeleton rows={3} cols={4} />
+          ) : apps.length === 0 ? (
             <div className="py-6 text-center space-y-4">
               <AppWindow className="h-10 w-10 mx-auto text-muted-foreground/50" />
               <div>
@@ -472,7 +539,9 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {keywords.length === 0 ? (
+          {keywordsLoading ? (
+            <TableSkeleton rows={3} cols={4} />
+          ) : keywords.length === 0 ? (
             <EmptyState
               icon={Key}
               title="No tracked keywords yet"
@@ -556,7 +625,9 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {competitors.length === 0 ? (
+          {competitorsLoading ? (
+            <TableSkeleton rows={3} cols={4} />
+          ) : competitors.length === 0 ? (
             <EmptyState
               icon={Users}
               title="No competitor apps yet"
@@ -625,7 +696,9 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {features.length === 0 ? (
+          {featuresLoading ? (
+            <TableSkeleton rows={3} cols={3} />
+          ) : features.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No bookmarked features yet.{" "}
               <Link href={`/${platform}/features`} className="text-primary hover:underline">
@@ -700,7 +773,9 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {categories.length === 0 ? (
+          {categoriesLoading ? (
+            <TableSkeleton rows={3} cols={3} />
+          ) : categories.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No categories to show.{" "}
               <Link href={`/${platform}/categories`} className="text-primary hover:underline">

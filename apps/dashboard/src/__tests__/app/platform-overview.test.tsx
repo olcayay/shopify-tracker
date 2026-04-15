@@ -125,6 +125,28 @@ describe("OverviewPage", () => {
     expect(screen.getAllByTestId("stat-skeleton").length).toBeGreaterThan(0);
   });
 
+  it("renders resolved cards even when one endpoint hangs (PLA-1106 decoupling)", async () => {
+    // Simulate: apps + keywords + competitors + categories resolve fast,
+    // but starred-features hangs forever. Before the fix, Promise.all made
+    // the whole page wait — now each card renders independently.
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url === "/api/apps")
+        return Promise.resolve(makeJsonResponse([{ slug: "fast-app", name: "Fast App" }]));
+      if (url === "/api/keywords") return Promise.resolve(makeJsonResponse([]));
+      if (url === "/api/account/competitors") return Promise.resolve(makeJsonResponse([]));
+      if (url === "/api/account/starred-features") return new Promise(() => {}); // hangs
+      if (url === "/api/account/starred-categories") return Promise.resolve(makeJsonResponse([]));
+      if (url === "/api/apps/categories") return Promise.resolve(makeJsonResponse({}));
+      return Promise.resolve(makeJsonResponse(null));
+    });
+    render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Fast App")).toBeInTheDocument();
+    });
+    // Features card still shows its in-card skeleton (not a full page block).
+    expect(screen.getAllByTestId("table-skeleton").length).toBeGreaterThan(0);
+  });
+
   it("renders My Apps card with count", async () => {
     setupFetchMocks();
     render(<OverviewPage />);
