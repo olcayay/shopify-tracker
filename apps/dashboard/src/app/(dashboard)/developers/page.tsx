@@ -41,6 +41,7 @@ interface Developer {
   linkCount: number;
   appCount: number;
   platforms: string[];
+  appCountsByPlatform: Record<string, number>;
   topApps: TopApp[];
   isStarred: boolean;
 }
@@ -72,7 +73,7 @@ interface DeveloperResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-function filterDeveloperForVisiblePlatforms(dev: Developer, enabledPlatforms: PlatformId[]): Developer | null {
+export function filterDeveloperForVisiblePlatforms(dev: Developer, enabledPlatforms: PlatformId[]): Developer | null {
   if (enabledPlatforms.length === 0) return dev;
 
   const allowed = new Set<string>(enabledPlatforms);
@@ -80,12 +81,22 @@ function filterDeveloperForVisiblePlatforms(dev: Developer, enabledPlatforms: Pl
   const topApps = dev.topApps.filter((app) => allowed.has(app.platform));
   if (platforms.length === 0 && topApps.length === 0) return null;
 
+  // Sum per-platform app counts for enabled platforms. Falls back to full
+  // dev.appCount when the API didn't return the breakdown (older response shape).
+  // Do NOT clamp to topApps.length — topApps is capped at 10 in the SQL, so that
+  // clamp silently hid real totals for prolific developers (PLA-1102).
+  const breakdown = dev.appCountsByPlatform ?? {};
+  const hasBreakdown = Object.keys(breakdown).length > 0;
+  const appCount = hasBreakdown
+    ? platforms.reduce((sum, p) => sum + (breakdown[p] ?? 0), 0)
+    : dev.appCount;
+
   return {
     ...dev,
     platforms,
     topApps,
     platformCount: platforms.length,
-    appCount: Math.min(dev.appCount, topApps.length),
+    appCount,
   };
 }
 

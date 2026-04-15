@@ -110,6 +110,17 @@ describe("Developer routes", () => {
         expect(typeof dev.appCount).toBe("number");
         expect(dev).toHaveProperty("isStarred");
         expect(typeof dev.isStarred).toBe("boolean");
+        // PLA-1102: per-platform breakdown so frontend can recompute appCount
+        // after client-side platform filtering without being capped at 10.
+        expect(dev).toHaveProperty("appCountsByPlatform");
+        expect(typeof dev.appCountsByPlatform).toBe("object");
+        expect(dev.appCountsByPlatform).not.toBeNull();
+        // Sum of per-platform counts should equal the unfiltered appCount.
+        const sum = Object.values(dev.appCountsByPlatform as Record<string, number>).reduce(
+          (a, b) => a + Number(b),
+          0,
+        );
+        expect(sum).toBe(dev.appCount);
       }
     });
 

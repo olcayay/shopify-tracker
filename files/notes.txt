@@ -6619,3 +6619,8 @@ PLA-1104 notes
 - Why suppress rather than just ignore: extension-injected rejections pollute console AND, if Sentry/other telemetry is wired later, would burn error budget on things we can't fix.
 - Why preventDefault not window.onerror swallow-all: preventDefault on the rejection event stops the default "unhandled" logging without hiding errors that originate in our bundle. App-origin rejections still hit console.error (and any future telemetry) via our own log path.
 - The acceptance criterion "regression test is added that covers the original failure path" is addressed by the 4-case test suite against the dispatcher (extension stack → suppressed, app stack → logged). We can't unit-test the specific extension since we don't own it.
+
+PLA-1102 notes
+- Chose Option A from the ticket (return a per-platform count from the API). Option B would have been to remove the top_apps LIMIT 10 or double-query; both have cost/complexity we don't need. jsonb_object_agg is O(apps) and reuses the already-materialized dev_apps CTE — no extra table scans.
+- Guard rail: appCount falls back to dev.appCount when appCountsByPlatform is empty. This means a rollback of the API change won't silently zero out the sort column on the frontend.
+- Response shape is additive (new field only), safe for any other consumer.

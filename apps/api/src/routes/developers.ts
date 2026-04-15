@@ -151,6 +151,19 @@ export async function developerRoutes(app: FastifyInstance) {
           FROM dev_apps
           GROUP BY global_developer_id
         ),
+        dev_platform_app_counts AS (
+          -- Per-platform app count so the frontend can recalc after client-side
+          -- platform filtering without being capped by top_apps' LIMIT 10.
+          -- See PLA-1102.
+          SELECT global_developer_id,
+            jsonb_object_agg(platform, app_count) AS app_counts_by_platform
+          FROM (
+            SELECT global_developer_id, platform, COUNT(DISTINCT app_id) AS app_count
+            FROM dev_apps
+            GROUP BY global_developer_id, platform
+          ) d
+          GROUP BY global_developer_id
+        ),
         dev_stats AS (
           -- One row per (developer, app) so apps with ratings but no reviews (or
           -- vice-versa) still contribute to both aggregates where they apply.
@@ -187,6 +200,7 @@ export async function developerRoutes(app: FastifyInstance) {
           ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
           COALESCE(dta.top_apps, '[]'::jsonb) AS top_apps,
           COALESCE(dac.app_count, 0) AS app_count,
+          COALESCE(dpac.app_counts_by_platform, '{}'::jsonb) AS app_counts_by_platform,
           ds.avg_review_count,
           ds.avg_rating,
           ds.first_launch_date,
@@ -195,12 +209,13 @@ export async function developerRoutes(app: FastifyInstance) {
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id ${platformJoinFilter}
         LEFT JOIN dev_app_counts dac ON dac.global_developer_id = g.id
+        LEFT JOIN dev_platform_app_counts dpac ON dpac.global_developer_id = g.id
         LEFT JOIN dev_top_apps dta ON dta.global_developer_id = g.id
         LEFT JOIN dev_stats ds ON ds.global_developer_id = g.id
         LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id
           AND asd.account_id = ${accountId}
         ${whereClause}
-        GROUP BY g.id, asd.id, dac.app_count, dta.top_apps,
+        GROUP BY g.id, asd.id, dac.app_count, dpac.app_counts_by_platform, dta.top_apps,
                  ds.avg_review_count, ds.avg_rating, ds.first_launch_date, ds.last_launch_date
         ORDER BY ${orderSQL}
         LIMIT ${limit} OFFSET ${offset}
@@ -215,6 +230,12 @@ export async function developerRoutes(app: FastifyInstance) {
           platformCount: Number(r.platform_count || 0),
           linkCount: Number(r.link_count || 0),
           appCount: Number(r.app_count || 0),
+          appCountsByPlatform: r.app_counts_by_platform && typeof r.app_counts_by_platform === "object"
+            ? Object.fromEntries(
+                Object.entries(r.app_counts_by_platform as Record<string, unknown>)
+                  .map(([k, v]) => [k, Number(v) || 0])
+              )
+            : {},
           platforms: r.platforms || [],
           topApps: (r.top_apps || []).map((a: any) => ({
             iconUrl: a.icon_url,
