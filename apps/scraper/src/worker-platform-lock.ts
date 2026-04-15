@@ -1,8 +1,8 @@
 import type { Job } from "bullmq";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
-import { featureFlags } from "@appranks/db";
-import { isPlatformId, platformFeatureFlagSlug, type PlatformId } from "@appranks/shared";
+import { platformVisibility } from "@appranks/db";
+import { isPlatformId } from "@appranks/shared";
 import type { ScraperJobData } from "./queue.js";
 import type { RedisLock } from "./redis-lock.js";
 
@@ -48,23 +48,23 @@ export function withPlatformLock(
 
     const platform = job.data.platform || "shopify";
 
+    // PLA-1095: gate scraper execution on platformVisibility.scraperEnabled only.
     if (isPlatformId(platform)) {
       try {
-        const flagSlug = platformFeatureFlagSlug(platform as PlatformId);
         const rows = await (db as {
           select: (x: unknown) => {
             from: (t: unknown) => {
-              where: (p: unknown) => { limit: (n: number) => Promise<Array<{ isEnabled: boolean }>> };
+              where: (p: unknown) => { limit: (n: number) => Promise<Array<{ scraperEnabled: boolean }>> };
             };
           };
         })
-          .select({ isEnabled: featureFlags.isEnabled })
-          .from(featureFlags)
-          .where(eq(featureFlags.slug, flagSlug))
+          .select({ scraperEnabled: platformVisibility.scraperEnabled })
+          .from(platformVisibility)
+          .where(eq(platformVisibility.platform, platform))
           .limit(1);
-        const flag = rows[0];
-        if (flag && !flag.isEnabled) {
-          log.warn("platform feature flag disabled, skipping job", {
+        const vis = rows[0];
+        if (vis && vis.scraperEnabled === false) {
+          log.warn("scraper disabled for platform, skipping job", {
             jobId: job.id,
             platform,
             type: job.data.type,
@@ -72,7 +72,7 @@ export function withPlatformLock(
           return;
         }
       } catch {
-        // Fail-open: continue processing if flag check fails
+        // Fail-open: continue processing if visibility check fails
       }
     }
 

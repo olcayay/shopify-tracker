@@ -285,24 +285,13 @@ function makeJob(data: Partial<ScraperJobData> & { type: ScraperJobData["type"] 
   } as any;
 }
 
-/** Mock the platformVisibility + featureFlag selects that happen at the start of every job */
+/** Mock the platformVisibility select that happens at the start of every job (PLA-1095: sole gate) */
 function mockPlatformVisibilitySelect(db: any, enabled = true) {
-  // 1) platformVisibility check
   db.select.mockReturnValueOnce({
     from: vi.fn().mockReturnValue({
       where: vi.fn().mockResolvedValue(enabled ? [] : [{ platform: "shopify", scraperEnabled: false }]),
     }),
   });
-  // 2) featureFlags check (always enabled unless testing specifically)
-  if (enabled) {
-    db.select.mockReturnValueOnce({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ isEnabled: true }]),
-        }),
-      }),
-    });
-  }
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -1061,24 +1050,24 @@ describe("createProcessJob", () => {
     });
   });
 
-  // ── 17. Platform feature flag check ──────────────────────────────────
+  // ── 17. PLA-1095: scraper execution only gated by platformVisibility.scraperEnabled ──
 
-  describe("platform feature flag disabled skip", () => {
-    it("skips job when platform feature flag is globally disabled", async () => {
-      // 1) platformVisibility: enabled
+  describe("scraper gate decoupled from platform launch flag (PLA-1095)", () => {
+    it("runs job when scraperEnabled=true regardless of any launch flag state", async () => {
+      // Only the platformVisibility check is consulted now.
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([]),
+          where: vi.fn().mockResolvedValue([{ platform: "shopify", scraperEnabled: true }]),
         }),
       });
-      // 2) featureFlags: disabled
-      db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ isEnabled: false }]),
-          }),
-        }),
-      });
+
+      await processJob(makeJob({ type: "category", slug: "test" }));
+
+      expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalled();
+    });
+
+    it("skips job when scraperEnabled=false (single gate)", async () => {
+      mockPlatformVisibilitySelect(db, false);
 
       await processJob(makeJob({ type: "category", slug: "test" }));
 
@@ -1086,27 +1075,10 @@ describe("createProcessJob", () => {
       expect(mockCategoryScraper.crawl).not.toHaveBeenCalled();
     });
 
-    it("processes job when platform feature flag is enabled", async () => {
-      mockPlatformVisibilitySelect(db, true);
-
-      await processJob(makeJob({ type: "category", slug: "test" }));
-
-      expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalled();
-    });
-
-    it("processes job when platform feature flag does not exist (fail-open)", async () => {
-      // 1) platformVisibility: enabled
+    it("processes job when no platform_visibility row exists (fail-open)", async () => {
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),
-        }),
-      });
-      // 2) featureFlags: not found
-      db.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
         }),
       });
 

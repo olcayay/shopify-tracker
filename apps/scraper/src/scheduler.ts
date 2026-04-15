@@ -2,8 +2,8 @@ import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import cron from "node-cron";
-import { createLogger, SCRAPER_SCHEDULES, platformFeatureFlagSlug, isPlatformId, type PlatformId } from "@appranks/shared";
-import { createDb, featureFlags } from "@appranks/db";
+import { createLogger, SCRAPER_SCHEDULES, isPlatformId } from "@appranks/shared";
+import { createDb, platformVisibility } from "@appranks/db";
 import { eq } from "drizzle-orm";
 import { enqueueScraperJob, closeQueue, type ScraperJobType, type ScraperJobOptions } from "./queue.js";
 import { isCircuitOpen } from "./circuit-breaker.js";
@@ -11,16 +11,15 @@ import { cleanupOldNotifications } from "./notifications/retention-cleanup.js";
 
 const log = createLogger("scheduler");
 
-// Lightweight DB connection for feature flag checks (1 connection)
+// Lightweight DB connection for scraper visibility checks (1 connection)
 const schedulerDb = process.env.DATABASE_URL ? createDb(process.env.DATABASE_URL, { max: 1 }) : null;
 
-/** Check if a platform's feature flag is globally enabled */
-async function isPlatformFlagEnabled(platform: string): Promise<boolean> {
+/** PLA-1095: gate scheduler enqueue on platformVisibility.scraperEnabled only. */
+async function isScraperEnabled(platform: string): Promise<boolean> {
   if (!schedulerDb || !isPlatformId(platform)) return true; // fail-open
   try {
-    const flagSlug = platformFeatureFlagSlug(platform as PlatformId);
-    const [flag] = await schedulerDb.select({ isEnabled: featureFlags.isEnabled }).from(featureFlags).where(eq(featureFlags.slug, flagSlug)).limit(1);
-    return !flag || flag.isEnabled; // if flag doesn't exist, allow
+    const [vis] = await schedulerDb.select({ scraperEnabled: platformVisibility.scraperEnabled }).from(platformVisibility).where(eq(platformVisibility.platform, platform)).limit(1);
+    return !vis || vis.scraperEnabled !== false; // if row doesn't exist, allow
   } catch {
     return true; // fail-open on DB errors
   }
@@ -51,10 +50,10 @@ for (const schedule of SCRAPER_SCHEDULES) {
         return;
       }
 
-      // Check platform feature flag before enqueuing
-      const flagEnabled = await isPlatformFlagEnabled(schedule.platform);
-      if (!flagEnabled) {
-        log.warn("platform feature flag disabled, skipping job", { name: schedule.name, platform: schedule.platform });
+      // Check scraper is enabled for the platform before enqueuing
+      const scraperOn = await isScraperEnabled(schedule.platform);
+      if (!scraperOn) {
+        log.warn("scraper disabled for platform, skipping job", { name: schedule.name, platform: schedule.platform });
         return;
       }
     }

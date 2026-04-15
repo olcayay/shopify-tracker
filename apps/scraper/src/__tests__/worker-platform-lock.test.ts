@@ -172,8 +172,8 @@ describe("withPlatformLock (PLA-1060)", () => {
     expect(processOrder).toHaveLength(2);
   });
 
-  it("skips job when platform feature flag is disabled (no lock acquired)", async () => {
-    const limit = vi.fn(async () => [{ isEnabled: false }]);
+  it("skips job when platform scraperEnabled is false (no lock acquired)", async () => {
+    const limit = vi.fn(async () => [{ scraperEnabled: false }]);
     const where = vi.fn(() => ({ limit }));
     const from = vi.fn(() => ({ where }));
     const select = vi.fn(() => ({ from }));
@@ -190,8 +190,26 @@ describe("withPlatformLock (PLA-1060)", () => {
     expect(processFn).not.toHaveBeenCalled();
     expect(acquireWithWait).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith(
-      "platform feature flag disabled, skipping job",
+      "scraper disabled for platform, skipping job",
       expect.objectContaining({ platform: "salesforce" }),
     );
+  });
+
+  it("runs job when scraperEnabled is true even if launch flag is off (PLA-1095)", async () => {
+    const limit = vi.fn(async () => [{ scraperEnabled: true }]);
+    const where = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where }));
+    const select = vi.fn(() => ({ from }));
+
+    const { deps, acquireWithWait, release } = makeDeps({
+      db: { select } as unknown as Parameters<typeof withPlatformLock>[1]["db"],
+    });
+    const wrapped = withPlatformLock(processFn, deps);
+
+    await wrapped(makeJob({ platform: "salesforce" }));
+
+    expect(acquireWithWait).toHaveBeenCalledTimes(1);
+    expect(processFn).toHaveBeenCalledTimes(1);
+    expect(release).toHaveBeenCalledTimes(1);
   });
 });
