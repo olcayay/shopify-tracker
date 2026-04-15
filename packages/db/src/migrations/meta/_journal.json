@@ -1079,6 +1079,13 @@
       "when": 1808812800000,
       "tag": "0153_drop_dismiss_reason_column",
       "breakpoints": true
+    },
+    {
+      "idx": 154,
+      "version": "7",
+      "when": 1808899200000,
+      "tag": "0154_account_competitor_apps_competitor_index",
+      "breakpoints": true
     }
   ]
 }

@@ -139,5 +139,9 @@ export const accountCompetitorApps = pgTable(
       table.competitorAppId
     ),
     index("idx_account_competitor_apps_tracked").on(table.trackedAppId),
+    index("idx_account_competitor_apps_account_competitor").on(
+      table.accountId,
+      table.competitorAppId
+    ),
   ]
 );

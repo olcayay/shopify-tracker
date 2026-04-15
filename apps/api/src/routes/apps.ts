@@ -725,39 +725,45 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: "App not found" });
     }
 
-    const [latestSnapshot] = await db
-      .select()
-      .from(appSnapshots)
-      .where(eq(appSnapshots.appId, appRow.id))
-      .orderBy(desc(appSnapshots.scrapedAt))
-      .limit(1);
+    const [latestSnapshotResult, trackedResult, competitorLinksResult] =
+      await Promise.all([
+        db
+          .select()
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appId, appRow.id))
+          .orderBy(desc(appSnapshots.scrapedAt))
+          .limit(1),
+        db
+          .select({ appId: accountTrackedApps.appId })
+          .from(accountTrackedApps)
+          .where(
+            and(
+              eq(accountTrackedApps.accountId, accountId),
+              eq(accountTrackedApps.appId, appRow.id)
+            )
+          ),
+        (async () => {
+          try {
+            return await db
+              .select({ trackedAppSlug: apps.slug })
+              .from(accountCompetitorApps)
+              .innerJoin(apps, eq(apps.id, accountCompetitorApps.trackedAppId))
+              .where(
+                and(
+                  eq(accountCompetitorApps.accountId, accountId),
+                  eq(accountCompetitorApps.competitorAppId, appRow.id)
+                )
+              );
+          } catch {
+            // Column may not exist if migration 0022 hasn't been applied yet
+            return [] as { trackedAppSlug: string }[];
+          }
+        })(),
+      ]);
 
-    const [tracked] = await db
-      .select({ appId: accountTrackedApps.appId })
-      .from(accountTrackedApps)
-      .where(
-        and(
-          eq(accountTrackedApps.accountId, accountId),
-          eq(accountTrackedApps.appId, appRow.id)
-        )
-      );
-
-    let competitorForApps: string[] = [];
-    try {
-      const competitorLinks = await db
-        .select({ trackedAppSlug: apps.slug })
-        .from(accountCompetitorApps)
-        .innerJoin(apps, eq(apps.id, accountCompetitorApps.trackedAppId))
-        .where(
-          and(
-            eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.competitorAppId, appRow.id)
-          )
-        );
-      competitorForApps = competitorLinks.map((r) => r.trackedAppSlug);
-    } catch {
-      // Column may not exist if migration 0022 hasn't been applied yet
-    }
+    const [latestSnapshot] = latestSnapshotResult;
+    const [tracked] = trackedResult;
+    const competitorForApps = competitorLinksResult.map((r) => r.trackedAppSlug);
 
     // Validate platformData against Zod schema (non-blocking, warn only)
     if (latestSnapshot?.platformData) {
