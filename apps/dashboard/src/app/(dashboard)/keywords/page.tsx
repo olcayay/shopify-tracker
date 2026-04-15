@@ -155,7 +155,7 @@ export default function CrossPlatformKeywordsPage() {
                   <Tooltip key={i}>
                     <TooltipTrigger asChild>
                       <Link
-                        href={`/apps/${app.platform}/${app.slug}`}
+                        href={`/${app.platform}/apps/${app.slug}`}
                         className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
                       >
                         {app.iconUrl ? (

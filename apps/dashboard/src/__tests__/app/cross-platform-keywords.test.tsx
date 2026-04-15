@@ -204,11 +204,13 @@ describe("CrossPlatformKeywordsPage", () => {
       expect(screen.getByAltText("Klaviyo")).toBeInTheDocument();
       expect(screen.getByAltText("Mailchimp")).toBeInTheDocument();
     });
-    // App icons should link to app detail pages
+    // App icons should link to platform-scoped app detail pages (/{platform}/apps/{slug}).
+    // The previous /apps/{platform}/{slug} shape was a bug (PLA-1107): the dashboard
+    // middleware rewrote those into /shopify/apps/v1/{platform}/{slug} → 404.
     const klaviyoLink = screen.getByAltText("Klaviyo").closest("a");
-    expect(klaviyoLink).toHaveAttribute("href", "/apps/shopify/klaviyo");
+    expect(klaviyoLink).toHaveAttribute("href", "/shopify/apps/klaviyo");
     const mailchimpLink = screen.getByAltText("Mailchimp").closest("a");
-    expect(mailchimpLink).toHaveAttribute("href", "/apps/shopify/mailchimp");
+    expect(mailchimpLink).toHaveAttribute("href", "/shopify/apps/mailchimp");
   });
 
   it("renders fallback initial for apps without icon", async () => {
