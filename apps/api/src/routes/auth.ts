@@ -559,10 +559,27 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     const tokenHash = hashToken(token);
 
-    const [storedToken] = await db
+    // PLA-1112: first try current hash, then check recently-rotated hash (grace period)
+    let storedToken = (await db
       .select()
       .from(refreshTokens)
-      .where(eq(refreshTokens.tokenHash, tokenHash));
+      .where(eq(refreshTokens.tokenHash, tokenHash)))[0];
+
+    let isGraceHit = false;
+    if (!storedToken) {
+      // Check if this is a recently-rotated token (within 30s grace window)
+      const [graceToken] = await db
+        .select()
+        .from(refreshTokens)
+        .where(eq(refreshTokens.previousTokenHash, tokenHash));
+      if (graceToken && graceToken.rotatedAt) {
+        const elapsed = Date.now() - graceToken.rotatedAt.getTime();
+        if (elapsed < 30_000) {
+          storedToken = graceToken;
+          isGraceHit = true;
+        }
+      }
+    }
 
     if (!storedToken) {
       return reply.code(401).send({ error: "Invalid refresh token" });
@@ -606,11 +623,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     const accessToken = generateAccessToken(jwtPayload);
 
-    // Rotate refresh token
+    // Rotate refresh token, preserving old hash for 30s grace period.
+    // On a grace hit, this rotates again — giving the second caller a fresh token.
     const newRefreshToken = generateRefreshToken();
     await db
       .update(refreshTokens)
       .set({
+        previousTokenHash: storedToken.tokenHash,
+        rotatedAt: new Date(),
         tokenHash: hashToken(newRefreshToken),
         expiresAt: new Date(
           Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000

@@ -160,6 +160,73 @@ describe("proxy – cross-platform developer profile rewrite", () => {
   });
 });
 
+describe("proxy – auth token handling (PLA-1112: no server-side refresh)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("redirects to /login when both tokens are missing", async () => {
+    const req = makeRequest("/overview");
+    await proxy(req);
+    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
+    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
+    expect(redirectUrl.pathname).toBe("/login");
+  });
+
+  it("lets page load when access_token is missing but refresh_token exists (client-side handles refresh)", async () => {
+    const req = makeRequest("/overview", { refresh_token: "some-refresh-token" });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets page load when access_token is expired but refresh_token exists", async () => {
+    // Expired JWT (exp in the past)
+    const expiredPayload = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 60 })).toString("base64");
+    const expiredToken = `eyJhbGciOiJIUzI1NiJ9.${expiredPayload}.abc`;
+    const req = makeRequest("/overview", { access_token: expiredToken, refresh_token: "some-refresh" });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+
+  it("redirects to /login when access_token is expired and no refresh_token", async () => {
+    const expiredPayload = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 60 })).toString("base64");
+    const expiredToken = `eyJhbGciOiJIUzI1NiJ9.${expiredPayload}.abc`;
+    const req = makeRequest("/overview", { access_token: expiredToken });
+    await proxy(req);
+    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
+    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
+    expect(redirectUrl.pathname).toBe("/login");
+  });
+
+  it("does NOT call /api/auth/refresh from middleware (no server-side refresh)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const req = makeRequest("/overview", { refresh_token: "some-refresh-token" });
+    await proxy(req);
+    const refreshCalls = fetchSpy.mock.calls.filter(
+      (call) => typeof call[0] === "string" && call[0].includes("/api/auth/refresh")
+    );
+    expect(refreshCalls).toHaveLength(0);
+    fetchSpy.mockRestore();
+  });
+
+  it("redirects to /login when access_token is malformed and no refresh_token", async () => {
+    const req = makeRequest("/overview", { access_token: "not-a-jwt" });
+    await proxy(req);
+    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
+    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
+    expect(redirectUrl.pathname).toBe("/login");
+  });
+
+  it("lets page load when access_token is malformed but refresh_token exists", async () => {
+    const req = makeRequest("/overview", { access_token: "not-a-jwt", refresh_token: "some-refresh" });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("proxy – bare app detail routing (PLA-1110: rewrite, not redirect)", () => {
   beforeEach(() => {
     vi.clearAllMocks();

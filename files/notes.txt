@@ -1,3 +1,34 @@
+Auth refresh race condition fix (PLA-1112, 2026-04-17)
+======================================================
+Problem: Both Next.js middleware (server-side) and React auth-context (client-side)
+independently called /api/auth/refresh. Because refresh tokens are rotation-based
+(each refresh invalidates the old token), the second caller always failed with
+"Invalid refresh token". This cascaded into a retry storm hitting the 429 rate
+limit, leaving users stuck without being redirected to login.
+
+8 failure modes identified:
+1. Double refresh: middleware + client race with token rotation
+2. Multi-tab refresh storm (no cross-tab coordination)
+3. No login redirect when refresh fails in refreshUser()
+4. Cookie sync gap between middleware Set-Cookie and document.cookie
+5. refreshUser() doesn't handle 401 from /api/auth/me
+6. Proactive timer fires with stale token
+7. silentRefresh ignores 429 Retry-After header
+8. Rate limiter IP mismatch between middleware and client
+
+Fix (3 layers):
+Layer 1 — Middleware: removed ALL refresh logic from proxy.ts. Middleware now
+only checks if tokens exist; if access_token is expired/missing but refresh_token
+exists, it lets the page load and client-side handles refresh.
+
+Layer 2 — Auth-context: BroadcastChannel for cross-tab coordination, 429
+Retry-After handling, refreshUser 401 retry, proactive timer staleness check,
+centralized redirectToLogin with broadcast.
+
+Layer 3 — API: 30-second grace period for recently-rotated tokens. New columns
+previousTokenHash + rotatedAt on refresh_tokens table. If old token is used
+within 30s of rotation, the request succeeds instead of returning 401.
+
 Force-kill admin endpoint (PLA-1111, 2026-04-17)
 =================================================
 Problem: POST /api/system-admin/scraper/runs/:id/kill only marks the DB row

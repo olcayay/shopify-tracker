@@ -1,3 +1,15 @@
+Auth refresh race condition fix (PLA-1112, 2026-04-17)
+  - `apps/dashboard/src/proxy.ts` — removed ~60 lines of server-side refresh logic;
+    middleware now lets pages load when refresh_token exists, client handles refresh
+  - `apps/dashboard/src/lib/auth-context.tsx` — BroadcastChannel cross-tab coordination,
+    429 Retry-After handling, refreshUser 401 retry, proactive timer staleness check,
+    centralized redirectToLogin with broadcast to other tabs
+  - `apps/api/src/routes/auth.ts` — 30s grace period for recently-rotated tokens
+  - `packages/db/src/schema/auth.ts` — added previousTokenHash + rotatedAt columns
+  - Migration 0156: ALTER TABLE refresh_tokens ADD COLUMN previous_token_hash, rotated_at
+  - `apps/dashboard/src/__tests__/middleware.test.ts` — 7 new tests for PLA-1112 behavior
+  - All tests pass: 31 middleware, 71 auth, 90 system-admin, 2628 scraper
+
 Force-kill admin endpoint (PLA-1111, 2026-04-17)
   - `apps/api/src/routes/system-admin.ts` — new POST /scraper/runs/:id/force-kill
     endpoint: DB update + Redis DEL lock key + best-effort BullMQ job cleanup

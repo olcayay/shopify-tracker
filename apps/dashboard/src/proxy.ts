@@ -95,84 +95,40 @@ export async function proxy(request: NextRequest) {
   }
 
   const accessToken = request.cookies.get("access_token")?.value;
+  const refreshToken = request.cookies.get("refresh_token")?.value;
 
-  // If no access token, try to refresh
-  if (!accessToken) {
-    const refreshToken = request.cookies.get("refresh_token")?.value;
-    if (refreshToken) {
-      try {
-        const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
-
-        if (refreshRes.ok) {
-          const data = await refreshRes.json();
-          const response = NextResponse.next();
-          response.cookies.set("access_token", data.accessToken, {
-            path: "/",
-            maxAge: 900,
-            sameSite: "lax",
-          });
-          response.cookies.set("refresh_token", data.refreshToken, {
-            path: "/",
-            maxAge: 7 * 86400,
-            sameSite: "lax",
-          });
-          return response;
-        }
-      } catch {
-        // refresh failed, redirect to login
-      }
-    }
-
+  // No tokens at all → redirect to login
+  // (Client-side auth-context is the single owner of token refresh to avoid
+  //  race conditions with rotation-based refresh tokens — see PLA-1112)
+  if (!accessToken && !refreshToken) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Decode JWT payload to check expiry and role
-  try {
-    const payload = JSON.parse(atob(accessToken.split(".")[1]));
+  // If access token exists, validate expiry and role
+  if (accessToken) {
+    try {
+      const payload = JSON.parse(atob(accessToken.split(".")[1]));
 
-    // If token expired, try refresh
-    if (payload.exp * 1000 < Date.now()) {
-      const refreshToken = request.cookies.get("refresh_token")?.value;
-      if (refreshToken) {
-        try {
-          const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refreshToken }),
-          });
-
-          if (refreshRes.ok) {
-            const data = await refreshRes.json();
-            const response = NextResponse.next();
-            response.cookies.set("access_token", data.accessToken, {
-              path: "/",
-              maxAge: 900,
-              sameSite: "lax",
-            });
-            response.cookies.set("refresh_token", data.refreshToken, {
-              path: "/",
-              maxAge: 7 * 86400,
-              sameSite: "lax",
-            });
-            return response;
-          }
-        } catch {
-          // refresh failed
+      // Expired access token but refresh token exists → let client-side handle refresh
+      if (payload.exp * 1000 < Date.now()) {
+        if (!refreshToken) {
+          return NextResponse.redirect(new URL("/login", request.url));
         }
+        // Let page load — client-side auth-context will silently refresh
+        return NextResponse.next();
       }
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
 
-    // Block non-system-admin from system-admin routes
-    if (pathname.startsWith("/system-admin") && !payload.isSystemAdmin) {
-      return NextResponse.redirect(new URL("/overview", request.url));
+      // Block non-system-admin from system-admin routes
+      if (pathname.startsWith("/system-admin") && !payload.isSystemAdmin) {
+        return NextResponse.redirect(new URL("/overview", request.url));
+      }
+    } catch {
+      // Malformed token — if refresh token exists, let client-side handle it
+      if (!refreshToken) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+      return NextResponse.next();
     }
-  } catch {
-    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // Rewrite /developers/{slug} → /developer/{slug} (internal route uses singular

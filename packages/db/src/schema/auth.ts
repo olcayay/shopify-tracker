@@ -113,6 +113,13 @@ export const refreshTokens = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 255 }).notNull(),
     userAgentHash: varchar("user_agent_hash", { length: 64 }),
+    /** PLA-1112: hash of the previous token after rotation. Allows a 30-second
+     *  grace period where the old token still returns the current pair, preventing
+     *  race conditions between middleware/client/multi-tab refresh attempts. */
+    previousTokenHash: varchar("previous_token_hash", { length: 255 }),
+    /** PLA-1112: when the token was last rotated. Used with previousTokenHash
+     *  to enforce the 30-second grace window. */
+    rotatedAt: timestamp("rotated_at"),
     expiresAt: timestamp("expires_at").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

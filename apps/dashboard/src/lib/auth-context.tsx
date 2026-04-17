@@ -164,13 +164,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Counter to force proactive refresh timer to re-arm after token rotation
   const [tokenGeneration, setTokenGeneration] = useState(0);
 
+  // PLA-1112: Cross-tab coordination via BroadcastChannel.
+  // Only one tab refreshes; others receive the new tokens via broadcast.
+  const authChannelRef = useRef<BroadcastChannel | null>(null);
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel("auth");
+    authChannelRef.current = channel;
+    channel.onmessage = (event) => {
+      const { type, accessToken, refreshToken } = event.data ?? {};
+      if (type === "refreshed" && accessToken && refreshToken) {
+        setCookie("access_token", accessToken, 900);
+        setCookie("refresh_token", refreshToken, 7 * 86400);
+        setTokenGeneration((g) => g + 1);
+      } else if (type === "logout") {
+        deleteCookie("access_token");
+        deleteCookie("refresh_token");
+        setUser(null);
+        setAccount(null);
+        setImpersonation(null);
+        router.push("/login");
+      }
+    };
+    return () => { channel.close(); authChannelRef.current = null; };
+  }, [router]);
+
   // Silent token refresh using refresh_token cookie
-  // Uses a mutex to prevent concurrent refresh requests (race condition:
-  // multiple 401s trigger parallel refreshes, first rotates the token,
-  // second fails with "Invalid refresh token" → session drops)
+  // PLA-1112: single-owner refresh — only auth-context refreshes tokens.
+  // Uses a mutex to prevent concurrent refresh requests within the same tab,
+  // and BroadcastChannel to prevent races across tabs.
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
   const silentRefresh = useCallback(async (): Promise<boolean> => {
-    // If a refresh is already in flight, wait for it instead of starting another
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
 
     const doRefresh = async (): Promise<boolean> => {
@@ -182,11 +206,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
         });
-        if (!res.ok) return false;
-        const data = await res.json();
-        setCookie("access_token", data.accessToken, 900);
-        setCookie("refresh_token", data.refreshToken, 7 * 86400);
-        return true;
+        if (res.ok) {
+          const data = await res.json();
+          setCookie("access_token", data.accessToken, 900);
+          setCookie("refresh_token", data.refreshToken, 7 * 86400);
+          try { authChannelRef.current?.postMessage({ type: "refreshed", accessToken: data.accessToken, refreshToken: data.refreshToken }); } catch {}
+          return true;
+        }
+        // PLA-1112: handle 429 — wait Retry-After then retry once
+        if (res.status === 429) {
+          const retryAfter = parseInt(res.headers.get("Retry-After") || "10", 10);
+          await new Promise((r) => setTimeout(r, retryAfter * 1000));
+          const retryToken = getCookie("refresh_token");
+          if (!retryToken) return false;
+          const retry = await fetch(`${API_BASE}/api/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken: retryToken }),
+          });
+          if (retry.ok) {
+            const data = await retry.json();
+            setCookie("access_token", data.accessToken, 900);
+            setCookie("refresh_token", data.refreshToken, 7 * 86400);
+            try { authChannelRef.current?.postMessage({ type: "refreshed", accessToken: data.accessToken, refreshToken: data.refreshToken }); } catch {}
+            return true;
+          }
+        }
+        return false;
       } catch {
         return false;
       }
@@ -197,6 +243,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return refreshPromiseRef.current;
   }, []);
+
+  // Redirect to login and broadcast logout to other tabs
+  const redirectToLogin = useCallback(() => {
+    deleteCookie("access_token");
+    deleteCookie("refresh_token");
+    setUser(null);
+    setAccount(null);
+    setImpersonation(null);
+    try { authChannelRef.current?.postMessage({ type: "logout" }); } catch {}
+    const returnUrl = typeof window !== "undefined" ? window.location.pathname : "/overview";
+    router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+  }, [router]);
 
   // Proactive token refresh — refresh 2 minutes before expiry (PLA-559)
   useEffect(() => {
@@ -209,9 +267,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const delay = refreshAt - Date.now();
       if (delay <= 0) return;
       const timer = setTimeout(async () => {
+        // PLA-1112: re-read token — it may have been refreshed by another tab
+        const currentToken = getCookie("access_token");
+        if (currentToken && currentToken !== token) {
+          setTokenGeneration((g) => g + 1);
+          return;
+        }
         const ok = await silentRefresh();
         if (ok) {
-          // Bump counter to re-arm the timer for the new token
           setTokenGeneration((g) => g + 1);
         } else {
           toast.warning("Your session is about to expire. Please save your work.", {
@@ -282,16 +345,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         // Refresh failed — clear state and redirect to login (PLA-559)
         toast.error("Session expired. Redirecting to login...", { duration: 3000 });
-        setUser(null);
-        setAccount(null);
-        setImpersonation(null);
-        const returnUrl = typeof window !== "undefined" ? window.location.pathname : "/overview";
-        router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+        redirectToLogin();
       }
 
       return res;
     },
-    [silentRefresh, router]
+    [silentRefresh, router, redirectToLogin]
   );
 
   const fetchWithAuth = useCallback(
@@ -335,7 +394,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let token = getCookie("access_token");
 
     // Access token expired/missing but refresh token exists — try silent refresh
-    // This prevents session drops after deploy or 15min idle
     if (!token) {
       const refreshed = await silentRefresh();
       if (refreshed) {
@@ -349,12 +407,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setImpersonation(null);
       return;
     }
-    const fetchMe = async () => {
+    const fetchMe = async (accessToken: string) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10_000);
       try {
         return await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
           signal: controller.signal,
         });
       } finally {
@@ -365,13 +423,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       let res: Response;
       try {
-        res = await fetchMe();
+        res = await fetchMe(token);
         // Retry once on timeout/5xx — covers transient DB pool pressure (PLA-1097)
         if (res.status >= 500) {
-          res = await fetchMe();
+          res = await fetchMe(token);
         }
       } catch {
-        res = await fetchMe();
+        res = await fetchMe(token);
+      }
+
+      // PLA-1112: if /me returns 401, try silentRefresh then retry once
+      if (res.status === 401) {
+        const refreshed = await silentRefresh();
+        if (refreshed) {
+          const newToken = getCookie("access_token");
+          if (newToken) {
+            res = await fetchMe(newToken);
+          }
+        }
       }
 
       if (res.ok) {
@@ -475,6 +544,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setAccount(null);
     setImpersonation(null);
+    try { authChannelRef.current?.postMessage({ type: "logout" }); } catch {}
     router.push("/login");
     router.refresh();
   };
