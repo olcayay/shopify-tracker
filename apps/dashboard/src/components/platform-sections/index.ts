@@ -17,6 +17,8 @@ export interface PlatformSection {
   component: ComponentType<PlatformSectionProps<any>>;
   /** Optional: only render if this returns true */
   shouldRender?: (props: PlatformSectionProps<any>) => boolean;
+  /** Where to render in the details page layout. Defaults to "top". */
+  position?: "top" | "bottom";
 }
 
 // Import platform section registries

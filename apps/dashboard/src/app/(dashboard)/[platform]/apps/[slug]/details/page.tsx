@@ -45,9 +45,11 @@ export default async function DetailsPage({
 
   const hasPluginInfo = app.currentVersion || app.activeInstalls != null || app.lastUpdatedAt;
 
-  // Platform sections from registry
+  // Platform sections from registry — split by position
   const platformSections = getPlatformSections(platform as PlatformId);
   const sectionProps = { platform: platform as PlatformId, platformData: pd ?? {}, snapshot, app };
+  const topSections = platformSections.filter(s => (s.position ?? "top") === "top");
+  const bottomSections = platformSections.filter(s => s.position === "bottom");
 
   return (
     <div className="space-y-4">
@@ -105,8 +107,8 @@ export default async function DetailsPage({
         );
       })()}
 
-      {/* Platform-specific sections from registry */}
-      {platformSections
+      {/* Platform-specific sections (top) */}
+      {topSections
         .filter((section) => !section.shouldRender || section.shouldRender(sectionProps))
         .map((section) => (
           <section.component key={section.id} {...sectionProps} />
@@ -367,6 +369,13 @@ export default async function DetailsPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Platform-specific sections (bottom) */}
+      {bottomSections
+        .filter((section) => !section.shouldRender || section.shouldRender(sectionProps))
+        .map((section) => (
+          <section.component key={section.id} {...sectionProps} />
+        ))}
     </div>
   );
 }

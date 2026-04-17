@@ -105,6 +105,7 @@ export const salesforceSections: PlatformSection[] = [
   {
     id: "salesforce-badge-grid",
     component: SalesforceBadgeGrid,
+    position: "bottom",
     shouldRender: ({ platformData: pd, snapshot }) => {
       const industries: string[] = pd?.supportedIndustries || [];
       const businessNeeds: string[] = Array.isArray(pd?.businessNeeds) ? pd.businessNeeds : [];
