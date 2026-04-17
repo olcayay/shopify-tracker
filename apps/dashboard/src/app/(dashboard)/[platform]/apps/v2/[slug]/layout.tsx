@@ -118,6 +118,7 @@ export default async function V2AppDetailLayout({
             appName={app.name}
             initialStarred={app.isCompetitor}
             competitorForApps={app.competitorForApps}
+            isOwnTrackedApp={app.isTrackedByAccount}
             iconClassName="h-4 w-4"
           />
           <TrackAppButton

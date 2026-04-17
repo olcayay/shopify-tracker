@@ -1,3 +1,14 @@
+Prevent adding own tracked app as competitor (PLA-1120, 2026-04-17)
+======================================================
+Problem: API allowed inserting a row into account_competitor_apps where the
+competitor app is one of the account's own tracked apps. This creates nonsensical
+data and pollutes competitor comparisons.
+
+Fix: Added self-tracked guard to both POST competitor endpoints — queries
+accountTrackedApps before insert. Returns 400 with stable error code
+APP_ALREADY_TRACKED_AS_SELF. UI: CompetitorButton disabled on app detail pages
+when viewing own tracked app. API guard is the canonical defense; UI is UX polish.
+
 Flatten heatmap intensity to binary seen/not-seen (PLA-1117, 2026-04-17)
 ======================================================
 Problem: All heatmaps darkened cells based on per-day event count via a 3-level

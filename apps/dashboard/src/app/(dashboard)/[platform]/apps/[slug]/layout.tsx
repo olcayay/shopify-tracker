@@ -102,6 +102,7 @@ export default async function AppDetailLayout({
             appName={app.name}
             initialStarred={app.isCompetitor}
             competitorForApps={app.competitorForApps}
+            isOwnTrackedApp={app.isTrackedByAccount}
           />
           <TrackAppButton
             appSlug={app.slug}

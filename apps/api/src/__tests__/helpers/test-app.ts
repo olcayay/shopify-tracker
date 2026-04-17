@@ -37,6 +37,8 @@ function chainable(resolveValue: any = []) {
 export interface MockDbOverrides {
   /** Default result for select chains */
   selectResult?: any;
+  /** Sequential results for select chains — each call shifts the next result */
+  selectResults?: any[];
   /** Default result for insert().values().returning() chains */
   insertResult?: any;
   /** Custom handler per table (keyed by table symbol name) */
@@ -50,11 +52,20 @@ export interface MockDbOverrides {
   executeResult?: any;
 }
 
+function makeSelectFn(overrides: MockDbOverrides) {
+  if (overrides.selectResults) {
+    const queue = [...overrides.selectResults];
+    return () => chainable(queue.length > 0 ? queue.shift() : overrides.selectResult ?? []);
+  }
+  return () => chainable(overrides.selectResult ?? []);
+}
+
 export function createMockDb(overrides: MockDbOverrides = {}) {
+  const selectFn = makeSelectFn(overrides);
   const db: any = {
-    select: (...args: any[]) => chainable(overrides.selectResult ?? []),
-    selectDistinct: (...args: any[]) => chainable(overrides.selectResult ?? []),
-    selectDistinctOn: (...args: any[]) => chainable(overrides.selectResult ?? []),
+    select: (...args: any[]) => selectFn(),
+    selectDistinct: (...args: any[]) => selectFn(),
+    selectDistinctOn: (...args: any[]) => selectFn(),
     insert: (...args: any[]) => chainable(overrides.insertResult ?? []),
     update: (...args: any[]) => chainable([]),
     delete: (...args: any[]) => chainable([]),
@@ -64,10 +75,11 @@ export function createMockDb(overrides: MockDbOverrides = {}) {
     // Transaction support: the callback receives a tx object with the same
     // chainable interface, then returns whatever the callback returns.
     transaction: async (fn: (tx: any) => Promise<any>) => {
+      const txSelectFn = makeSelectFn(overrides);
       const tx: any = {
-        select: (...args: any[]) => chainable(overrides.selectResult ?? []),
-        selectDistinct: (...args: any[]) => chainable(overrides.selectResult ?? []),
-        selectDistinctOn: (...args: any[]) => chainable(overrides.selectResult ?? []),
+        select: (...args: any[]) => txSelectFn(),
+        selectDistinct: (...args: any[]) => txSelectFn(),
+        selectDistinctOn: (...args: any[]) => txSelectFn(),
         insert: (...args: any[]) => chainable(overrides.insertResult ?? []),
         update: (...args: any[]) => chainable([]),
         delete: (...args: any[]) => chainable([]),

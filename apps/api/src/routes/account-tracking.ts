@@ -1035,6 +1035,24 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
+      // Prevent adding an account's own tracked app as a competitor
+      const [selfTracked] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appId, existingApp.id)
+          )
+        )
+        .limit(1);
+      if (selfTracked) {
+        return reply.code(400).send({
+          error: "This app is already one of your tracked apps — it can't also be a competitor.",
+          code: "APP_ALREADY_TRACKED_AS_SELF",
+        });
+      }
+
       // Mark as tracked
       await db
         .update(apps)
@@ -1678,6 +1696,24 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({
           error:
             "App not found. Only existing apps can be added as competitors.",
+        });
+      }
+
+      // Prevent adding an account's own tracked app as a competitor
+      const [selfTracked2] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appId, existingApp.id)
+          )
+        )
+        .limit(1);
+      if (selfTracked2) {
+        return reply.code(400).send({
+          error: "This app is already one of your tracked apps — it can't also be a competitor.",
+          code: "APP_ALREADY_TRACKED_AS_SELF",
         });
       }
 

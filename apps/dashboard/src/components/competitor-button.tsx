@@ -15,6 +15,7 @@ export function CompetitorButton({
   initialStarred,
   trackedAppSlug,
   competitorForApps,
+  isOwnTrackedApp,
   size = "default",
   iconClassName,
 }: {
@@ -23,6 +24,7 @@ export function CompetitorButton({
   initialStarred: boolean;
   trackedAppSlug?: string;
   competitorForApps?: string[];
+  isOwnTrackedApp?: boolean;
   size?: "default" | "sm";
   iconClassName?: string;
 }) {
@@ -208,8 +210,8 @@ export function CompetitorButton({
     <>
       <button
         onClick={handleClick}
-        disabled={loading}
-        title={starred ? "Competitor — click to manage" : "Add as Competitor"}
+        disabled={loading || isOwnTrackedApp}
+        title={isOwnTrackedApp ? "Your own tracked app can't be added as a competitor" : starred ? "Competitor — click to manage" : "Add as Competitor"}
         className={`${sizeClasses} inline-flex items-center justify-center rounded-md hover:bg-accent transition-colors disabled:opacity-50`}
       >
         {loading ? (

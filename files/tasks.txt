@@ -1,3 +1,11 @@
+Prevent adding own tracked app as competitor (PLA-1120, 2026-04-17)
+  - API: both POST competitor endpoints now reject if competitor slug is already
+    tracked by the same account (400 + code: APP_ALREADY_TRACKED_AS_SELF)
+  - UI: CompetitorButton gains `isOwnTrackedApp` prop → disables button with tooltip
+  - App layouts v1/v2 pass `isOwnTrackedApp={app.isTrackedByAccount}`
+  - Test infra: `selectResults` array support in mock DB for sequential results
+  - New test: self-tracked guard returns 400 with correct error code
+
 Flatten heatmap intensity to binary seen/not-seen (PLA-1117, 2026-04-17)
   - `heatmap-utils.ts`: `intensityClass()` now returns flat `bg-primary/60` for any count>0
   - `ad-heatmap.tsx`, `change-heatmap.tsx`, `ad-history.tsx`, `featured-history.tsx`:
