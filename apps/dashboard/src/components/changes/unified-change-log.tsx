@@ -201,13 +201,22 @@ function DiffSpan({ segment }: { segment: DiffSegment }) {
 
 function ShortTextRenderer({ oldValue, newValue }: { oldValue: string | null; newValue: string | null }) {
   return (
-    <div className="text-xs">
+    <div className="space-y-1.5 text-xs">
       {oldValue && (
-        <span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 line-through px-1 py-0.5 rounded">{oldValue}</span>
+        <div className="flex items-start gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-red-700 dark:text-red-400 w-14 shrink-0 pt-0.5">Before</span>
+          <span className="flex-1 bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 line-through px-2 py-1 rounded border-l-2 border-red-500 whitespace-pre-wrap break-words">
+            {oldValue}
+          </span>
+        </div>
       )}
-      {oldValue && newValue && <span className="mx-1.5 text-muted-foreground">→</span>}
       {newValue && (
-        <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 py-0.5 rounded">{newValue}</span>
+        <div className="flex items-start gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 w-14 shrink-0 pt-0.5">After</span>
+          <span className="flex-1 bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300 px-2 py-1 rounded border-l-2 border-green-500 whitespace-pre-wrap break-words">
+            {newValue}
+          </span>
+        </div>
       )}
     </div>
   );
