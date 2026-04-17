@@ -29,8 +29,8 @@ const salesforceLimits: MetadataLimits = {
   introduction: 500,
   details: 2000,
   feature: 80,
-  seoTitle: 60,
-  seoMetaDescription: 160,
+  seoTitle: 0,
+  seoMetaDescription: 0,
 };
 
 const canvaLimits: MetadataLimits = {
@@ -156,4 +156,13 @@ export function getMetadataLimits(platform: string): MetadataLimits {
 
 export function hasSeoTitle(platform: string): boolean {
   return getMetadataLimits(platform).seoTitle > 0;
+}
+
+export function hasSeoMetaDescription(platform: string): boolean {
+  return getMetadataLimits(platform).seoMetaDescription > 0;
+}
+
+export function hasAnySeoField(platform: string): boolean {
+  const limits = getMetadataLimits(platform);
+  return limits.seoTitle > 0 || limits.seoMetaDescription > 0;
 }

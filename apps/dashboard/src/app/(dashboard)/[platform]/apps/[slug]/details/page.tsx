@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getApp } from "@/lib/api";
-import { hasSeoTitle, type PlatformId } from "@appranks/shared";
+import { hasAnySeoField, hasSeoTitle, hasSeoMetaDescription, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Clock, Code, Globe, FileCode } from "lucide-react";
@@ -344,7 +344,7 @@ export default async function DetailsPage({
         </Card>
       )}
 
-      {isAdmin && platform !== "canva" && !isWordPress && (snapshot.seoTitle || snapshot.seoMetaDescription) && (
+      {isAdmin && hasAnySeoField(platform) && (snapshot.seoTitle || snapshot.seoMetaDescription) && (
         <Card>
           <CardHeader>
             <CardTitle>Web Search Content</CardTitle>
@@ -357,7 +357,7 @@ export default async function DetailsPage({
                   <p className="text-sm">{snapshot.seoTitle}</p>
                 </div>
               )}
-              {snapshot.seoMetaDescription && (
+              {hasSeoMetaDescription(platform) && snapshot.seoMetaDescription && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Meta Description</p>
                   <p className="text-sm">{snapshot.seoMetaDescription}</p>

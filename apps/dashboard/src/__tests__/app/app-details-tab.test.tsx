@@ -200,7 +200,7 @@ describe("DetailsPage", () => {
   it("renders seoTitle on platforms that support it", async () => {
     setupDefaultMocks();
     const page = await DetailsPage({
-      params: Promise.resolve({ platform: "salesforce", slug: "my-app" }),
+      params: Promise.resolve({ platform: "wix", slug: "my-app" }),
     });
     render(page);
     expect(screen.getByText("My App - Best Email Marketing")).toBeInTheDocument();

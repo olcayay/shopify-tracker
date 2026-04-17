@@ -1,3 +1,11 @@
+Hide Web Search Content for Salesforce (PLA-1127, 2026-04-18)
+  - `metadata-limits.ts`: Salesforce seoTitle + seoMetaDescription → 0
+  - New helpers: `hasSeoMetaDescription()`, `hasAnySeoField()`
+  - Details page: replaced hardcoded `!canva && !wordpress` with `hasAnySeoField()`
+  - Compare page: Web Search Content section gated with `hasAnySeoField()`
+  - Studio, draft, research compare, changes page: all seo fields gated
+  - Test updated: details tab salesforce→wix for seoTitle rendering test
+
 Hide Shopify seoTitle from UI everywhere (PLA-1121, 2026-04-18)
   - `metadata-limits.ts`: Shopify seoTitle 60→0, new `hasSeoTitle()` helper
   - Details page: Title Tag row gated with `hasSeoTitle(platform)`

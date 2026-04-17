@@ -516,7 +516,7 @@ export function SeoSection({ apps, seoTitleMax, seoDescMax }: { apps: AppData[];
           })}
         </div>
       </div>}
-      <div>
+      {seoDescMax > 0 && <div>
         <h4 className="text-xs font-medium text-muted-foreground mb-2">Meta Description</h4>
         <div className="space-y-2">
           {apps.map((app) => {
@@ -533,7 +533,7 @@ export function SeoSection({ apps, seoTitleMax, seoDescMax }: { apps: AppData[];
             );
           })}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

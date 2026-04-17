@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { getMetadataLimits, hasSeoTitle } from "@appranks/shared";
+import { getMetadataLimits, hasSeoTitle, hasSeoMetaDescription, hasAnySeoField } from "@appranks/shared";
 import { CardSkeleton } from "@/components/skeletons";
 
 import { useCompareData } from "./use-compare-data";
@@ -347,7 +347,7 @@ export default function ComparePage() {
           <PricingComparison id="sec-pricing" sectionKey="pricingPlans" collapsed={isCollapsed("pricingPlans")} onToggle={toggleSection} apps={selectedApps} />
 
           {/* Web Search Content */}
-          {!isCanva && <VerticalListSection id="sec-seo" title="Web Search Content" sectionKey="webSearchContent" collapsed={isCollapsed("webSearchContent")} onToggle={toggleSection} apps={selectedApps} mainSlug={mainApp.slug}>
+          {hasAnySeoField(platform) && <VerticalListSection id="sec-seo" title="Web Search Content" sectionKey="webSearchContent" collapsed={isCollapsed("webSearchContent")} onToggle={toggleSection} apps={selectedApps} mainSlug={mainApp.slug}>
             {(app) => {
               const s = app.latestSnapshot;
               if (!s?.seoTitle && !s?.seoMetaDescription) return <span className="text-sm text-muted-foreground">—</span>;
@@ -362,7 +362,7 @@ export default function ComparePage() {
                       <p className="text-sm mt-0.5">{s.seoTitle}</p>
                     </div>
                   )}
-                  {s?.seoMetaDescription && (
+                  {hasSeoMetaDescription(platform) && s?.seoMetaDescription && (
                     <div>
                       <div className="flex items-center">
                         <span className="text-xs text-muted-foreground flex-1">Meta Description</span>

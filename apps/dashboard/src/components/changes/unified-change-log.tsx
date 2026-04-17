@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { formatShortDate } from "@/lib/format-utils";
 import { diffWords, diffArraySummary, type DiffSegment } from "@/lib/text-diff";
 import { diffPricingPlans, formatPlanPrice } from "@/lib/pricing-diff";
-import { getFieldLabels, hasSeoTitle } from "@appranks/shared";
+import { getFieldLabels, hasSeoTitle, hasSeoMetaDescription } from "@appranks/shared";
 import type { PricingPlan } from "@appranks/shared";
 
 const PAGE_SIZE = 20;
@@ -258,9 +258,14 @@ function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
 export function UnifiedChangeLog({ entries: rawEntries, platform, showSourceFilter = true }: Props) {
   const platformId = platform || "shopify";
   const showSeoTitle = hasSeoTitle(platformId);
+  const showSeoDesc = hasSeoMetaDescription(platformId);
   const entries = useMemo(
-    () => showSeoTitle ? rawEntries : rawEntries.filter((e) => e.field !== "seoTitle"),
-    [rawEntries, showSeoTitle]
+    () => rawEntries.filter((e) => {
+      if (e.field === "seoTitle" && !showSeoTitle) return false;
+      if (e.field === "seoMetaDescription" && !showSeoDesc) return false;
+      return true;
+    }),
+    [rawEntries, showSeoTitle, showSeoDesc]
   );
   const pathname = usePathname();
   const appLinkPrefix = pathname.includes("/v2/")

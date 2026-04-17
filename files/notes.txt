@@ -1,3 +1,12 @@
+Hide Web Search Content for Salesforce (PLA-1127, 2026-04-18)
+======================================================
+Problem: Salesforce SEO fields (seoTitle + seoMetaDescription) are unreliable.
+Same pattern as PLA-1121 but covers both fields.
+
+Fix: Set both Salesforce seo limits to 0. Added `hasSeoMetaDescription()` and
+`hasAnySeoField()` helpers. Replaced hardcoded platform checks (`!canva &&
+!wordpress`) with `hasAnySeoField()`. All seo render sites now gate on limits.
+
 Hide Shopify seoTitle from UI everywhere (PLA-1121, 2026-04-18)
 ======================================================
 Problem: Shopify's scraped seoTitle is unreliable — creates misleading compare
