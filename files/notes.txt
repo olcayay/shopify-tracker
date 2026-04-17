@@ -1,3 +1,14 @@
+Fix Salesforce discover/integrations dead links (PLA-1126, 2026-04-18)
+======================================================
+Problem: Salesforce badge grid slugified values (toLowerCase + replace spaces)
+when building /discover/ and /integrations/ links. The API uses JSONB exact-match
+(@> to_jsonb(ARRAY[value])), so slugified values like "horizontal-product" didn't
+match stored values like "Horizontal Product". Pages existed but showed 0 results.
+
+Fix: Replaced custom slugification with encodeURIComponent() on all 4 link types.
+URLs now use percent-encoding (%20 for spaces) which round-trips through
+decodeURIComponent → re-encodeURIComponent correctly.
+
 Fix Category Rankings leader logos (PLA-1123, 2026-04-18)
 ======================================================
 Bug: API returns `iconUrl` (camelCase) but component read `icon_url` (snake_case).

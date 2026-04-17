@@ -1,3 +1,11 @@
+Fix Salesforce discover/integrations dead links (PLA-1126, 2026-04-18)
+  - Routes /discover/[type]/[value] and /integrations/[name] already existed
+  - Root cause: salesforce-sections.tsx slugified values (toLowerCase + replace spaces)
+    which broke the JSONB exact-match lookup in the API
+  - Fix: replaced custom slugification with encodeURIComponent() on all 4 link types
+    (industries, businessNeeds, productsRequired, integrations)
+  - URLs now preserve original values via percent-encoding, round-tripping correctly
+
 Fix Category Rankings leader logos + Remove Last Updated card (PLA-1123/PLA-1119, 2026-04-18)
   - PLA-1123: Fixed snake_case `icon_url` → camelCase `iconUrl` in category-rankings-card.tsx
     Added typed `Leader` interface to prevent future mismatches

@@ -22,16 +22,13 @@ function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: Props) {
           <div>
             <p className="text-sm text-muted-foreground mb-2">Industries</p>
             <div className="flex flex-wrap gap-1">
-              {industries.map((ind) => {
-                const slug = ind.toLowerCase().replace(/[\s&/]+/g, "-");
-                return (
-                  <Link key={ind} href={`/${platform}/discover/industry/${slug}`}>
-                    <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
-                      {ind}
-                    </Badge>
-                  </Link>
-                );
-              })}
+              {industries.map((ind) => (
+                <Link key={ind} href={`/${platform}/discover/industry/${encodeURIComponent(ind)}`}>
+                  <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                    {ind}
+                  </Badge>
+                </Link>
+              ))}
             </div>
           </div>
         )}
@@ -39,16 +36,13 @@ function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: Props) {
           <div>
             <p className="text-sm text-muted-foreground mb-2">Business Needs</p>
             <div className="flex flex-wrap gap-1">
-              {businessNeeds.map((bn) => {
-                const slug = bn.toLowerCase().replace(/[\s&/]+/g, "-");
-                return (
-                  <Link key={bn} href={`/${platform}/discover/business-need/${slug}`}>
-                    <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
-                      {bn}
-                    </Badge>
-                  </Link>
-                );
-              })}
+              {businessNeeds.map((bn) => (
+                <Link key={bn} href={`/${platform}/discover/business-need/${encodeURIComponent(bn)}`}>
+                  <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                    {bn}
+                  </Badge>
+                </Link>
+              ))}
             </div>
           </div>
         )}
@@ -56,16 +50,13 @@ function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: Props) {
           <div>
             <p className="text-sm text-muted-foreground mb-2">Requires</p>
             <div className="flex flex-wrap gap-1">
-              {productsRequired.map((pr) => {
-                const slug = pr.toLowerCase().replace(/[\s&/]+/g, "-");
-                return (
-                  <Link key={pr} href={`/${platform}/discover/product-required/${slug}`}>
-                    <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
-                      {pr}
-                    </Badge>
-                  </Link>
-                );
-              })}
+              {productsRequired.map((pr) => (
+                <Link key={pr} href={`/${platform}/discover/product-required/${encodeURIComponent(pr)}`}>
+                  <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                    {pr}
+                  </Badge>
+                </Link>
+              ))}
             </div>
           </div>
         )}
@@ -83,16 +74,13 @@ function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: Props) {
           <div>
             <p className="text-sm text-muted-foreground mb-2">Compatible With</p>
             <div className="flex flex-wrap gap-1">
-              {integrations.map((integ) => {
-                const slug = integ.toLowerCase().replace(/[\s&/]+/g, "-");
-                return (
-                  <Link key={integ} href={`/${platform}/integrations/${slug}`}>
-                    <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
-                      {integ}
-                    </Badge>
-                  </Link>
-                );
-              })}
+              {integrations.map((integ) => (
+                <Link key={integ} href={`/${platform}/integrations/${encodeURIComponent(integ)}`}>
+                  <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                    {integ}
+                  </Badge>
+                </Link>
+              ))}
             </div>
           </div>
         )}
