@@ -1,3 +1,14 @@
+Preview close button returns to previous page (PLA-1116, 2026-04-17)
+======================================================
+Problem: Preview page close (X) button always navigated to app root, ignoring
+where the user came from. E.g. /compare → /preview → X → lands on overview
+instead of /compare.
+
+Fix: `closePreview()` now checks `document.referrer` + `window.history.length`
+to determine if the user navigated from within the app. If so, `router.back()`
+pops to the previous page. Otherwise falls back to `router.push(appRoot)` for
+direct visits, hard refreshes, or external links.
+
 Hide source filter on changes page for untracked apps (PLA-1113, 2026-04-17)
 ======================================================
 Problem: All/My App/Competitors filter on the changes page renders even when

@@ -1,3 +1,9 @@
+Preview close button returns to previous page (PLA-1116, 2026-04-17)
+  - `preview/page.tsx`: replaced hardcoded `router.push()` with `router.back()`
+    + same-origin referrer check; falls back to app root for direct visits
+  - New test file `app-preview.test.tsx`: 3 tests (in-app back, direct visit fallback,
+    cross-origin fallback)
+
 Hide source filter on changes page for untracked apps (PLA-1113, 2026-04-17)
   - `unified-change-log.tsx`: new `showSourceFilter` prop (default true)
   - `changes/page.tsx`: passes `showSourceFilter={!!app.isTrackedByAccount}`

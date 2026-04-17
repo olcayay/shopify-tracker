@@ -58,7 +58,17 @@ export default function PreviewPage() {
   }
 
   function closePreview() {
-    router.push(buildAppLink(platform, slug, "", version));
+    const cameFromWithinApp =
+      typeof window !== "undefined" &&
+      window.history.length > 1 &&
+      document.referrer &&
+      new URL(document.referrer).origin === window.location.origin;
+
+    if (cameFromWithinApp) {
+      router.back();
+    } else {
+      router.push(buildAppLink(platform, slug, "", version));
+    }
   }
 
   return (
