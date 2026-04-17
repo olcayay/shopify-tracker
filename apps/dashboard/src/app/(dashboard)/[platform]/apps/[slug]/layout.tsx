@@ -113,7 +113,7 @@ export default async function AppDetailLayout({
       </div>
 
       {snapshot && (() => {
-        const cardCount = 2 + (caps.hasReviews ? 2 : 0) + (caps.hasPricing ? 1 : 0) + (caps.hasLaunchedDate ? 1 : 0);
+        const cardCount = 1 + (caps.hasReviews ? 2 : 0) + (caps.hasPricing ? 1 : 0) + (caps.hasLaunchedDate ? 1 : 0);
         const lgCols = cardCount <= 3 ? "lg:grid-cols-3" : cardCount <= 4 ? "lg:grid-cols-4" : cardCount <= 5 ? "lg:grid-cols-5" : "lg:grid-cols-6";
         return (
         <div className={`grid grid-cols-2 sm:grid-cols-3 ${lgCols} gap-4`}>
@@ -224,16 +224,6 @@ export default async function AppDetailLayout({
               </CardContent>
             </Card>
           )}
-          <Card className="min-w-0 py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Last Updated</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className="text-sm">
-                {formatDateOnly(snapshot.scrapedAt)}
-              </span>
-            </CardContent>
-          </Card>
         </div>
         );
       })()}
