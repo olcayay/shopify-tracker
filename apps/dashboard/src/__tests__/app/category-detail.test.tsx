@@ -63,6 +63,10 @@ vi.mock("@/components/ad-heatmap", () => ({
   AdHeatmap: () => <div data-testid="ad-heatmap">Ad Heatmap</div>,
 }));
 
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock(
   "@/app/(dashboard)/[platform]/categories/[slug]/app-results",
   () => ({

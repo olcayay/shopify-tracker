@@ -30,6 +30,12 @@ vi.mock("@/lib/auth-server", () => ({
   isSystemAdminServer: () => mockIsSystemAdmin(),
 }));
 
+// Mock score-features-server
+const mockHasServerFeature = vi.fn().mockResolvedValue(true);
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: () => mockHasServerFeature(),
+}));
+
 import DetailsPage from "@/app/(dashboard)/[platform]/apps/[slug]/details/page";
 
 function buildAppData(overrides: any = {}) {
@@ -75,6 +81,7 @@ function buildAppData(overrides: any = {}) {
       integrations: ["Klaviyo", "Mailchimp"],
       seoTitle: "My App - Best Email Marketing",
       seoMetaDescription: "Boost your email campaigns",
+      scrapedAt: new Date(Date.now() - 3600_000).toISOString(),
       platformData: {},
       ...overrides.snapshot,
     },
@@ -207,6 +214,28 @@ describe("DetailsPage", () => {
       params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
     });
     expect(mockGetApp).toHaveBeenCalledWith("my-app", "shopify");
+  });
+
+  describe("DataFreshness feature flag", () => {
+    it("hides DataFreshness when scrape-timestamps flag is off", async () => {
+      mockHasServerFeature.mockResolvedValue(false);
+      setupDefaultMocks();
+      const page = await DetailsPage({
+        params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
+      });
+      render(page);
+      expect(screen.queryByText(/Data from/)).not.toBeInTheDocument();
+    });
+
+    it("shows DataFreshness when scrape-timestamps flag is on", async () => {
+      mockHasServerFeature.mockResolvedValue(true);
+      setupDefaultMocks();
+      const page = await DetailsPage({
+        params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
+      });
+      render(page);
+      expect(screen.getByText(/Data from/)).toBeInTheDocument();
+    });
   });
 
   describe("admin gating", () => {

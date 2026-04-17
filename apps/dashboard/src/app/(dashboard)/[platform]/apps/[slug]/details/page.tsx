@@ -9,6 +9,7 @@ import { formatFullDate } from "@/lib/format-utils";
 import { DataFreshness } from "@/components/data-freshness";
 import { getPlatformSections } from "@/components/platform-sections";
 import { isSystemAdminServer } from "@/lib/auth-server";
+import { hasServerFeature } from "@/lib/score-features-server";
 
 export default async function DetailsPage({
   params,
@@ -31,7 +32,10 @@ export default async function DetailsPage({
 
   const pd = snapshot.platformData as Record<string, any> | undefined;
   const isWordPress = platform === "wordpress";
-  const isAdmin = await isSystemAdminServer();
+  const [isAdmin, showDataFreshness] = await Promise.all([
+    isSystemAdminServer(),
+    hasServerFeature("scrape-timestamps"),
+  ]);
 
   const formatInstalls = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M+`;
@@ -47,7 +51,7 @@ export default async function DetailsPage({
 
   return (
     <div className="space-y-4">
-      <DataFreshness dateStr={snapshot.scrapedAt} />
+      {showDataFreshness && <DataFreshness dateStr={snapshot.scrapedAt} />}
 
       {/* Plugin Info — full-width stats grid */}
       {hasPluginInfo && (() => {

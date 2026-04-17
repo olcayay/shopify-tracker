@@ -1,3 +1,10 @@
+Gate DataFreshness behind feature flag (PLA-1114, 2026-04-17)
+  - Migration 0157: seed `scrape-timestamps` feature flag (default disabled)
+  - 5 pages gated: app overview, app details, rankings v1, rankings v2, category detail
+  - Uses existing `hasServerFeature()` — no new infrastructure
+  - Tests: 4 new flag-gating tests across details tab + both rankings pages
+  - All 4976+ tests pass
+
 Gate Support & Web Search Content to admins (PLA-1115, 2026-04-17)
   - New `apps/dashboard/src/lib/auth-server.ts` — `isSystemAdminServer()` helper
     decodes JWT from cookie server-side, cache()-wrapped for per-request O(1)

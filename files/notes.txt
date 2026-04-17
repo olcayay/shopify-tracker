@@ -1,3 +1,13 @@
+Gate DataFreshness behind feature flag (PLA-1114, 2026-04-17)
+======================================================
+Problem: "Data from X ago" freshness indicator exposes scrape cadence to all users.
+This leaks operational detail and can be alarming when timestamps turn red.
+
+Fix: New `scrape-timestamps` feature flag (migration 0157, default disabled). Gated
+`DataFreshness` rendering on 5 server-component pages using existing `hasServerFeature()`.
+System admins always see it (existing flag behavior). Per-account toggle available in
+admin panel.
+
 Gate Support & Web Search Content to admins (PLA-1115, 2026-04-17)
 ======================================================
 Problem: Support card (developer email/phone/portal) and Web Search Content card

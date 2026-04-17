@@ -20,6 +20,7 @@ import { CategoryAppResults } from "./app-results";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { shouldShowAds } from "@/lib/ads-feature-server";
+import { hasServerFeature } from "@/lib/score-features-server";
 
 export default async function CategoryDetailPage({
   params,
@@ -39,7 +40,10 @@ export default async function CategoryDetailPage({
   let categoryFetchError: "not_found" | "transient" | null = null;
 
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const showAds = await shouldShowAds(caps);
+  const [showAds, showDataFreshness] = await Promise.all([
+    shouldShowAds(caps),
+    hasServerFeature("scrape-timestamps"),
+  ]);
 
   // Tag each Phase 1 promise with a timer so slow calls are identifiable in prod logs.
   const timed = <T,>(label: string, p: Promise<T>): Promise<T> => {
@@ -228,7 +232,7 @@ export default async function CategoryDetailPage({
           {category.description && (
             <p className="text-muted-foreground mt-1">{category.description}</p>
           )}
-          <DataFreshness dateStr={history?.snapshots?.[0]?.scrapedAt} />
+          {showDataFreshness && <DataFreshness dateStr={history?.snapshots?.[0]?.scrapedAt} />}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <BookmarkCategoryButton

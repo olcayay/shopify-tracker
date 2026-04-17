@@ -5,6 +5,7 @@ import { formatCategoryTitle } from "@/lib/platform-urls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RankingChart } from "@/components/ranking-chart";
 import { DataFreshness } from "@/components/data-freshness";
+import { hasServerFeature } from "@/lib/score-features-server";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   RANKINGS_DATE_RANGE_CONFIG,
@@ -23,6 +24,8 @@ export default async function V2RankingsPage({
   const { platform, slug } = await params;
   const resolvedSearchParams = await searchParams;
   const dateRange = getDateRangeFromSearchParams(resolvedSearchParams, RANKINGS_DATE_RANGE_CONFIG);
+
+  const showDataFreshness = await hasServerFeature("scrape-timestamps");
 
   let rankings: any;
   try {
@@ -53,7 +56,7 @@ export default async function V2RankingsPage({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <DataFreshness dateStr={latestRanking?.scrapedAt} />
+        {showDataFreshness && <DataFreshness dateStr={latestRanking?.scrapedAt} />}
         <DateRangePicker config={RANKINGS_DATE_RANGE_CONFIG} />
       </div>
 

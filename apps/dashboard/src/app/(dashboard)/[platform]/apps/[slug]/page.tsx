@@ -35,9 +35,10 @@ export default async function AppOverviewPage({
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const showAds = await shouldShowAds(caps);
-  const [hasAppVisibility, hasAppPower] = await Promise.all([
+  const [hasAppVisibility, hasAppPower, showDataFreshness] = await Promise.all([
     hasServerFeature("app-visibility"),
     hasServerFeature("app-power"),
+    hasServerFeature("scrape-timestamps"),
   ]);
   const shouldShowAppScores = hasAppVisibility || hasAppPower;
 
@@ -252,7 +253,7 @@ export default async function AppOverviewPage({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="lg:col-span-2">
-        <DataFreshness dateStr={app.latestSnapshot?.scrapedAt} />
+        {showDataFreshness && <DataFreshness dateStr={app.latestSnapshot?.scrapedAt} />}
       </div>
       {/* Card 1: Review Pulse */}
       {caps.hasReviews && (

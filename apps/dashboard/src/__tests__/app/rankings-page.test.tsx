@@ -27,6 +27,11 @@ vi.mock("@/components/data-freshness", () => ({
   DataFreshness: ({ dateStr }: any) => <div data-testid="data-freshness">{dateStr || "none"}</div>,
 }));
 
+const mockHasServerFeature = vi.fn().mockResolvedValue(true);
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: () => mockHasServerFeature(),
+}));
+
 vi.mock("@/components/ui/date-range-picker", () => ({
   DateRangePicker: () => <div data-testid="rankings-date-picker" />,
 }));
@@ -90,5 +95,22 @@ describe("RankingsPage", () => {
     expect(screen.getByText("Keyword Rankings")).toBeInTheDocument();
     expect(screen.getAllByTestId("ranking-chart")).toHaveLength(2);
     expect(screen.getByText("1 sightings")).toBeInTheDocument();
+  });
+
+  it("hides DataFreshness when scrape-timestamps flag is off", async () => {
+    mockHasServerFeature.mockResolvedValue(false);
+    mockGetAppRankings.mockResolvedValue({
+      categoryRankings: [
+        { categorySlug: "tools", categoryTitle: "Tools", position: 5, scrapedAt: "2026-02-20" },
+      ],
+      keywordRankings: [],
+    });
+    await renderAsync(
+      RankingsPage({
+        params: Promise.resolve({ platform: "shopify", slug: "ranked-app" }),
+        searchParams: Promise.resolve({}),
+      })
+    );
+    expect(screen.queryByTestId("data-freshness")).not.toBeInTheDocument();
   });
 });

@@ -28,6 +28,11 @@ vi.mock("@/components/data-freshness", () => ({
   ),
 }));
 
+const mockHasServerFeature = vi.fn().mockResolvedValue(true);
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: () => mockHasServerFeature(),
+}));
+
 vi.mock("@/components/ui/date-range-picker", () => ({
   DateRangePicker: () => <div data-testid="rankings-date-picker" />,
 }));
@@ -124,5 +129,17 @@ describe("V2RankingsPage", () => {
       })
     );
     expect(mockGetAppRankings).toHaveBeenCalledWith("test-app", 90, "shopify");
+  });
+
+  it("hides DataFreshness when scrape-timestamps flag is off", async () => {
+    mockHasServerFeature.mockResolvedValue(false);
+    mockGetAppRankings.mockResolvedValue({
+      categoryRankings: [
+        { categorySlug: "tools", categoryTitle: "Tools", position: 5, scrapedAt: "2026-03-20" },
+      ],
+      keywordRankings: [],
+    });
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
+    expect(screen.queryByTestId("data-freshness")).not.toBeInTheDocument();
   });
 });
