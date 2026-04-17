@@ -98,3 +98,45 @@ describe("UnifiedChangeLog app links", () => {
     expect(link).toHaveAttribute("href", "/shopify/apps/my-app");
   });
 });
+
+describe("UnifiedChangeLog source filter visibility", () => {
+  it("shows source filter buttons by default", () => {
+    mockUsePathname.mockReturnValue("/shopify/apps/my-app/changes");
+    render(
+      <UnifiedChangeLog
+        entries={[makeEntry()]}
+        platform="shopify"
+      />
+    );
+    expect(screen.getByText("All")).toBeInTheDocument();
+    expect(screen.getByText("My App")).toBeInTheDocument();
+    expect(screen.getByText("Competitors")).toBeInTheDocument();
+  });
+
+  it("shows source filter when showSourceFilter is true", () => {
+    mockUsePathname.mockReturnValue("/shopify/apps/my-app/changes");
+    render(
+      <UnifiedChangeLog
+        entries={[makeEntry()]}
+        platform="shopify"
+        showSourceFilter={true}
+      />
+    );
+    expect(screen.getByText("All")).toBeInTheDocument();
+    expect(screen.getByText("My App")).toBeInTheDocument();
+    expect(screen.getByText("Competitors")).toBeInTheDocument();
+  });
+
+  it("hides source filter when showSourceFilter is false", () => {
+    mockUsePathname.mockReturnValue("/shopify/apps/my-app/changes");
+    render(
+      <UnifiedChangeLog
+        entries={[makeEntry()]}
+        platform="shopify"
+        showSourceFilter={false}
+      />
+    );
+    expect(screen.queryByText("My App")).not.toBeInTheDocument();
+    expect(screen.queryByText("Competitors")).not.toBeInTheDocument();
+  });
+});

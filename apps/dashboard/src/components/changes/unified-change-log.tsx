@@ -43,6 +43,7 @@ export interface ChangeEntry {
 interface Props {
   entries: ChangeEntry[];
   platform?: string;
+  showSourceFilter?: boolean;
 }
 
 function groupByPeriod(entries: ChangeEntry[]): { label: string; entries: ChangeEntry[] }[] {
@@ -254,7 +255,7 @@ function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function UnifiedChangeLog({ entries, platform }: Props) {
+export function UnifiedChangeLog({ entries, platform, showSourceFilter = true }: Props) {
   const pathname = usePathname();
   const appLinkPrefix = pathname.includes("/v2/")
     ? `/${platform || "shopify"}/apps/v2`
@@ -352,22 +353,24 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted">
-          {(["all", "self", "competitors"] as const).map((key) => (
-            <button
-              key={key}
-              onClick={() => handleSourceFilter(key)}
-              className={cn(
-                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
-                sourceFilter === key
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {key === "all" ? "All" : key === "self" ? "My App" : "Competitors"}
-            </button>
-          ))}
-        </div>
+        {showSourceFilter && (
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted">
+            {(["all", "self", "competitors"] as const).map((key) => (
+              <button
+                key={key}
+                onClick={() => handleSourceFilter(key)}
+                className={cn(
+                  "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                  sourceFilter === key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {key === "all" ? "All" : key === "self" ? "My App" : "Competitors"}
+              </button>
+            ))}
+          </div>
+        )}
 
         <select
           value={fieldFilter}

@@ -10,8 +10,9 @@ export default async function ChangesPage({
   const { platform, slug } = await params;
 
   let entries;
+  let app;
   try {
-    ({ entries } = await fetchChangeEntries(slug, platform as PlatformId));
+    ({ entries, app } = await fetchChangeEntries(slug, platform as PlatformId));
   } catch {
     return <p className="text-muted-foreground">Failed to load changes.</p>;
   }
@@ -25,7 +26,7 @@ export default async function ChangesPage({
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Change Log</h2>
-      <UnifiedChangeLog entries={entries} platform={platform} />
+      <UnifiedChangeLog entries={entries} platform={platform} showSourceFilter={!!app?.isTrackedByAccount} />
     </div>
   );
 }

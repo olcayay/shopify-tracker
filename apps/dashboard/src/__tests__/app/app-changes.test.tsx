@@ -8,8 +8,8 @@ vi.mock("@/components/changes/fetch-change-entries", () => ({
 }));
 
 vi.mock("@/components/changes/unified-change-log", () => ({
-  UnifiedChangeLog: ({ entries, platform }: { entries: any[]; platform: string }) => (
-    <div data-testid="change-log" data-platform={platform}>
+  UnifiedChangeLog: ({ entries, platform, showSourceFilter }: { entries: any[]; platform: string; showSourceFilter?: boolean }) => (
+    <div data-testid="change-log" data-platform={platform} data-show-source-filter={String(!!showSourceFilter)}>
       {entries.map((e: any, i: number) => (
         <div key={i} data-testid="change-entry">
           {e.appName}: {e.field} ({e.isSelf ? "self" : "competitor"})
@@ -72,6 +72,28 @@ describe("ChangesPage (shared implementation)", () => {
     mockFetchChangeEntries.mockRejectedValue(new Error("API error"));
     await renderAsync(ChangesPage({ params }));
     expect(screen.getByText("Failed to load changes.")).toBeInTheDocument();
+  });
+
+  it("passes showSourceFilter=true when app is tracked", async () => {
+    mockFetchChangeEntries.mockResolvedValue({
+      app: { name: "Test App", isTrackedByAccount: true },
+      entries: [
+        { appSlug: "test-app", appName: "Test App", isSelf: true, field: "name", oldValue: "Old", newValue: "New", detectedAt: "2026-03-01" },
+      ],
+    });
+    await renderAsync(ChangesPage({ params }));
+    expect(screen.getByTestId("change-log")).toHaveAttribute("data-show-source-filter", "true");
+  });
+
+  it("passes showSourceFilter=false when app is not tracked", async () => {
+    mockFetchChangeEntries.mockResolvedValue({
+      app: { name: "Test App", isTrackedByAccount: false },
+      entries: [
+        { appSlug: "test-app", appName: "Test App", isSelf: true, field: "name", oldValue: "Old", newValue: "New", detectedAt: "2026-03-01" },
+      ],
+    });
+    await renderAsync(ChangesPage({ params }));
+    expect(screen.getByTestId("change-log")).toHaveAttribute("data-show-source-filter", "false");
   });
 
   it("works with canva platform", async () => {

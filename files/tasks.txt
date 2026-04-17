@@ -1,3 +1,9 @@
+Hide source filter on changes page for untracked apps (PLA-1113, 2026-04-17)
+  - `unified-change-log.tsx`: new `showSourceFilter` prop (default true)
+  - `changes/page.tsx`: passes `showSourceFilter={!!app.isTrackedByAccount}`
+  - Covers v1, v2, and shared changes routes (all re-export same page)
+  - Tests: 5 new tests (2 page-level, 3 component-level)
+
 Gate DataFreshness behind feature flag (PLA-1114, 2026-04-17)
   - Migration 0157: seed `scrape-timestamps` feature flag (default disabled)
   - 5 pages gated: app overview, app details, rankings v1, rankings v2, category detail

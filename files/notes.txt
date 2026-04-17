@@ -1,3 +1,14 @@
+Hide source filter on changes page for untracked apps (PLA-1113, 2026-04-17)
+======================================================
+Problem: All/My App/Competitors filter on the changes page renders even when
+the viewed app is not tracked. This creates dead UI — "Competitors" shows empty,
+"All" and "My App" are identical, and "My App" mislabels an untracked app.
+
+Fix: Added `showSourceFilter` prop to `UnifiedChangeLog` (default `true` for
+backwards compatibility). `changes/page.tsx` passes `!!app.isTrackedByAccount`.
+When false, source filter is hidden; sourceFilter defaults to "all" so all
+entries still render. Field/app/view-mode controls remain visible.
+
 Gate DataFreshness behind feature flag (PLA-1114, 2026-04-17)
 ======================================================
 Problem: "Data from X ago" freshness indicator exposes scrape cadence to all users.
