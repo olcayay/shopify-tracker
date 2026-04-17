@@ -10,6 +10,7 @@ import {
 import type { FastifyInstance } from "fastify";
 
 // Mock BullMQ Queue to avoid real Redis connections in CI
+const mockGetJob = vi.fn();
 vi.mock("bullmq", () => {
   let _paused = false;
   class MockQueue {
@@ -19,8 +20,22 @@ vi.mock("bullmq", () => {
     isPaused = vi.fn().mockImplementation(() => Promise.resolve(_paused));
     pause = vi.fn().mockImplementation(() => { _paused = true; return Promise.resolve(); });
     resume = vi.fn().mockImplementation(() => { _paused = false; return Promise.resolve(); });
+    getJob = mockGetJob;
   }
   return { Queue: MockQueue };
+});
+
+// Mock ioredis to avoid real Redis connections
+const mockRedisDel = vi.fn().mockResolvedValue(1);
+vi.mock("ioredis", () => {
+  return {
+    default: class MockRedis {
+      del = mockRedisDel;
+      connect = vi.fn().mockResolvedValue(undefined);
+      quit = vi.fn().mockResolvedValue(undefined);
+      on = vi.fn();
+    },
+  };
 });
 
 describe("System admin routes", () => {
@@ -1021,6 +1036,169 @@ describe("System admin routes", () => {
       });
       expect(res.statusCode).not.toBe(401);
       expect(res.statusCode).not.toBe(403);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /api/system-admin/scraper/runs/:id/force-kill
+  // -----------------------------------------------------------------------
+
+  describe("POST /scraper/runs/:id/force-kill", () => {
+    it("returns 401 without token", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/run-001/force-kill",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-admin user", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/run-001/force-kill",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 404 when run not found", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/00000000-0000-0000-0000-000000000000/force-kill",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe("POST /scraper/runs/:id/force-kill (with run data)", () => {
+    let forceKillApp: FastifyInstance;
+
+    beforeAll(async () => {
+      const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+      forceKillApp = await buildTestApp({
+        routes: systemAdminRoutes,
+        prefix: "/api/system-admin",
+        db: {
+          selectResult: [{
+            id: "account-001",
+            name: "Test Account",
+            packageId: null,
+            isSuspended: false,
+            maxTrackedApps: 10,
+            maxTrackedKeywords: 50,
+            maxCompetitorApps: 20,
+            maxTrackedFeatures: 10,
+            maxUsers: 5,
+            maxResearchProjects: 3,
+            count: 0,
+            email: "admin@test.com",
+            role: "owner",
+            isSystemAdmin: true,
+            slug: "test-app",
+            keyword: "test",
+            platform: "shopify",
+            isActive: true,
+            isTracked: true,
+            scraperType: "app_details",
+            status: "completed",
+          }],
+          executeResult: [{
+            id: "run-001",
+            platform: "shopify",
+            scraperType: "app_details",
+            jobId: "1739",
+            queue: "scraper-jobs-background",
+          }],
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await forceKillApp.close();
+    });
+
+    it("force-kills a running run, releases lock and returns success", async () => {
+      mockRedisDel.mockResolvedValueOnce(1);
+      mockGetJob.mockResolvedValueOnce(null);
+
+      const res = await forceKillApp.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/run-001/force-kill",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.platform).toBe("shopify");
+      expect(body.scraperType).toBe("app_details");
+      expect(body.lockKey).toBe("lock:platform:shopify:app_details");
+      expect(body.lockReleased).toBe(true);
+    });
+
+    it("is idempotent — force-kill on already-failed run still deletes lock", async () => {
+      mockRedisDel.mockResolvedValueOnce(0);
+      mockGetJob.mockResolvedValueOnce(null);
+
+      const res = await forceKillApp.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/run-001/force-kill",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.lockReleased).toBe(false);
+    });
+
+    it("survives Redis DEL failure gracefully", async () => {
+      mockRedisDel.mockRejectedValueOnce(new Error("Redis connection lost"));
+      mockGetJob.mockResolvedValueOnce(null);
+
+      const res = await forceKillApp.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/run-001/force-kill",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.lockReleased).toBe(false);
+    });
+
+    it("attempts BullMQ job cleanup when jobId exists", async () => {
+      const mockMoveToFailed = vi.fn().mockResolvedValue(undefined);
+      mockRedisDel.mockResolvedValueOnce(1);
+      mockGetJob.mockResolvedValueOnce({ moveToFailed: mockMoveToFailed });
+
+      const res = await forceKillApp.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/run-001/force-kill",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.jobCancelled).toBe(true);
+      expect(mockMoveToFailed).toHaveBeenCalledWith(
+        expect.any(Error),
+        "0",
+        false,
+      );
+    });
+
+    it("survives BullMQ job cleanup failure gracefully", async () => {
+      mockRedisDel.mockResolvedValueOnce(1);
+      mockGetJob.mockRejectedValueOnce(new Error("BullMQ error"));
+
+      const res = await forceKillApp.inject({
+        method: "POST",
+        url: "/api/system-admin/scraper/runs/run-001/force-kill",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.jobCancelled).toBe(false);
     });
   });
 });

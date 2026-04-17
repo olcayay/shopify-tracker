@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, like, gte, lte } from "drizzle-orm";
 import { Queue } from "bullmq";
+import Redis from "ioredis";
 import {
   packages,
   accounts,
@@ -89,6 +90,22 @@ function getRedisConnection() {
 
 let _backgroundQueue: Queue | null = null;
 let _interactiveQueue: Queue | null = null;
+let _rawRedis: Redis | null = null;
+
+function getRawRedis(): Redis {
+  if (!_rawRedis) {
+    const conn = getRedisConnection();
+    _rawRedis = new Redis({
+      host: conn.host,
+      port: conn.port,
+      password: conn.password,
+      maxRetriesPerRequest: 1,
+      connectTimeout: 3000,
+      lazyConnect: true,
+    });
+  }
+  return _rawRedis;
+}
 
 function getBackgroundQueue(): Queue {
   if (!_backgroundQueue) {
@@ -967,6 +984,52 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: "Run not found or not running" });
     }
     return { success: true, id };
+  });
+
+  // POST /api/system-admin/scraper/runs/:id/force-kill — mark run as failed + release Redis lock + best-effort BullMQ cleanup
+  app.post<{ Params: { id: string } }>("/scraper/runs/:id/force-kill", async (request, reply) => {
+    const { id } = request.params;
+
+    const rows = await db.execute(
+      sql`UPDATE scrape_runs
+          SET status = 'failed', error = 'force-killed by admin', completed_at = NOW()
+          WHERE id = ${id}::uuid
+          RETURNING id, platform, scraper_type AS "scraperType", job_id AS "jobId", queue`
+    );
+    const run = (rows as any[])[0];
+    if (!run) {
+      return reply.code(404).send({ error: "Run not found" });
+    }
+
+    const { platform, scraperType, jobId, queue: queueName } = run;
+    const lockKey = `lock:platform:${platform}:${scraperType}`;
+    let lockReleased = false;
+
+    try {
+      const redis = getRawRedis();
+      const deleted = await redis.del(lockKey);
+      lockReleased = deleted > 0;
+    } catch {
+      // Redis DEL failure is non-fatal
+    }
+
+    let jobCancelled = false;
+    if (jobId) {
+      try {
+        const q = queueName === "scraper-jobs-interactive"
+          ? getInteractiveQueue()
+          : getBackgroundQueue();
+        const job = await q.getJob(jobId);
+        if (job) {
+          await job.moveToFailed(new Error("force-killed by admin"), "0", false);
+          jobCancelled = true;
+        }
+      } catch {
+        // BullMQ cleanup is best-effort
+      }
+    }
+
+    return { success: true, id, platform, scraperType, jobId, lockKey, lockReleased, jobCancelled };
   });
 
   // GET /api/system-admin/scraper/smoke-test — SSE endpoint that runs smoke test checks

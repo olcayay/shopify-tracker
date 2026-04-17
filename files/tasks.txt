@@ -1,3 +1,11 @@
+Force-kill admin endpoint (PLA-1111, 2026-04-17)
+  - `apps/api/src/routes/system-admin.ts` — new POST /scraper/runs/:id/force-kill
+    endpoint: DB update + Redis DEL lock key + best-effort BullMQ job cleanup
+  - Added `getRawRedis()` lazy singleton for direct Redis access (ioredis)
+  - `apps/api/src/__tests__/routes/system-admin.test.ts` — 8 new tests: auth guard
+    (401/403), 404, happy path, idempotent, Redis failure resilience, BullMQ cleanup,
+    BullMQ failure resilience
+
 Forgot-password 307 redirect fix (PLA-1093, 2026-04-15)
   - `apps/dashboard/src/proxy.ts` — PUBLIC_PATHS now includes /forgot-password,
     /reset-password, /verify-email; exported so tests can assert coverage.

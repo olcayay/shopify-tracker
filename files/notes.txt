@@ -1,3 +1,20 @@
+Force-kill admin endpoint (PLA-1111, 2026-04-17)
+=================================================
+Problem: POST /api/system-admin/scraper/runs/:id/kill only marks the DB row
+as failed — it does NOT release the Redis platform lock or cancel the BullMQ
+job. The worker's setInterval renew loop keeps extending the lock TTL
+indefinitely, blocking all future scrape jobs for that platform until the
+worker container is manually restarted.
+
+Fix: Added POST /api/system-admin/scraper/runs/:id/force-kill endpoint that:
+1. Marks DB row as failed (any current status, not just running)
+2. DELs Redis lock key lock:platform:{platform}:{scraperType}
+3. Best-effort BullMQ job.moveToFailed() cleanup
+4. Idempotent and resilient — Redis/BullMQ failures don't crash the endpoint
+
+Safe because: after DEL, the next extend() call's Lua ownership check fails
+→ returns 0 → lock stays released. No race condition.
+
 Forgot-password 307 redirect fix (PLA-1093, 2026-04-15)
 =======================================================
 Problem: On production, clicking "Forgot password?" on /login responded
