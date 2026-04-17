@@ -9,6 +9,14 @@ import type { Database } from "@appranks/db";
 import { appSnapshots, appFieldChanges } from "@appranks/db";
 import type { NormalizedCategoryApp } from "../platforms/platform-module.js";
 
+/**
+ * Fields that should never be tracked as "changes" in app_field_changes.
+ * These fluctuate naturally (e.g. with every new review) and are not
+ * meaningful app listing changes. Values are still stored in snapshots
+ * for trend analysis.
+ */
+export const IGNORED_DRIFT_FIELDS = new Set(["averageRating", "ratingCount"]);
+
 export interface UpsertSnapshotOptions {
   refresh: boolean;
   maxAgeMs: number;
@@ -81,20 +89,6 @@ export async function upsertSnapshotFromCategoryCard(
         : null;
 
     const drift: Array<{ field: string; oldValue: string | null; newValue: string | null }> = [];
-    // averageRating: Postgres stores decimal(3,2) so prev is e.g. "4.80" and
-    // String(4.8) is "4.8". Compare numerically to two decimals.
-    const prevRatingNum = latestSnap.averageRating == null ? null : Math.round(Number(latestSnap.averageRating) * 100);
-    const nextRatingNum = nextRating == null ? null : Math.round(Number(nextRating) * 100);
-    if (prevRatingNum !== nextRatingNum) {
-      drift.push({ field: "averageRating", oldValue: latestSnap.averageRating, newValue: nextRating });
-    }
-    if (nextCount !== latestSnap.ratingCount) {
-      drift.push({
-        field: "ratingCount",
-        oldValue: latestSnap.ratingCount == null ? null : String(latestSnap.ratingCount),
-        newValue: nextCount == null ? null : String(nextCount),
-      });
-    }
     // pricing: the category API occasionally omits `pricing` on a card that
     // had it before. Treat "missing in the new card" as no-op instead of
     // blowing away the stored value. Case-insensitive compare for the rest.

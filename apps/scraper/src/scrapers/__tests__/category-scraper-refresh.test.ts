@@ -127,9 +127,9 @@ describe("upsertSnapshotFromCategoryCard (PLA-1049)", () => {
       latestSnapshot: {
         id: 100,
         scrapedAt: new Date(now.getTime() - 60 * 60 * 1000), // 1h ago, fresh
-        averageRating: "4.0",
+        averageRating: "4.5",
         ratingCount: 10,
-        pricing: "Free",
+        pricing: "Paid",
         appIntroduction: "desc",
         developer: null,
       },
@@ -157,7 +157,10 @@ describe("upsertSnapshotFromCategoryCard (PLA-1049)", () => {
     expect(snapshotInserts).toHaveLength(1);
     expect(fieldChangeInserts).toHaveLength(1);
     const changedFields = (fieldChangeInserts[0] as any[]).map((c) => c.field);
-    expect(changedFields).toContain("averageRating"); // 4.0 → 4.5
+    expect(changedFields).toContain("pricing"); // "Paid" → "Free"
+    // averageRating changes are no longer tracked (PLA-1130)
+    expect(changedFields).not.toContain("averageRating");
+    expect(changedFields).not.toContain("ratingCount");
   });
 
   it("flag=true, no change, snapshot fresh: no insert (idempotent)", async () => {

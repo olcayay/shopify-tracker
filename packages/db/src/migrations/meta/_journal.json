@@ -1107,6 +1107,13 @@
       "when": 1809158400000,
       "tag": "0157_seed_scrape_timestamps_feature_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "7",
+      "when": 1809244800000,
+      "tag": "0158_purge_rating_changes",
+      "breakpoints": true
     }
   ]
 }
