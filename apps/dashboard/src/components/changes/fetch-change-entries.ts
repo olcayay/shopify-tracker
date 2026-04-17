@@ -15,35 +15,46 @@ export async function fetchChangeEntries(
     getAppChanges(slug, 50, platform).catch(() => []),
   ]);
 
-  const entries: ChangeEntry[] = selfChanges.map((c: any) => ({
-    appSlug: slug,
-    appName: app.name,
-    isSelf: true,
-    field: c.field,
-    oldValue: typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue),
-    newValue: typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue),
-    detectedAt: c.detectedAt,
-  }));
+  // Guard: if getApp returned null/undefined, return empty entries
+  if (!app) {
+    return { app: { slug, name: slug, isTrackedByAccount: false }, entries: [] };
+  }
+
+  const appName = app.name || slug;
+
+  const entries: ChangeEntry[] = (selfChanges || [])
+    .filter((c: any) => c && c.field && c.detectedAt)
+    .map((c: any) => ({
+      appSlug: slug,
+      appName,
+      isSelf: true,
+      field: c.field,
+      oldValue: typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue),
+      newValue: typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue),
+      detectedAt: c.detectedAt,
+    }));
 
   // Fetch competitor changes if tracked
   if (app.isTrackedByAccount) {
     const competitors = await getAppCompetitors(slug, platform).catch(() => []);
-    const topCompetitors = competitors.slice(0, 10);
+    const topCompetitors = (competitors || []).slice(0, 10).filter((c: any) => c && c.appSlug);
 
     if (topCompetitors.length > 0) {
       const competitorChanges = await Promise.all(
         topCompetitors.map((c: any) =>
           getAppChanges(c.appSlug, 20, platform)
             .then((changes: any[]) =>
-              changes.map((ch: any) => ({
-                appSlug: c.appSlug,
-                appName: c.appName,
-                isSelf: false,
-                field: ch.field,
-                oldValue: typeof ch.oldValue === "string" ? ch.oldValue : JSON.stringify(ch.oldValue),
-                newValue: typeof ch.newValue === "string" ? ch.newValue : JSON.stringify(ch.newValue),
-                detectedAt: ch.detectedAt,
-              }))
+              (changes || [])
+                .filter((ch: any) => ch && ch.field && ch.detectedAt)
+                .map((ch: any) => ({
+                  appSlug: c.appSlug,
+                  appName: c.appName || c.appSlug,
+                  isSelf: false,
+                  field: ch.field,
+                  oldValue: typeof ch.oldValue === "string" ? ch.oldValue : JSON.stringify(ch.oldValue),
+                  newValue: typeof ch.newValue === "string" ? ch.newValue : JSON.stringify(ch.newValue),
+                  detectedAt: ch.detectedAt,
+                }))
             )
             .catch(() => [])
         )
