@@ -267,17 +267,16 @@ describe("ActivityLog", () => {
   });
 
   describe("truncateAppName helper", () => {
-    it("returns names ≤ 20 chars unchanged", () => {
+    it("returns names ≤ 36 chars unchanged", () => {
       expect(truncateAppName("Short App")).toBe("Short App");
-      expect(truncateAppName("Exactly twenty chars")).toBe("Exactly twenty chars");
-      expect(truncateAppName("Exactly twenty chars".slice(0, 20))).toHaveLength(20);
+      expect(truncateAppName("A name that is exactly thirty six ch")).toHaveLength(36);
     });
 
-    it("truncates names > 20 chars with a single ellipsis char", () => {
+    it("truncates names > 36 chars with a single ellipsis char", () => {
       const long = "A Very Long Application Name That Goes On";
       const out = truncateAppName(long);
-      expect(out).toBe("A Very Long Applicat…");
-      expect(out.length).toBe(21); // 20 chars + ellipsis
+      expect(out).toBe("A Very Long Application Name That Go…");
+      expect(out.length).toBe(37); // 36 chars + ellipsis
       expect(out.endsWith("…")).toBe(true);
     });
 
@@ -321,8 +320,8 @@ describe("ActivityLog", () => {
       const link = await screen.findByRole("link", {
         name: /My Cool App Builder/,
       });
-      // Truncated display (20 chars + single ellipsis char)
-      expect(link.textContent).toBe("My Cool App Builder …");
+      // With APP_NAME_MAX_CHARS=36, this 24-char name fits without truncation
+      expect(link.textContent).toBe("My Cool App Builder Pro");
       // Full name preserved in title attribute
       expect(link.getAttribute("title")).toBe("My Cool App Builder Pro");
       // href still uses full slug
@@ -355,7 +354,8 @@ describe("ActivityLog", () => {
         name: /my-cool-app-builder/,
       });
       expect(link.getAttribute("title")).toBe("my-cool-app-builder-pro");
-      expect(link.textContent).toBe("my-cool-app-builder-…");
+      // With APP_NAME_MAX_CHARS=36, this 24-char slug fits without truncation
+      expect(link.textContent).toBe("my-cool-app-builder-pro");
     });
   });
 });

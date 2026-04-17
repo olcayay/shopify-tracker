@@ -126,7 +126,7 @@ function formatSlug(slug: string): string {
 }
 
 /** Truncate a name with an ellipsis when longer than `max` characters. */
-const APP_NAME_MAX_CHARS = 20;
+const APP_NAME_MAX_CHARS = 36;
 export function truncateAppName(value: string, max: number = APP_NAME_MAX_CHARS): string {
   if (!value) return value;
   return value.length > max ? value.slice(0, max) + "…" : value;
@@ -455,7 +455,7 @@ export function ActivityLog() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="text-xs text-muted-foreground max-w-[250px] block truncate">
+                            <span className="text-xs text-muted-foreground max-w-[420px] block break-words">
                               {getDetails(entry)}
                             </span>
                           </TableCell>

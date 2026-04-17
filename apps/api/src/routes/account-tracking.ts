@@ -978,7 +978,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Look up app IDs from slugs
       const [trackedAppRow] = await db
-        .select({ id: apps.id })
+        .select({ id: apps.id, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
@@ -1085,7 +1085,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug, competitorName: existingApp.name })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug, competitorName: existingApp.name, trackedAppName: trackedAppRow.name })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );
@@ -1104,7 +1104,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Look up competitor app ID from slug
       const [compAppRow] = await db
-        .select({ id: apps.id })
+        .select({ id: apps.id, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
@@ -1116,9 +1116,10 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         eq(accountCompetitorApps.accountId, accountId),
         eq(accountCompetitorApps.competitorAppId, compAppRow.id),
       ];
+      let trackedAppName: string | null = null;
       if (trackedAppSlug) {
         const [trackedAppRow] = await db
-          .select({ id: apps.id })
+          .select({ id: apps.id, name: apps.name })
           .from(apps)
           .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
           .limit(1);
@@ -1126,6 +1127,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           whereConditions.push(
             eq(accountCompetitorApps.trackedAppId, trackedAppRow.id)
           );
+          trackedAppName = trackedAppRow.name;
         }
       }
 
@@ -1140,7 +1142,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncAppTrackedFlag(db, compAppRow.id);
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug: trackedAppSlug || null })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug: trackedAppSlug || null, competitorName: compAppRow.name, trackedAppName })).catch(() => {});
       return { message: "Competitor removed" };
     }
   );
@@ -1642,7 +1644,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Look up tracked app ID from slug
       const [trackedAppRow2] = await db
-        .select({ id: apps.id })
+        .select({ id: apps.id, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
@@ -1754,7 +1756,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug, existingApp.platform, request.id);
 
       await invalidatePlatformStats(accountId, platform);
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", competitorSlug, { competitorSlug, platform, trackedAppSlug, competitorName: existingApp.name })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", competitorSlug, { competitorSlug, platform, trackedAppSlug, competitorName: existingApp.name, trackedAppName: trackedAppRow2.name })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );
@@ -1773,12 +1775,12 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Look up app IDs from slugs
       const [delTrackedAppRow] = await db
-        .select({ id: apps.id })
+        .select({ id: apps.id, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
       const [delCompAppRow] = await db
-        .select({ id: apps.id })
+        .select({ id: apps.id, name: apps.name })
         .from(apps)
         .where(and(eq(apps.slug, competitorSlug), eq(apps.platform, platform)))
         .limit(1);
@@ -1805,7 +1807,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       await syncAppTrackedFlag(db, delCompAppRow.id);
 
       await invalidatePlatformStats(accountId, platform);
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", competitorSlug, { competitorSlug, platform: getPlatformFromQuery(request.query as Record<string, unknown>), trackedAppSlug })).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", competitorSlug, { competitorSlug, platform: getPlatformFromQuery(request.query as Record<string, unknown>), trackedAppSlug, competitorName: delCompAppRow.name, trackedAppName: delTrackedAppRow.name })).catch(() => {});
       return { message: "Competitor removed" };
     }
   );
