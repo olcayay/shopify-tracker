@@ -178,8 +178,8 @@ export function AdHeatmap({
                     className={`flex-1 min-w-[14px] h-[14px] rounded-[2px] ${intensityClass(count)}`}
                     title={
                       count > 0
-                        ? `${item.name} — ${formatShortDate(dates[dateIdx])} — seen ${count} time${count !== 1 ? "s" : ""}`
-                        : `${formatShortDate(dates[dateIdx])} — no ad`
+                        ? `${item.name} — ${formatShortDate(dates[dateIdx])} — seen`
+                        : `${formatShortDate(dates[dateIdx])} — not seen`
                     }
                   />
                 ))}
@@ -202,12 +202,10 @@ export function AdHeatmap({
 
         {/* Legend */}
         <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
-          <span>Less</span>
+          <span>Not seen</span>
           <div className="w-3 h-3 rounded-[2px] bg-muted/40" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/25" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/50" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/80" />
-          <span>More</span>
+          <div className="w-3 h-3 rounded-[2px] bg-primary/60" />
+          <span>Seen</span>
         </div>
       </div>
     </div>

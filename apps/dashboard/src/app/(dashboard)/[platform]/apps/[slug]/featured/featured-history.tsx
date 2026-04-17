@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { buildExternalCategoryUrl } from "@/lib/platform-urls";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { ExternalLink } from "@/components/ui/external-link";
+import { intensityClass } from "@/lib/heatmap-utils";
 
 interface Sighting {
   surface: string;
@@ -36,12 +37,6 @@ function formatShortDate(dateStr: string): string {
   return `${d.getDate()} ${d.toLocaleString("en", { month: "short" })}`;
 }
 
-function intensityClass(count: number): string {
-  if (count === 0) return "bg-muted/40";
-  if (count === 1) return "bg-primary/25";
-  if (count === 2) return "bg-primary/50";
-  return "bg-primary/80";
-}
 
 export function FeaturedHistory({ sightings }: FeaturedHistoryProps) {
   const { platform } = useParams();
@@ -151,7 +146,7 @@ export function FeaturedHistory({ sightings }: FeaturedHistoryProps) {
                     className={`flex-1 min-w-[14px] h-[14px] rounded-[2px] ${intensityClass(count)}`}
                     title={
                       count > 0
-                        ? `${section.sectionTitle} — ${formatShortDate(dates[dateIdx])} — seen ${count} time${count !== 1 ? "s" : ""}`
+                        ? `${section.sectionTitle} — ${formatShortDate(dates[dateIdx])} — seen`
                         : `${formatShortDate(dates[dateIdx])} — not featured`
                     }
                   />
@@ -163,12 +158,10 @@ export function FeaturedHistory({ sightings }: FeaturedHistoryProps) {
 
         {/* Legend */}
         <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
-          <span>Less</span>
+          <span>Not seen</span>
           <div className="w-3 h-3 rounded-[2px] bg-muted/40" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/25" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/50" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/80" />
-          <span>More</span>
+          <div className="w-3 h-3 rounded-[2px] bg-primary/60" />
+          <span>Seen</span>
         </div>
       </div>
     </div>

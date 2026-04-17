@@ -37,8 +37,8 @@ describe("ChangeHeatmap", () => {
 
   it("renders legend", () => {
     render(<ChangeHeatmap entries={entries} />);
-    expect(screen.getByText("Less")).toBeInTheDocument();
-    expect(screen.getByText("More")).toBeInTheDocument();
+    expect(screen.getByText("No changes")).toBeInTheDocument();
+    expect(screen.getByText("Changes")).toBeInTheDocument();
   });
 
   it("renders time navigation controls", () => {

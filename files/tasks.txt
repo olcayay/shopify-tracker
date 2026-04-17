@@ -1,3 +1,12 @@
+Flatten heatmap intensity to binary seen/not-seen (PLA-1117, 2026-04-17)
+  - `heatmap-utils.ts`: `intensityClass()` now returns flat `bg-primary/60` for any count>0
+  - `ad-heatmap.tsx`, `change-heatmap.tsx`, `ad-history.tsx`, `featured-history.tsx`:
+    legends collapsed to 2-swatch "Not seen / Seen" (or "No changes / Changes")
+  - Tooltips drop count language: "seen N times" → "seen" / "not seen"
+  - `featured-history.tsx`: replaced local `intensityClass` copy with shared import
+  - Tests updated: heatmap-utils (flat assertions), ad-heatmap/change-heatmap legends,
+    v2 unified-change-log calendar view legend
+
 Preview close button returns to previous page (PLA-1116, 2026-04-17)
   - `preview/page.tsx`: replaced hardcoded `router.push()` with `router.back()`
     + same-origin referrer check; falls back to app root for direct visits

@@ -36,8 +36,5 @@ export function formatDateRangeLabel(dates: string[]): string {
 }
 
 export function intensityClass(count: number): string {
-  if (count === 0) return "bg-muted/40";
-  if (count === 1) return "bg-primary/25";
-  if (count === 2) return "bg-primary/50";
-  return "bg-primary/80";
+  return count > 0 ? "bg-primary/60" : "bg-muted/40";
 }

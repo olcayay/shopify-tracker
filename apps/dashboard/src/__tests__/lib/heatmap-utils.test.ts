@@ -63,16 +63,10 @@ describe("intensityClass", () => {
     expect(intensityClass(0)).toBe("bg-muted/40");
   });
 
-  it("returns low intensity for 1", () => {
-    expect(intensityClass(1)).toBe("bg-primary/25");
-  });
-
-  it("returns medium intensity for 2", () => {
-    expect(intensityClass(2)).toBe("bg-primary/50");
-  });
-
-  it("returns high intensity for 3+", () => {
-    expect(intensityClass(3)).toBe("bg-primary/80");
-    expect(intensityClass(10)).toBe("bg-primary/80");
+  it("returns flat primary for any count > 0", () => {
+    expect(intensityClass(1)).toBe("bg-primary/60");
+    expect(intensityClass(2)).toBe("bg-primary/60");
+    expect(intensityClass(5)).toBe("bg-primary/60");
+    expect(intensityClass(100)).toBe("bg-primary/60");
   });
 });

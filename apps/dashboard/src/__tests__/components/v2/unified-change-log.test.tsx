@@ -326,7 +326,7 @@ describe("UnifiedChangeLog", () => {
     fireEvent.click(screen.getByLabelText("Calendar view"));
     // Calendar view should show navigation and legend
     expect(screen.getByLabelText("Previous period")).toBeInTheDocument();
-    expect(screen.getByText("Less")).toBeInTheDocument();
+    expect(screen.getByText("No changes")).toBeInTheDocument();
     // List-specific elements should be hidden
     expect(screen.queryByText("Collapse All")).not.toBeInTheDocument();
   });

@@ -34,8 +34,8 @@ describe("AdHeatmap", () => {
 
   it("renders the intensity legend", () => {
     render(<AdHeatmap sightings={mockSightings} />);
-    expect(screen.getByText("Less")).toBeInTheDocument();
-    expect(screen.getByText("More")).toBeInTheDocument();
+    expect(screen.getByText("Not seen")).toBeInTheDocument();
+    expect(screen.getByText("Seen")).toBeInTheDocument();
   });
 
   it("shows tracked badge for tracked apps", () => {

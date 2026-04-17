@@ -175,12 +175,10 @@ export function ChangeHeatmap({ entries, platform }: ChangeHeatmapProps) {
 
         {/* Legend */}
         <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
-          <span>Less</span>
+          <span>No changes</span>
           <div className="w-3 h-3 rounded-[2px] bg-muted/40" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/25" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/50" />
-          <div className="w-3 h-3 rounded-[2px] bg-primary/80" />
-          <span>More</span>
+          <div className="w-3 h-3 rounded-[2px] bg-primary/60" />
+          <span>Changes</span>
         </div>
       </div>
     </div>

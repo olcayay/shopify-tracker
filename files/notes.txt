@@ -1,3 +1,16 @@
+Flatten heatmap intensity to binary seen/not-seen (PLA-1117, 2026-04-17)
+======================================================
+Problem: All heatmaps darkened cells based on per-day event count via a 3-level
+intensity ladder. This is misleading: the count reflects scrape-run frequency,
+not a real signal-strength difference. Users interpret darker = "more important"
+which is false.
+
+Fix: Flattened `intensityClass()` to binary (count>0 → `bg-primary/60`, else
+`bg-muted/40`). All heatmap components cascade from this single function.
+Legends collapsed from 4-swatch "Less → More" to 2-swatch "Not seen / Seen".
+Tooltips drop count language. `featured-history.tsx` local copy replaced with
+shared import to prevent future divergence.
+
 Preview close button returns to previous page (PLA-1116, 2026-04-17)
 ======================================================
 Problem: Preview page close (X) button always navigated to app root, ignoring
