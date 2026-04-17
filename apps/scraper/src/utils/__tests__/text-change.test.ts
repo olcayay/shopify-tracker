@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCaseOnlyDiff } from "../text-change.js";
+import { isCaseOnlyDiff, classifyNameChange } from "../text-change.js";
 
 describe("isCaseOnlyDiff", () => {
   it("returns true when strings differ only in letter case", () => {
@@ -31,5 +31,76 @@ describe("isCaseOnlyDiff", () => {
     expect(isCaseOnlyDiff("İSTANBUL", "istanbul")).toBe(false); // Turkish dotted I is a real difference under non-locale lowercase
     // But a normal brand re-case that maps under default lowercase still matches:
     expect(isCaseOnlyDiff("CANVA", "Canva")).toBe(true);
+  });
+});
+
+describe("classifyNameChange", () => {
+  it("rejects when new name equals old subtitle (cross-field contamination)", () => {
+    const result = classifyNameChange(
+      "Mobile Forms by FieldKo",
+      "Build inspection checklists in minutes",
+      { oldSubtitle: "Build inspection checklists in minutes" }
+    );
+    expect(result.accept).toBe(false);
+    expect(result.labels).toContain("title-subtitle-conflict");
+  });
+
+  it("rejects when new name equals old introduction", () => {
+    const result = classifyNameChange(
+      "Real App Title",
+      "This app helps you do things",
+      { oldIntroduction: "This app helps you do things" }
+    );
+    expect(result.accept).toBe(false);
+    expect(result.labels).toContain("title-subtitle-conflict");
+  });
+
+  it("rejects when new name equals current subtitle", () => {
+    const result = classifyNameChange(
+      "Real App Title",
+      "The best CRM tool",
+      { newSubtitle: "The best CRM tool" }
+    );
+    expect(result.accept).toBe(false);
+    expect(result.labels).toContain("title-subtitle-conflict");
+  });
+
+  it("comparison is case-insensitive", () => {
+    const result = classifyNameChange(
+      "Real App Title",
+      "BUILD CHECKLISTS FAST",
+      { oldSubtitle: "Build Checklists Fast" }
+    );
+    expect(result.accept).toBe(false);
+  });
+
+  it("soft-labels dramatic shortening (>=50%) but still accepts", () => {
+    const result = classifyNameChange(
+      "Mobile Forms, Tables & Checklists for Salesforce by FieldKo",
+      "Mobile Forms"
+    );
+    expect(result.accept).toBe(true);
+    expect(result.labels).toContain("title-subtitle-conflict");
+  });
+
+  it("does not label minor shortening (<50%)", () => {
+    const result = classifyNameChange(
+      "Mobile Forms by FieldKo",
+      "Mobile Forms by FK"
+    );
+    expect(result.accept).toBe(true);
+    expect(result.labels).toHaveLength(0);
+  });
+
+  it("accepts legitimate rebrand with similar length", () => {
+    const result = classifyNameChange("Old Brand Name Pro", "New Brand Name Plus");
+    expect(result.accept).toBe(true);
+    expect(result.labels).toHaveLength(0);
+  });
+
+  it("does not trigger shortening rule when old name is very short", () => {
+    const result = classifyNameChange("App", "AB");
+    expect(result.accept).toBe(true);
+    expect(result.labels).toHaveLength(0);
   });
 });

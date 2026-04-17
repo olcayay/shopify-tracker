@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
-import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper, platformDevelopers } from "@appranks/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges, appUpdateLabels, appUpdateLabelAssignments, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper, platformDevelopers } from "@appranks/db";
 import { urls, createLogger, clampRating, clampCount, validatePlatformData, normalizePricingModel, type PlatformId } from "@appranks/shared";
 import { AppNotFoundError } from "../utils/app-not-found-error.js";
 import type { ResolvedScraperConfig } from "../config-resolver.js";
@@ -52,7 +52,7 @@ import { runConcurrent } from "../utils/run-concurrent.js";
 import { resolveParentRunId } from "../utils/parent-run-id.js";
 import { recordItemError } from "../utils/record-item-error.js";
 import { upsertSnapshotFromCategoryCard } from "../utils/upsert-snapshot-from-card.js";
-import { isCaseOnlyDiff } from "../utils/text-change.js";
+import { isCaseOnlyDiff, classifyNameChange } from "../utils/text-change.js";
 
 /** Snapshot fields needed for change detection */
 interface PrevSnapshotData {
@@ -1297,12 +1297,12 @@ export class AppDetailsScraper {
         : parseAppPage(html, slug);
 
       // Change detection: compare against current state
-      const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+      const changes: { field: string; oldValue: string | null; newValue: string | null; _labels?: string[] }[] = [];
 
       const currentApp = preFetched
         ? (preFetched.currentApps.get(slug) ?? undefined)
         : await this.db
-            .select({ name: apps.name, currentVersion: apps.currentVersion })
+            .select({ name: apps.name, currentVersion: apps.currentVersion, appCardSubtitle: apps.appCardSubtitle })
             .from(apps)
             .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)))
             .then((rows) => rows[0]);
@@ -1315,7 +1315,29 @@ export class AppDetailsScraper {
             new: details.app_name,
           });
         } else {
-          changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
+          const nameClassification = classifyNameChange(
+            currentApp.name,
+            details.app_name,
+            {
+              oldSubtitle: (currentApp as any).appCardSubtitle ?? null,
+              oldIntroduction: details.app_introduction,
+              newSubtitle: details.app_introduction,
+            }
+          );
+          if (nameClassification.accept) {
+            changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name, _labels: nameClassification.labels });
+          } else {
+            log.warn("rejected suspicious name change (title-subtitle conflict)", {
+              slug,
+              old: currentApp.name,
+              new: details.app_name,
+              labels: nameClassification.labels,
+            });
+            // Record the change for admin visibility with labels, but prevent overwriting the real name
+            const rejectedNewName = details.app_name;
+            details.app_name = currentApp.name;
+            changes.push({ field: "name", oldValue: currentApp.name, newValue: rejectedNewName, _labels: nameClassification.labels });
+          }
         }
       }
 
@@ -1486,7 +1508,7 @@ export class AppDetailsScraper {
         });
 
         if (dedupedChanges.length > 0) {
-          await this.db.insert(appFieldChanges).values(
+          const insertedChanges = await this.db.insert(appFieldChanges).values(
             dedupedChanges.map((c) => ({
               appId,
               field: c.field,
@@ -1494,7 +1516,34 @@ export class AppDetailsScraper {
               newValue: c.newValue,
               scrapeRunId: runId!,
             }))
-          );
+          ).returning({ id: appFieldChanges.id });
+
+          // Auto-assign labels for suspicious changes (e.g. title-subtitle-conflict)
+          const labelAssignments: { changeId: number; labelName: string }[] = [];
+          for (let i = 0; i < dedupedChanges.length; i++) {
+            const labels = dedupedChanges[i]._labels;
+            if (labels && labels.length > 0 && insertedChanges[i]) {
+              for (const labelName of labels) {
+                labelAssignments.push({ changeId: insertedChanges[i].id, labelName });
+              }
+            }
+          }
+          if (labelAssignments.length > 0) {
+            // Resolve label IDs by name, then insert assignments
+            const labelNames = [...new Set(labelAssignments.map(a => a.labelName))];
+            const labelRows = await this.db
+              .select({ id: appUpdateLabels.id, name: appUpdateLabels.name })
+              .from(appUpdateLabels)
+              .where(sql`${appUpdateLabels.name} IN (${sql.join(labelNames.map(n => sql`${n}`), sql`, `)})`);
+            const labelIdByName = new Map(labelRows.map(r => [r.name, r.id]));
+            const assignmentValues = labelAssignments
+              .filter(a => labelIdByName.has(a.labelName))
+              .map(a => ({ changeId: a.changeId, labelId: labelIdByName.get(a.labelName)! }));
+            if (assignmentValues.length > 0) {
+              await this.db.insert(appUpdateLabelAssignments).values(assignmentValues).onConflictDoNothing();
+              log.info("auto-labeled suspicious changes", { slug, labels: labelNames });
+            }
+          }
           log.info("detected field changes", { slug, fields: dedupedChanges.map((c) => c.field) });
         }
       }
