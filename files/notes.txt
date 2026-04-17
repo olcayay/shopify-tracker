@@ -1,3 +1,13 @@
+Hide Shopify seoTitle from UI everywhere (PLA-1121, 2026-04-18)
+======================================================
+Problem: Shopify's scraped seoTitle is unreliable — creates misleading compare
+rows, change entries, and scorecard checks. Users don't trust it.
+
+Fix: Set `shopifyLimits.seoTitle = 0` in metadata-limits.ts. Added `hasSeoTitle()`
+helper. All UI render sites now gate on `limits.seoTitle > 0` or `hasSeoTitle()`.
+Changes page filters out seoTitle entries. Studio/draft editors skip the field.
+Scraper and DB unchanged — data still collected for admin/analytics use.
+
 Prevent adding own tracked app as competitor (PLA-1120, 2026-04-17)
 ======================================================
 Problem: API allowed inserting a row into account_competitor_apps where the

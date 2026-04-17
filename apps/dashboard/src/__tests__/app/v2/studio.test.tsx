@@ -63,7 +63,7 @@ describe("V2StudioPage", () => {
     expect(screen.getByText("Feature B")).toBeInTheDocument();
   });
 
-  it("shows SEO & Metadata card", async () => {
+  it("shows SEO & Metadata card (seoTitle hidden for shopify)", async () => {
     mockGetApp.mockResolvedValue({
       slug: "test-app",
       name: "Test App",
@@ -72,7 +72,9 @@ describe("V2StudioPage", () => {
     });
     await renderAsync(V2StudioPage({ params }));
     expect(screen.getByText("SEO & Metadata")).toBeInTheDocument();
-    expect(screen.getByText("SEO Title Here")).toBeInTheDocument();
+    // seoTitle hidden for shopify (limit=0)
+    expect(screen.queryByText("SEO Title Here")).not.toBeInTheDocument();
+    expect(screen.getByText("Meta desc")).toBeInTheDocument();
   });
 
   it("shows lock message when not tracked", async () => {

@@ -185,15 +185,25 @@ describe("DetailsPage", () => {
     expect(screen.getByText("Email")).toBeInTheDocument();
   });
 
-  it("renders SEO/web search content section", async () => {
+  it("renders SEO/web search content section (seoTitle hidden for shopify)", async () => {
     setupDefaultMocks();
     const page = await DetailsPage({
       params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
     });
     render(page);
     expect(screen.getByText("Web Search Content")).toBeInTheDocument();
-    expect(screen.getByText("My App - Best Email Marketing")).toBeInTheDocument();
+    // seoTitle hidden for shopify (limit=0), but seoMetaDescription still shown
+    expect(screen.queryByText("My App - Best Email Marketing")).not.toBeInTheDocument();
     expect(screen.getByText("Boost your email campaigns")).toBeInTheDocument();
+  });
+
+  it("renders seoTitle on platforms that support it", async () => {
+    setupDefaultMocks();
+    const page = await DetailsPage({
+      params: Promise.resolve({ platform: "salesforce", slug: "my-app" }),
+    });
+    render(page);
+    expect(screen.getByText("My App - Best Email Marketing")).toBeInTheDocument();
   });
 
   it("renders languages and integrations", async () => {

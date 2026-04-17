@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { formatShortDate } from "@/lib/format-utils";
 import { diffWords, diffArraySummary, type DiffSegment } from "@/lib/text-diff";
 import { diffPricingPlans, formatPlanPrice } from "@/lib/pricing-diff";
-import { getFieldLabels } from "@appranks/shared";
+import { getFieldLabels, hasSeoTitle } from "@appranks/shared";
 import type { PricingPlan } from "@appranks/shared";
 
 const PAGE_SIZE = 20;
@@ -255,11 +255,17 @@ function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function UnifiedChangeLog({ entries, platform, showSourceFilter = true }: Props) {
+export function UnifiedChangeLog({ entries: rawEntries, platform, showSourceFilter = true }: Props) {
+  const platformId = platform || "shopify";
+  const showSeoTitle = hasSeoTitle(platformId);
+  const entries = useMemo(
+    () => showSeoTitle ? rawEntries : rawEntries.filter((e) => e.field !== "seoTitle"),
+    [rawEntries, showSeoTitle]
+  );
   const pathname = usePathname();
   const appLinkPrefix = pathname.includes("/v2/")
-    ? `/${platform || "shopify"}/apps/v2`
-    : `/${platform || "shopify"}/apps`;
+    ? `/${platformId}/apps/v2`
+    : `/${platformId}/apps`;
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [sourceFilter, setSourceFilter] = useState<"all" | "self" | "competitors">("all");
   const [fieldFilter, setFieldFilter] = useState<string>("all");

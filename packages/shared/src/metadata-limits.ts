@@ -19,7 +19,7 @@ const shopifyLimits: MetadataLimits = {
   introduction: 100,
   details: 500,
   feature: 80,
-  seoTitle: 60,
+  seoTitle: 0,
   seoMetaDescription: 160,
 };
 
@@ -152,4 +152,8 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
 
 export function getMetadataLimits(platform: string): MetadataLimits {
   return limitsByPlatform[platform] ?? defaultLimits;
+}
+
+export function hasSeoTitle(platform: string): boolean {
+  return getMetadataLimits(platform).seoTitle > 0;
 }

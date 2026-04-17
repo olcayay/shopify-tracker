@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getApp } from "@/lib/api";
-import type { PlatformId } from "@appranks/shared";
+import { hasSeoTitle, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Clock, Code, Globe, FileCode } from "lucide-react";
@@ -351,7 +351,7 @@ export default async function DetailsPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {snapshot.seoTitle && (
+              {hasSeoTitle(platform) && snapshot.seoTitle && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Title Tag</p>
                   <p className="text-sm">{snapshot.seoTitle}</p>

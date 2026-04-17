@@ -1,3 +1,13 @@
+Hide Shopify seoTitle from UI everywhere (PLA-1121, 2026-04-18)
+  - `metadata-limits.ts`: Shopify seoTitle 60→0, new `hasSeoTitle()` helper
+  - Details page: Title Tag row gated with `hasSeoTitle(platform)`
+  - Compare page: Title Tag row gated
+  - Studio page: SEO Title field hidden
+  - Draft editor: fields with limit=0 excluded
+  - Research compare sections: Title Tag section gated on `seoTitleMax > 0`
+  - Changes page: entries with `field === "seoTitle"` filtered out for platforms with limit=0
+  - 4 tests updated: details-tab, studio, draft, listing-scorecard
+
 Prevent adding own tracked app as competitor (PLA-1120, 2026-04-17)
   - API: both POST competitor endpoints now reject if competitor slug is already
     tracked by the same account (400 + code: APP_ALREADY_TRACKED_AS_SELF)

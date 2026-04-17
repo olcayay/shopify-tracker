@@ -1,5 +1,5 @@
 import { getApp } from "@/lib/api";
-import type { PlatformId } from "@appranks/shared";
+import { hasSeoTitle, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListingScorecard } from "@/components/v2/listing-scorecard";
 import { Lock } from "lucide-react";
@@ -99,10 +99,10 @@ export default async function V2StudioPage({
             <CardTitle className="text-sm">SEO & Metadata</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div>
+            {hasSeoTitle(platform) && <div>
               <p className="text-xs text-muted-foreground">SEO Title</p>
               <p className="text-sm">{snapshot?.seoTitle || "—"}</p>
-            </div>
+            </div>}
             <div>
               <p className="text-xs text-muted-foreground">SEO Description</p>
               <p className="text-sm">{snapshot?.seoMetaDescription || "—"}</p>

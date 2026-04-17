@@ -85,20 +85,20 @@ describe("ListingScorecard", () => {
   });
 
   it("shows good status for fields at or near the character limit (PLA-767)", () => {
-    // Shopify title limit is 30 chars
+    // Shopify title limit is 30 chars, seoTitle limit is 0 (hidden)
     const snapshot = {
       name: "A".repeat(30), // exactly at limit — should be good, not warning
       appCardSubtitle: "B".repeat(60), // 60/62 — near limit, should be good
       appIntroduction: "C".repeat(92), // 92/100 — near limit, should be good
       appDetails: "D".repeat(480), // 480/500 — near limit, should be good
       features: ["F1", "F2", "F3", "F4", "F5"],
-      seoTitle: "E".repeat(58), // 58/60 — near limit, should be good
+      seoTitle: "E".repeat(58), // seoTitle hidden for shopify (limit=0)
       seoMetaDescription: "F".repeat(155), // 155/160 — near limit, should be good
     };
     render(<ListingScorecard snapshot={snapshot} platform="shopify" />);
     const good = screen.getAllByText("✓");
-    // All 7 checks should be good (Title, Subtitle, Introduction, Description, Features, SEO Title, SEO Description)
-    expect(good.length).toBe(7);
+    // 6 checks good (Title, Subtitle, Introduction, Description, Features, SEO Description — seoTitle hidden for shopify)
+    expect(good.length).toBe(6);
     // No warnings should exist
     const warnings = screen.queryAllByText("⚠");
     expect(warnings.length).toBe(0);

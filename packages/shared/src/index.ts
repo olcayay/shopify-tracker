@@ -301,7 +301,7 @@ export { checkAiRateLimit, checkMonthlyBudget, DEFAULT_AI_RATE_LIMITS } from "./
 export type { AiRateLimitConfig, RateLimitCheck } from "./ai-rate-limiter.js";
 
 // Metadata Limits
-export { getMetadataLimits } from "./metadata-limits.js";
+export { getMetadataLimits, hasSeoTitle } from "./metadata-limits.js";
 export type { MetadataLimits } from "./metadata-limits.js";
 
 // Audit Engine

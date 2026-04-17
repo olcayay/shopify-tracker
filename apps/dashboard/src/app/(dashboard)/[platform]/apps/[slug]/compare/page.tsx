@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { getMetadataLimits } from "@appranks/shared";
+import { getMetadataLimits, hasSeoTitle } from "@appranks/shared";
 import { CardSkeleton } from "@/components/skeletons";
 
 import { useCompareData } from "./use-compare-data";
@@ -353,7 +353,7 @@ export default function ComparePage() {
               if (!s?.seoTitle && !s?.seoMetaDescription) return <span className="text-sm text-muted-foreground">—</span>;
               return (
                 <div className="space-y-2">
-                  {s?.seoTitle && (
+                  {hasSeoTitle(platform) && s?.seoTitle && (
                     <div>
                       <div className="flex items-center">
                         <span className="text-xs text-muted-foreground flex-1">Title Tag</span>

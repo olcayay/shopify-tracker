@@ -105,8 +105,8 @@ export default function V2DraftEditorPage() {
           makeField("appCardSubtitle", "Subtitle", limits.subtitle),
           makeField("appIntroduction", "Introduction", limits.introduction, true),
           makeField("appDetails", "Description", limits.details, true),
-          makeField("seoTitle", "SEO Title", limits.seoTitle),
-          makeField("seoMetaDescription", "SEO Description", limits.seoMetaDescription, true),
+          ...(limits.seoTitle > 0 ? [makeField("seoTitle", "SEO Title", limits.seoTitle)] : []),
+          ...(limits.seoMetaDescription > 0 ? [makeField("seoMetaDescription", "SEO Description", limits.seoMetaDescription, true)] : []),
         ]);
         setKeywords((kwData || []).map((k: any) => k.keyword || k.name).filter(Boolean));
       } catch {

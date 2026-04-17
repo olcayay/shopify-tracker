@@ -102,7 +102,7 @@ describe("V2DraftEditorPage", () => {
     });
   });
 
-  it("shows field labels (Title, Description, etc.) after loading", async () => {
+  it("shows field labels (Title, Description, etc.) after loading — seoTitle hidden for shopify", async () => {
     mockFetchWithAuth.mockImplementation((url: string) => {
       if (url.includes("/api/apps/")) {
         return Promise.resolve({
@@ -124,7 +124,8 @@ describe("V2DraftEditorPage", () => {
       expect(screen.getByText("Title")).toBeInTheDocument();
     });
     expect(screen.getByText("Description")).toBeInTheDocument();
-    expect(screen.getByText("SEO Title")).toBeInTheDocument();
+    // SEO Title hidden for shopify (limit=0)
+    expect(screen.queryByText("SEO Title")).not.toBeInTheDocument();
   });
 
   it("shows lock message when no user", async () => {
