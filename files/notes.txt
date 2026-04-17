@@ -1,3 +1,17 @@
+Gate Support & Web Search Content to admins (PLA-1115, 2026-04-17)
+======================================================
+Problem: Support card (developer email/phone/portal) and Web Search Content card
+(SEO title/meta description) on the app details page were visible to all users.
+These are internal/operational data that shouldn't be customer-facing.
+
+Fix: Created `isSystemAdminServer()` — a server-side JWT-decoding helper that
+mirrors the client-side `useAuth().isSystemAdmin` for RSC pages. Gated both
+cards in `details/page.tsx` with `isAdmin &&` prefix. Non-admin users see a
+cleaner details page; admins see everything unchanged.
+
+New helper pattern: `lib/auth-server.ts` with `cache()` wrapping can be reused
+for any future server-component admin gating (no API call needed, just JWT decode).
+
 Auth refresh race condition fix (PLA-1112, 2026-04-17)
 ======================================================
 Problem: Both Next.js middleware (server-side) and React auth-context (client-side)

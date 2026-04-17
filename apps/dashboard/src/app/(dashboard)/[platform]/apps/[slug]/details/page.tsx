@@ -8,6 +8,7 @@ import { ExternalLink } from "@/components/ui/external-link";
 import { formatFullDate } from "@/lib/format-utils";
 import { DataFreshness } from "@/components/data-freshness";
 import { getPlatformSections } from "@/components/platform-sections";
+import { isSystemAdminServer } from "@/lib/auth-server";
 
 export default async function DetailsPage({
   params,
@@ -30,6 +31,7 @@ export default async function DetailsPage({
 
   const pd = snapshot.platformData as Record<string, any> | undefined;
   const isWordPress = platform === "wordpress";
+  const isAdmin = await isSystemAdminServer();
 
   const formatInstalls = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M+`;
@@ -251,7 +253,7 @@ export default async function DetailsPage({
         </Card>
       )}
 
-      {snapshot.support && (
+      {isAdmin && snapshot.support && (
         <Card>
           <CardHeader>
             <CardTitle>Support</CardTitle>
@@ -338,7 +340,7 @@ export default async function DetailsPage({
         </Card>
       )}
 
-      {platform !== "canva" && !isWordPress && (snapshot.seoTitle || snapshot.seoMetaDescription) && (
+      {isAdmin && platform !== "canva" && !isWordPress && (snapshot.seoTitle || snapshot.seoMetaDescription) && (
         <Card>
           <CardHeader>
             <CardTitle>Web Search Content</CardTitle>

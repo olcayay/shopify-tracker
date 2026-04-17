@@ -1,3 +1,14 @@
+Gate Support & Web Search Content to admins (PLA-1115, 2026-04-17)
+  - New `apps/dashboard/src/lib/auth-server.ts` — `isSystemAdminServer()` helper
+    decodes JWT from cookie server-side, cache()-wrapped for per-request O(1)
+  - `apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/details/page.tsx`
+    — Support card and Web Search Content card now gated behind `isAdmin`
+  - `apps/dashboard/src/__tests__/lib/auth-server.test.ts` — 5 tests (no cookie,
+    malformed JWT, admin true, admin false, claim missing)
+  - `apps/dashboard/src/__tests__/app/app-details-tab.test.tsx` — 2 new admin
+    gating tests (hidden for non-admin, shown for admin)
+  - All 2348 dashboard tests pass, 4976 total across all packages
+
 Auth refresh race condition fix (PLA-1112, 2026-04-17)
   - `apps/dashboard/src/proxy.ts` — removed ~60 lines of server-side refresh logic;
     middleware now lets pages load when refresh_token exists, client handles refresh

@@ -24,6 +24,12 @@ vi.mock("@/lib/api", () => ({
   getApp: (...args: any[]) => mockGetApp(...args),
 }));
 
+// Mock auth-server
+const mockIsSystemAdmin = vi.fn().mockResolvedValue(true);
+vi.mock("@/lib/auth-server", () => ({
+  isSystemAdminServer: () => mockIsSystemAdmin(),
+}));
+
 import DetailsPage from "@/app/(dashboard)/[platform]/apps/[slug]/details/page";
 
 function buildAppData(overrides: any = {}) {
@@ -201,5 +207,34 @@ describe("DetailsPage", () => {
       params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
     });
     expect(mockGetApp).toHaveBeenCalledWith("my-app", "shopify");
+  });
+
+  describe("admin gating", () => {
+    it("hides Support and Web Search Content for non-admin users", async () => {
+      mockIsSystemAdmin.mockResolvedValue(false);
+      setupDefaultMocks();
+      const page = await DetailsPage({
+        params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
+      });
+      render(page);
+      expect(screen.queryByText("Support")).not.toBeInTheDocument();
+      expect(screen.queryByText("Web Search Content")).not.toBeInTheDocument();
+      // Other cards should still render
+      expect(screen.getByText("App Introduction")).toBeInTheDocument();
+      expect(screen.getByText("Features")).toBeInTheDocument();
+      expect(screen.getByText("Pricing Plans")).toBeInTheDocument();
+      expect(screen.getByText("Categories & Features")).toBeInTheDocument();
+    });
+
+    it("shows Support and Web Search Content for admin users", async () => {
+      mockIsSystemAdmin.mockResolvedValue(true);
+      setupDefaultMocks();
+      const page = await DetailsPage({
+        params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
+      });
+      render(page);
+      expect(screen.getByText("Support")).toBeInTheDocument();
+      expect(screen.getByText("Web Search Content")).toBeInTheDocument();
+    });
   });
 });
