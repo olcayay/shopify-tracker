@@ -1,3 +1,14 @@
+Fix Category Rankings leader logos (PLA-1123, 2026-04-18)
+======================================================
+Bug: API returns `iconUrl` (camelCase) but component read `icon_url` (snake_case).
+Fix: One-line rename + typed Leader interface to prevent recurrence.
+
+Remove Last Updated card from app layout (PLA-1119, 2026-04-18)
+======================================================
+Problem: "Last Updated" card showed `scrapedAt` (our scrape time) mislabeled as
+when the app was last updated. Leaks scrape cadence to customers.
+Fix: Removed card, reduced cardCount by 1, remaining cards expand to fill row.
+
 Hide Web Search Content for Salesforce (PLA-1127, 2026-04-18)
 ======================================================
 Problem: Salesforce SEO fields (seoTitle + seoMetaDescription) are unreliable.

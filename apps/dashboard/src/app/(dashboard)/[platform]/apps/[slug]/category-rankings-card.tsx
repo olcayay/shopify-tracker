@@ -12,6 +12,13 @@ import {
 } from "lucide-react";
 import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
+interface Leader {
+  slug: string;
+  name: string;
+  iconUrl: string | null;
+  position: number;
+}
+
 export function CategoryRankingsCard({
   platform,
   slug,
@@ -21,7 +28,7 @@ export function CategoryRankingsCard({
   platform: string;
   slug: string;
   catChanges: { slug: string; label: string; position: number; delta: number }[];
-  categoryInfoMap: Map<string, { leaders: any[]; appCount: number | null }>;
+  categoryInfoMap: Map<string, { leaders: Leader[]; appCount: number | null }>;
 }) {
   const version = useLayoutVersion();
 
@@ -64,13 +71,13 @@ export function CategoryRankingsCard({
                     </div>
                     {leaders.length > 0 && (
                       <div className="mt-1.5 ml-1 space-y-1">
-                        {leaders.map((leader: any) => (
+                        {leaders.map((leader) => (
                           <div key={leader.slug} className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0 font-mono">
                               #{leader.position}
                             </Badge>
-                            {leader.icon_url ? (
-                              <img src={leader.icon_url} alt="" aria-hidden="true" className="h-4 w-4 rounded shrink-0" />
+                            {leader.iconUrl ? (
+                              <img src={leader.iconUrl} alt="" aria-hidden="true" className="h-4 w-4 rounded shrink-0" />
                             ) : (
                               <div className="h-4 w-4 rounded bg-muted shrink-0" />
                             )}

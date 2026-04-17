@@ -1,3 +1,10 @@
+Fix Category Rankings leader logos + Remove Last Updated card (PLA-1123/PLA-1119, 2026-04-18)
+  - PLA-1123: Fixed snake_case `icon_url` → camelCase `iconUrl` in category-rankings-card.tsx
+    Added typed `Leader` interface to prevent future mismatches
+    New test file: 3 tests (icon renders, placeholder fallback, empty state)
+  - PLA-1119: Removed "Last Updated" card from app layout header (leaks scrape cadence)
+    Adjusted cardCount from 2+caps to 1+caps, remaining cards fill row
+
 Hide Web Search Content for Salesforce (PLA-1127, 2026-04-18)
   - `metadata-limits.ts`: Salesforce seoTitle + seoMetaDescription → 0
   - New helpers: `hasSeoMetaDescription()`, `hasAnySeoField()`
