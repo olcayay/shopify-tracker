@@ -81,6 +81,7 @@ export const PLATFORMS = {
     hasPricing: false,
     hasLaunchedDate: true,
     hasFlatCategories: true,
+    allowLinkedButUnrankedCategories: true,
     maxRatingStars: 5,
     pageSize: 250,
   },

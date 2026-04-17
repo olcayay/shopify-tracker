@@ -17,7 +17,7 @@ export interface RankingTooltipRow {
   previousPosition: number | null;
 }
 
-export type TierKey = "top3" | "top10" | "top50" | "beyond" | "dropped";
+export type TierKey = "top3" | "top10" | "top50" | "beyond" | "linked" | "dropped";
 
 export interface TierGroup {
   key: TierKey;
@@ -31,12 +31,15 @@ const TIER_TITLES: Record<TierKey, string> = {
   top10: "Top 10",
   top50: "Top 50",
   beyond: "Beyond 50",
+  linked: "Linked (not ranked)",
   dropped: "Dropped / No rank",
 };
 
-/** Assign a tier by position. Null position => "dropped". */
+/** Assign a tier by position. Null position => "dropped", 0 => "linked". */
 export function tierFor(position: number | null): TierKey {
-  if (position == null || position <= 0) return "dropped";
+  if (position == null) return "dropped";
+  if (position === 0) return "linked";
+  if (position < 0) return "dropped";
   if (position <= 3) return "top3";
   if (position <= 10) return "top10";
   if (position <= 50) return "top50";
@@ -93,6 +96,7 @@ export function buildTooltipGroups(
     top10: [],
     top50: [],
     beyond: [],
+    linked: [],
     dropped: [],
   };
   for (const row of rows) {
@@ -112,6 +116,7 @@ export function buildTooltipGroups(
     { key: "top10", title: TIER_TITLES.top10, rows: buckets.top10, defaultCollapsed: false },
     { key: "top50", title: TIER_TITLES.top50, rows: buckets.top50, defaultCollapsed: false },
     { key: "beyond", title: TIER_TITLES.beyond, rows: buckets.beyond, defaultCollapsed: true },
+    { key: "linked", title: TIER_TITLES.linked, rows: buckets.linked, defaultCollapsed: true },
     { key: "dropped", title: TIER_TITLES.dropped, rows: buckets.dropped, defaultCollapsed: true },
   ];
   return groups.filter((g) => g.rows.length > 0);

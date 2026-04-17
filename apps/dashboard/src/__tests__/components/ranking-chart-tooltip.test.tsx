@@ -21,7 +21,7 @@ describe("tierFor", () => {
     expect(tierFor(51)).toBe("beyond");
     expect(tierFor(9999)).toBe("beyond");
     expect(tierFor(null)).toBe("dropped");
-    expect(tierFor(0)).toBe("dropped");
+    expect(tierFor(0)).toBe("linked");
   });
 });
 

@@ -1114,6 +1114,13 @@
       "when": 1809244800000,
       "tag": "0158_purge_rating_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 159,
+      "version": "7",
+      "when": 1809331200000,
+      "tag": "0159_purge_position_zero_non_wordpress",
+      "breakpoints": true
     }
   ]
 }

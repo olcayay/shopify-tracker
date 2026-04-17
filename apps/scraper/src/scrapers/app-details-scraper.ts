@@ -1660,8 +1660,9 @@ export class AppDetailsScraper {
           }
 
           // Link the app to this category via rankings (position 0 = linked but unranked).
-          // Skip if the category scraper already recorded a real position today.
-          if (!this.isShopify) {
+          // Only for platforms with truly unranked taxonomies (WordPress tags).
+          // Other platforms should NOT get position-0 rows — see PLA-1129.
+          if (this.platform === "wordpress") {
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
             const [existing] = await this.db
