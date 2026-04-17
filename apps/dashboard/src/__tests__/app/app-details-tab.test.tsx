@@ -19,9 +19,14 @@ vi.mock("next/navigation", () => ({
 // Mock API
 const mockGetApp = vi.fn();
 
+const mockGetCategoriesBatch = vi.fn().mockResolvedValue({});
+const mockGetAppRankings = vi.fn().mockResolvedValue({ categoryRankings: [] });
+
 vi.mock("@/lib/api", () => ({
   getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getApp: (...args: any[]) => mockGetApp(...args),
+  getCategoriesBatch: (...args: any[]) => mockGetCategoriesBatch(...args),
+  getAppRankings: (...args: any[]) => mockGetAppRankings(...args),
 }));
 
 // Mock auth-server
@@ -274,6 +279,24 @@ describe("DetailsPage", () => {
       render(page);
       expect(screen.getByText("Support")).toBeInTheDocument();
       expect(screen.getByText("Web Search Content")).toBeInTheDocument();
+    });
+  });
+
+  describe("category app count and rank", () => {
+    it("shows app count and rank badge when data is available", async () => {
+      mockGetCategoriesBatch.mockResolvedValue({
+        email: { leaders: [], appCount: 412 },
+      });
+      mockGetAppRankings.mockResolvedValue({
+        categoryRankings: [{ categorySlug: "email", position: 37 }],
+      });
+      setupDefaultMocks();
+      const page = await DetailsPage({
+        params: Promise.resolve({ platform: "shopify", slug: "my-app" }),
+      });
+      render(page);
+      expect(screen.getByText("412 apps")).toBeInTheDocument();
+      expect(screen.getByText("#37")).toBeInTheDocument();
     });
   });
 });

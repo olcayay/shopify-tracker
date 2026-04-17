@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getApp } from "@/lib/api";
+import { getApp, getCategoriesBatch, getAppRankings } from "@/lib/api";
 import { hasAnySeoField, hasSeoTitle, hasSeoMetaDescription, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,24 @@ export default async function DetailsPage({
   };
 
   const hasPluginInfo = app.currentVersion || app.activeInstalls != null || app.lastUpdatedAt;
+
+  // Fetch category counts + rankings for the Categories & Features card
+  const categorySlugs = (snapshot.categories ?? [])
+    .map((c: any) => c.url?.match(/\/categories\/([^/?]+)/)?.[1]
+      || (c.title ? c.title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") : null))
+    .filter(Boolean) as string[];
+
+  const [categoryInfo, rankings] = await Promise.all([
+    categorySlugs.length > 0
+      ? getCategoriesBatch(categorySlugs, platform as PlatformId).catch(() => ({}))
+      : Promise.resolve({} as Record<string, any>),
+    getAppRankings(slug, 1, platform as PlatformId).catch(() => ({ categoryRankings: [] })),
+  ]);
+
+  const rankByCatSlug = new Map<string, number>();
+  for (const r of (rankings as any)?.categoryRankings ?? []) {
+    if (r.categorySlug && r.position) rankByCatSlug.set(r.categorySlug, r.position);
+  }
 
   // Platform sections from registry — split by position
   const platformSections = getPlatformSections(platform as PlatformId);
@@ -301,9 +319,11 @@ export default async function DetailsPage({
             {snapshot.categories.map((cat: any, i: number) => {
               const catSlug = cat.url?.match(/\/categories\/([^/?]+)/)?.[1]
                 || (cat.title ? cat.title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") : null);
+              const appCount = catSlug ? (categoryInfo as Record<string, any>)[catSlug]?.appCount : null;
+              const position = catSlug ? rankByCatSlug.get(catSlug) : undefined;
               return (
                 <div key={i} className="mb-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {catSlug ? (
                       <Link href={`/${platform}/categories/${catSlug}`} className="font-medium text-primary hover:underline">
                         {cat.title}
@@ -315,6 +335,12 @@ export default async function DetailsPage({
                       <Badge variant="outline" className="text-xs">
                         {cat.type}
                       </Badge>
+                    )}
+                    {appCount != null && (
+                      <span className="text-xs text-muted-foreground">{appCount.toLocaleString()} apps</span>
+                    )}
+                    {position != null && (
+                      <Badge variant="secondary" className="text-xs">#{position}</Badge>
                     )}
                   </div>
                   {cat.subcategories?.map((sub: any, j: number) => (
