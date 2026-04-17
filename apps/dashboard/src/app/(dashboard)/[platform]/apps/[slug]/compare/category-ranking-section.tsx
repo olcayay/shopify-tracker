@@ -81,13 +81,13 @@ export function CategoryRankingSection({
       collapsed={collapsed}
       onToggle={onToggle}
     >
-      <div className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-sm table-fixed">
+      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+        <table className="w-max text-sm table-auto">
           <thead>
             <tr>
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_var(--border)]" />
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[180px] min-w-[180px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_var(--border)]" />
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-2 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_var(--border)]">
+                <th key={app.slug} className="py-2 px-2 pb-2 text-center w-[200px] min-w-[200px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_var(--border)]">
                   <div className="flex flex-col items-center gap-1">
                     <LinkedAppIcon app={app} />
                     <span className="text-[10px] font-medium text-muted-foreground">{appPrimaryCategory.get(app.slug) || ""}</span>

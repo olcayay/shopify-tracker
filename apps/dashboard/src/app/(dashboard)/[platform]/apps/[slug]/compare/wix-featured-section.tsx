@@ -25,7 +25,8 @@ export function WixFeaturedSection({
       collapsed={collapsed}
       onToggle={onToggle}
     >
-      <table className="w-full text-sm table-fixed">
+      <div className="overflow-x-auto overflow-y-auto max-h-[60vh]">
+      <table className="w-max text-sm table-auto">
         <thead>
           <tr className="border-b">
             <th className="text-left py-2 px-2 font-medium text-muted-foreground w-8">#</th>
@@ -70,6 +71,7 @@ export function WixFeaturedSection({
           })()}
         </tbody>
       </table>
+      </div>
     </CompareSection>
   );
 }
