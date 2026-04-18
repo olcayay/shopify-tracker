@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -51,11 +52,25 @@ export function SidebarTrackedApps({
     return () => { cancelled = true; };
   }, [fetchWithAuth, platform, isReady, trackedAppsCount]);
 
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+
+  const openPanel = useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPanelPos({ top: rect.top, left: rect.right + 8 });
+    }
+    setShowAll(true);
+  }, []);
+
   // Close panel on click outside
   useEffect(() => {
     if (!showAll) return;
     function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
         setShowAll(false);
       }
     }
@@ -102,11 +117,12 @@ export function SidebarTrackedApps({
           );
         })}
         {overflow > 0 && (
-          <div ref={panelRef} className="relative">
+          <>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setShowAll((v) => !v)}
+                  ref={triggerRef}
+                  onClick={() => showAll ? setShowAll(false) : openPanel()}
                   className="h-7 w-7 rounded-md bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground hover:bg-muted/80 transition-colors"
                 >
                   +{overflow}
@@ -114,17 +130,19 @@ export function SidebarTrackedApps({
               </TooltipTrigger>
               {!showAll && <TooltipContent side="right">Show all apps</TooltipContent>}
             </Tooltip>
-            {showAll && (
+            {showAll && panelPos && createPortal(
               <OverflowPanel
+                ref={panelRef}
                 apps={apps}
                 platform={platform}
                 currentSlug={currentSlug}
                 accentColor={accentColor}
                 onNavigate={() => { setShowAll(false); onNavigate?.(); }}
-                className="absolute left-full top-0 ml-2"
-              />
+                style={{ position: "fixed", top: panelPos.top, left: panelPos.left }}
+              />,
+              document.body
             )}
-          </div>
+          </>
         )}
       </div>
     );
@@ -162,9 +180,10 @@ export function SidebarTrackedApps({
         );
       })}
       {overflow > 0 && (
-        <div ref={panelRef} className="relative">
+        <>
           <button
-            onClick={() => setShowAll((v) => !v)}
+            ref={triggerRef}
+            onClick={() => showAll ? setShowAll(false) : openPanel()}
             className="flex items-center gap-2 mx-2 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted w-full"
           >
             <span className="h-5 w-5 rounded bg-muted/80 flex items-center justify-center text-[10px] font-medium shrink-0">
@@ -172,40 +191,44 @@ export function SidebarTrackedApps({
             </span>
             <span>{overflow} more app{overflow > 1 ? "s" : ""}</span>
           </button>
-          {showAll && (
+          {showAll && panelPos && createPortal(
             <OverflowPanel
+              ref={panelRef}
               apps={apps}
               platform={platform}
               currentSlug={currentSlug}
               accentColor={accentColor}
               onNavigate={() => { setShowAll(false); onNavigate?.(); }}
-              className="absolute left-full top-0 ml-1"
-            />
+              style={{ position: "fixed", top: panelPos.top, left: panelPos.left }}
+            />,
+            document.body
           )}
-        </div>
+        </>
       )}
     </div>
   );
 }
 
-function OverflowPanel({
-  apps,
-  platform,
-  currentSlug,
-  accentColor,
-  onNavigate,
-  className = "",
-}: {
+const OverflowPanel = forwardRef<HTMLDivElement, {
   apps: SidebarApp[];
   platform: string;
   currentSlug: string | null;
   accentColor: string | undefined;
   onNavigate?: () => void;
-  className?: string;
-}) {
+  style?: React.CSSProperties;
+}>(function OverflowPanel({
+  apps,
+  platform,
+  currentSlug,
+  accentColor,
+  onNavigate,
+  style,
+}, ref) {
   return (
     <div
-      className={`z-50 w-56 bg-popover border rounded-lg shadow-lg py-1.5 max-h-72 overflow-y-auto ${className}`}
+      ref={ref}
+      className="z-50 w-56 bg-popover border rounded-lg shadow-lg py-1.5 max-h-72 overflow-y-auto"
+      style={style}
     >
       <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground border-b mb-1">
         All tracked apps ({apps.length})
@@ -240,7 +263,7 @@ function OverflowPanel({
       })}
     </div>
   );
-}
+});
 
 function extractCurrentSlug(pathname: string, platform: string): string | null {
   const match = pathname.match(new RegExp(`^/${platform}/apps/([^/]+)`));
