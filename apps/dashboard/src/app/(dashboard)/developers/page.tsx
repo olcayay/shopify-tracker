@@ -23,6 +23,7 @@ import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
 import { DeveloperTopSection } from "@/components/developer-top-section";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
+import { toast } from "sonner";
 import type { PlatformId } from "@appranks/shared";
 
 interface TopApp {
@@ -193,7 +194,9 @@ export default function DevelopersPage() {
           const body = await competitorRes.json();
           setCompetitorDevs(body.developers ?? []);
         }
-      } catch { /* ignore */ } finally {
+      } catch (err) {
+        toast.error("Failed to load tracked/competitor developers");
+      } finally {
         setTopLoading(false);
       }
     })();

@@ -1,3 +1,27 @@
+Fix /developers tracked & competitor tables (PLA-1144, 2026-04-18)
+======================================================
+The "My Developers" and "Competitor Developers" tables on /developers failed
+to load — queries timed out due to expensive correlated subqueries against
+app_snapshots.
+
+Root cause: Both /tracked and /competitors endpoints used 3 correlated subqueries
+hitting app_snapshots per row: (1) total_apps count, (2) tracked/competitor app
+details, (3) main query join. With growing data, these exceeded query timeout.
+
+Fix: Two-phase query pattern (matching the main /api/developers endpoint):
+- Phase 1: CTE to find developer IDs via tracked/competitor apps (single LATERAL
+  snapshot join), then join developer_platform_stats MV for total_apps/platform stats
+- Phase 2: Batch-fetch app details for found developer IDs (single query with
+  sqlArray instead of per-row correlated subquery)
+
+Also fixed silent error swallowing: replaced `catch { /* ignore */ }` with
+`toast.error()` on both /developers and /[platform]/developers pages.
+
+Files changed:
+- apps/api/src/routes/developers.ts (/tracked + /competitors endpoints)
+- apps/dashboard/src/app/(dashboard)/developers/page.tsx (toast import + error)
+- apps/dashboard/src/app/(dashboard)/[platform]/developers/page.tsx (same)
+
 Fix preview page close button loop (PLA-1146, 2026-04-18)
 ======================================================
 The close button (X) on the preview page navigated back to the preview

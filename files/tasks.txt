@@ -1,3 +1,11 @@
+Fix /developers tracked & competitor tables (PLA-1144, 2026-04-18)
+  - Rewrote /tracked and /competitors endpoints with two-phase query pattern
+  - Phase 1: find developer IDs, get stats from developer_platform_stats MV
+  - Phase 2: batch-fetch app details per developer
+  - Replaced 3 correlated app_snapshots subqueries per endpoint
+  - Added toast error handling for failed API calls (both pages)
+  - 5035 tests passing
+
 Fix preview page close button loop (PLA-1146, 2026-04-18)
   - app-nav.tsx: Skip saving preview URL to localStorage
   - preview/page.tsx: Reject preview URL from saved tab in closePreview()

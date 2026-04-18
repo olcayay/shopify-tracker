@@ -320,53 +320,75 @@ export async function developerRoutes(app: FastifyInstance) {
       trackedAppsPlatformFilterSql = sql`AND ta.platform = ANY(${sqlArray(enabledPlatforms)})`;
     }
 
-    // total_apps computed on the fly: global_developers.total_apps column is
-    // never populated by any write path (PLA-1080). Count distinct apps whose
-    // latest snapshot attributes them to this developer — matches the /api/developers
-    // main-listing pattern. Result set is tiny (user's tracked-developer set),
-    // so the correlated subquery is cheap.
-    const rows: any[] = await db.execute(sql`
+    // Two-phase query (PLA-1144):
+    // Phase 1: Find developer IDs of tracked apps + stats from developer_platform_stats MV.
+    //   Uses the MV for total_apps instead of correlated subqueries against app_snapshots.
+    // Phase 2: Batch-fetch tracked app details only for the found developers.
+    const phase1Rows: any[] = await db.execute(sql`
+      WITH tracked_dev_ids AS (
+        SELECT DISTINCT pd.global_developer_id
+        FROM account_tracked_apps ata
+        JOIN apps a ON a.id = ata.app_id
+        JOIN platform_developers pd ON pd.platform = a.platform
+        JOIN LATERAL (
+          SELECT s.developer->>'name' AS dev_name
+          FROM app_snapshots s WHERE s.app_id = a.id
+          ORDER BY s.scraped_at DESC LIMIT 1
+        ) ls ON ls.dev_name = pd.name
+        WHERE ata.account_id = ${accountId} ${platformFilterSql}
+      )
       SELECT
         g.id, g.slug, g.name,
-        COUNT(DISTINCT pd.platform) AS platform_count,
-        ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
-        CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
-        (
-          SELECT COUNT(DISTINCT a2.id)
-          FROM apps a2
-          JOIN platform_developers pd2 ON pd2.platform = a2.platform AND pd2.global_developer_id = g.id
-          JOIN LATERAL (
-            SELECT s2.developer->>'name' AS dev_name
-            FROM app_snapshots s2 WHERE s2.app_id = a2.id
-            ORDER BY s2.scraped_at DESC LIMIT 1
-          ) ls2 ON ls2.dev_name = pd2.name
-        ) AS total_apps,
-        (
-          SELECT COALESCE(json_agg(json_build_object(
-            'slug', ta.slug,
-            'name', ta.name,
-            'platform', ta.platform,
-            'icon_url', ta.icon_url
-          )), '[]'::json)
-          FROM apps ta
-          JOIN account_tracked_apps ata ON ata.app_id = ta.id AND ata.account_id = ${accountId}
-          JOIN app_snapshots ts ON ts.app_id = ta.id
-            AND ts.id = (SELECT ts2.id FROM app_snapshots ts2 WHERE ts2.app_id = ta.id ORDER BY ts2.scraped_at DESC LIMIT 1)
-          JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
-            AND ta.platform = pd2.platform
-          WHERE ts.developer->>'name' = pd2.name ${trackedAppsPlatformFilterSql}
-        ) AS tracked_apps
-      FROM global_developers g
-      JOIN platform_developers pd ON pd.global_developer_id = g.id
-      JOIN apps a ON a.platform = pd.platform
-      JOIN app_snapshots s ON s.app_id = a.id
-        AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
-      JOIN account_tracked_apps ata ON ata.app_id = a.id AND ata.account_id = ${accountId}
+        COALESCE(dps.app_count, 0) AS total_apps,
+        COALESCE(dps.platform_count, 0) AS platform_count,
+        COALESCE(dps.platforms, '{}'::text[]) AS platforms,
+        CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
+      FROM tracked_dev_ids tdi
+      JOIN global_developers g ON g.id = tdi.global_developer_id
+      LEFT JOIN LATERAL (
+        SELECT
+          SUM(app_count)::int AS app_count,
+          COUNT(DISTINCT platform)::int AS platform_count,
+          ARRAY_AGG(platform ORDER BY platform) AS platforms
+        FROM developer_platform_stats
+        WHERE global_developer_id = g.id
+      ) dps ON true
       LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
-      WHERE s.developer->>'name' = pd.name ${platformFilterSql}
-      GROUP BY g.id, asd.id
       ORDER BY (asd.id IS NOT NULL) DESC, total_apps DESC, g.name ASC
     `);
+
+    // Phase 2: batch-fetch tracked apps per developer
+    const devIds = phase1Rows.map((r: any) => Number(r.id));
+    const trackedAppsMap = new Map<number, any[]>();
+    if (devIds.length > 0) {
+      const appRows: any[] = await db.execute(sql`
+        SELECT
+          pd.global_developer_id AS dev_id,
+          ta.slug, ta.name, ta.platform, ta.icon_url
+        FROM apps ta
+        JOIN account_tracked_apps ata ON ata.app_id = ta.id AND ata.account_id = ${accountId}
+        JOIN platform_developers pd ON pd.global_developer_id = ANY(${sqlArray(devIds)})
+          AND pd.platform = ta.platform
+        JOIN LATERAL (
+          SELECT s.developer->>'name' AS dev_name
+          FROM app_snapshots s WHERE s.app_id = ta.id
+          ORDER BY s.scraped_at DESC LIMIT 1
+        ) ls ON ls.dev_name = pd.name
+        ${trackedAppsPlatformFilterSql ? sql`WHERE true ${trackedAppsPlatformFilterSql}` : sql``}
+      `);
+      for (const ar of appRows) {
+        const devId = Number(ar.dev_id);
+        if (!trackedAppsMap.has(devId)) trackedAppsMap.set(devId, []);
+        trackedAppsMap.get(devId)!.push({
+          slug: ar.slug, name: ar.name, platform: ar.platform, iconUrl: ar.icon_url,
+        });
+      }
+    }
+
+    const rows = phase1Rows.map((r: any) => ({
+      ...r,
+      tracked_apps: trackedAppsMap.get(Number(r.id)) || [],
+    }));
 
     return {
       developers: rows.map((r: any) => ({
@@ -377,12 +399,7 @@ export async function developerRoutes(app: FastifyInstance) {
         platforms: r.platforms || [],
         totalApps: Number(r.total_apps || 0),
         isStarred: r.is_starred === true || r.is_starred === "true",
-        trackedApps: (r.tracked_apps || []).map((a: any) => ({
-          slug: a.slug,
-          name: a.name,
-          platform: a.platform,
-          iconUrl: a.icon_url,
-        })),
+        trackedApps: r.tracked_apps || [],
       })),
     };
   });
@@ -413,52 +430,71 @@ export async function developerRoutes(app: FastifyInstance) {
       compAppsPlatformFilterSql = sql`AND ca.platform = ${requestedPlatform}`;
     }
 
-    // total_apps computed on the fly — see PLA-1080. Same pattern as /tracked.
-    const rows: any[] = await db.execute(sql`
+    // Two-phase query (PLA-1144): same pattern as /tracked above.
+    // Phase 1: Find developer IDs + stats from MV
+    const phase1Rows: any[] = await db.execute(sql`
+      WITH comp_dev_ids AS (
+        SELECT DISTINCT pd.global_developer_id
+        FROM account_competitor_apps aca
+        JOIN apps a ON a.id = aca.competitor_app_id
+        JOIN platform_developers pd ON pd.platform = a.platform
+        JOIN LATERAL (
+          SELECT s.developer->>'name' AS dev_name
+          FROM app_snapshots s WHERE s.app_id = a.id
+          ORDER BY s.scraped_at DESC LIMIT 1
+        ) ls ON ls.dev_name = pd.name
+        WHERE aca.account_id = ${accountId} ${platformFilterSql}
+      )
       SELECT
         g.id, g.slug, g.name,
-        COUNT(DISTINCT pd.platform) AS platform_count,
-        ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
-        CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
-        (
-          SELECT COUNT(DISTINCT a2.id)
-          FROM apps a2
-          JOIN platform_developers pd2 ON pd2.platform = a2.platform AND pd2.global_developer_id = g.id
-          JOIN LATERAL (
-            SELECT s2.developer->>'name' AS dev_name
-            FROM app_snapshots s2 WHERE s2.app_id = a2.id
-            ORDER BY s2.scraped_at DESC LIMIT 1
-          ) ls2 ON ls2.dev_name = pd2.name
-        ) AS total_apps,
-        (
-          SELECT COALESCE(json_agg(json_build_object(
-            'slug', ca.slug,
-            'name', ca.name,
-            'platform', ca.platform,
-            'icon_url', ca.icon_url
-          )), '[]'::json)
-          FROM apps ca
-          JOIN account_competitor_apps aca ON aca.competitor_app_id = ca.id AND aca.account_id = ${accountId}
-          JOIN app_snapshots cs ON cs.app_id = ca.id
-            AND cs.id = (SELECT cs2.id FROM app_snapshots cs2 WHERE cs2.app_id = ca.id ORDER BY cs2.scraped_at DESC LIMIT 1)
-          JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
-            AND ca.platform = pd2.platform
-          WHERE cs.developer->>'name' = pd2.name ${compAppsPlatformFilterSql}
-        ) AS competitor_apps
-      FROM global_developers g
-      JOIN platform_developers pd ON pd.global_developer_id = g.id
-      JOIN apps a ON a.platform = pd.platform
-      JOIN app_snapshots s ON s.app_id = a.id
-        AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
-      JOIN account_competitor_apps aca ON aca.competitor_app_id = a.id AND aca.account_id = ${accountId}
+        COALESCE(dps.app_count, 0) AS total_apps,
+        COALESCE(dps.platform_count, 0) AS platform_count,
+        COALESCE(dps.platforms, '{}'::text[]) AS platforms,
+        CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
+      FROM comp_dev_ids cdi
+      JOIN global_developers g ON g.id = cdi.global_developer_id
+      LEFT JOIN LATERAL (
+        SELECT
+          SUM(app_count)::int AS app_count,
+          COUNT(DISTINCT platform)::int AS platform_count,
+          ARRAY_AGG(platform ORDER BY platform) AS platforms
+        FROM developer_platform_stats
+        WHERE global_developer_id = g.id
+      ) dps ON true
       LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
-      WHERE s.developer->>'name' = pd.name ${platformFilterSql}
-      GROUP BY g.id, asd.id
       ORDER BY (asd.id IS NOT NULL) DESC, total_apps DESC, g.name ASC
     `);
 
+    // Phase 2: batch-fetch competitor apps per developer
+    const devIds = phase1Rows.map((r: any) => Number(r.id));
+    const compAppsMap = new Map<number, any[]>();
+    if (devIds.length > 0) {
+      const appRows: any[] = await db.execute(sql`
+        SELECT
+          pd.global_developer_id AS dev_id,
+          ca.slug, ca.name, ca.platform, ca.icon_url
+        FROM apps ca
+        JOIN account_competitor_apps aca ON aca.competitor_app_id = ca.id AND aca.account_id = ${accountId}
+        JOIN platform_developers pd ON pd.global_developer_id = ANY(${sqlArray(devIds)})
+          AND pd.platform = ca.platform
+        JOIN LATERAL (
+          SELECT s.developer->>'name' AS dev_name
+          FROM app_snapshots s WHERE s.app_id = ca.id
+          ORDER BY s.scraped_at DESC LIMIT 1
+        ) ls ON ls.dev_name = pd.name
+        ${compAppsPlatformFilterSql ? sql`WHERE true ${compAppsPlatformFilterSql}` : sql``}
+      `);
+      for (const ar of appRows) {
+        const devId = Number(ar.dev_id);
+        if (!compAppsMap.has(devId)) compAppsMap.set(devId, []);
+        compAppsMap.get(devId)!.push({
+          slug: ar.slug, name: ar.name, platform: ar.platform, iconUrl: ar.icon_url,
+        });
+      }
+    }
+
     return {
-      developers: rows.map((r: any) => ({
+      developers: phase1Rows.map((r: any) => ({
         id: r.id,
         slug: r.slug,
         name: r.name,
@@ -466,12 +502,7 @@ export async function developerRoutes(app: FastifyInstance) {
         platforms: r.platforms || [],
         totalApps: Number(r.total_apps || 0),
         isStarred: r.is_starred === true || r.is_starred === "true",
-        competitorApps: (r.competitor_apps || []).map((a: any) => ({
-          slug: a.slug,
-          name: a.name,
-          platform: a.platform,
-          iconUrl: a.icon_url,
-        })),
+        competitorApps: compAppsMap.get(Number(r.id)) || [],
       })),
     };
   });

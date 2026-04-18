@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -164,7 +165,9 @@ function PlatformDevelopersContent() {
           );
           setTrackedDevs(filtered);
         }
-      } catch { /* ignore */ } finally {
+      } catch (err) {
+        toast.error("Failed to load tracked developers");
+      } finally {
         setTrackedLoading(false);
       }
     })();
@@ -175,7 +178,9 @@ function PlatformDevelopersContent() {
           const body = await competitorRes.json();
           setCompetitorDevs(body.developers ?? []);
         }
-      } catch { /* ignore */ } finally {
+      } catch (err) {
+        toast.error("Failed to load competitor developers");
+      } finally {
         setCompetitorLoading(false);
       }
     })();
