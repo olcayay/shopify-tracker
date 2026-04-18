@@ -32,16 +32,21 @@ export function SidebarTrackedApps({
   const { fetchWithAuth, account } = useAuth();
   const [apps, setApps] = useState<SidebarApp[]>([]);
 
+  // Wait until account is loaded before fetching
+  const trackedAppsCount = account?.usage?.trackedApps;
   useEffect(() => {
+    if (trackedAppsCount == null) return; // auth not ready yet
     let cancelled = false;
-    fetchWithAuth("/api/account/tracked-apps/sidebar").then(async (res) => {
-      if (!cancelled && res.ok) {
-        const all: SidebarApp[] = await res.json();
-        setApps(all.filter((a) => a.platform === platform));
-      }
-    });
+    fetchWithAuth("/api/account/tracked-apps/sidebar")
+      .then(async (res) => {
+        if (!cancelled && res.ok) {
+          const all: SidebarApp[] = await res.json();
+          setApps(all.filter((a) => a.platform === platform));
+        }
+      })
+      .catch(() => {/* network error — ignore */});
     return () => { cancelled = true; };
-  }, [fetchWithAuth, platform, account?.usage?.trackedApps]);
+  }, [fetchWithAuth, platform, trackedAppsCount]);
 
   if (apps.length === 0) return null;
 
