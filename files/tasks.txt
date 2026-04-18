@@ -1,3 +1,7 @@
+Change default sort on /developers to app count desc (PLA-1145, 2026-04-18)
+  - Default sort: "name" asc → "apps" desc (starred first already handled by API)
+  - Platform-specific page already had correct defaults
+
 Fix /developers tracked & competitor tables (PLA-1144, 2026-04-18)
   - Rewrote /tracked and /competitors endpoints with two-phase query pattern
   - Phase 1: find developer IDs, get stats from developer_platform_stats MV

@@ -149,8 +149,8 @@ export default function DevelopersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState("name");
-  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [sort, setSort] = useState("apps");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>([]);
   const { viewMode, changeViewMode } = useViewMode("developers-view-mode", () => setPage(1));
   const limit = viewMode === "grouped" ? 200 : 25;
@@ -231,7 +231,9 @@ export default function DevelopersPage() {
       } else {
         cmp = a.name.localeCompare(b.name);
       }
-      return order === "desc" ? -cmp : cmp;
+      const result = order === "desc" ? -cmp : cmp;
+      // Tiebreaker: sort by name ascending for stable ordering
+      return result !== 0 ? result : a.name.localeCompare(b.name);
     });
   }
 

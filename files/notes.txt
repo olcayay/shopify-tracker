@@ -1,3 +1,12 @@
+Change default sort on /developers to app count desc (PLA-1145, 2026-04-18)
+======================================================
+Changed default sort on cross-platform /developers page from name ascending
+to app count descending. Starred developers already sort to top via API
+ORDER BY clause. Platform-specific /[platform]/developers already had this default.
+
+Files changed:
+- apps/dashboard/src/app/(dashboard)/developers/page.tsx (2 lines)
+
 Fix /developers tracked & competitor tables (PLA-1144, 2026-04-18)
 ======================================================
 The "My Developers" and "Competitor Developers" tables on /developers failed
