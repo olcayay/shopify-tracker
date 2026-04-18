@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   extractWordGroups,
   filterKeywordsByWord,
+  filterKeywordsByWords,
   STOP_WORDS,
   MIN_WORD_FREQUENCY,
 } from "@/lib/keyword-word-groups";
@@ -107,6 +108,65 @@ describe("filterKeywordsByWord", () => {
     expect(result).toHaveLength(2);
     expect(result[0]).toHaveProperty("keywordId", 1);
     expect(result[1]).toHaveProperty("keywordId", 2);
+  });
+});
+
+describe("filterKeywordsByWords (multi-select)", () => {
+  const keywords = [
+    { keyword: "ai chatbot" },
+    { keyword: "chatbot" },
+    { keyword: "smart chatbot" },
+    { keyword: "ai helpdesk" },
+    { keyword: "email marketing" },
+  ];
+
+  it("returns all keywords when words set is empty", () => {
+    const result = filterKeywordsByWords(keywords, new Set());
+    expect(result).toHaveLength(5);
+  });
+
+  it("filters by single word (same as filterKeywordsByWord)", () => {
+    const result = filterKeywordsByWords(keywords, new Set(["chatbot"]));
+    expect(result).toHaveLength(3);
+  });
+
+  it("filters by multiple words with OR logic", () => {
+    const result = filterKeywordsByWords(keywords, new Set(["chatbot", "helpdesk"]));
+    expect(result).toHaveLength(4);
+    expect(result.map((k) => k.keyword)).toEqual([
+      "ai chatbot",
+      "chatbot",
+      "smart chatbot",
+      "ai helpdesk",
+    ]);
+  });
+
+  it("is case insensitive", () => {
+    const result = filterKeywordsByWords(keywords, new Set(["AI", "MARKETING"]));
+    expect(result).toHaveLength(3);
+  });
+
+  it("uses whole-word matching", () => {
+    const kws = [{ keyword: "email marketing" }, { keyword: "ai assistant" }];
+    const result = filterKeywordsByWords(kws, new Set(["ai"]));
+    expect(result).toHaveLength(1);
+    expect(result[0].keyword).toBe("ai assistant");
+  });
+
+  it("returns empty array when no keywords match any word", () => {
+    const result = filterKeywordsByWords(keywords, new Set(["nonexistent"]));
+    expect(result).toEqual([]);
+  });
+
+  it("preserves extra properties on keyword objects", () => {
+    const kws = [
+      { keyword: "ai chatbot", keywordId: 1, slug: "ai-chatbot" },
+      { keyword: "email marketing", keywordId: 2, slug: "email-marketing" },
+    ];
+    const result = filterKeywordsByWords(kws, new Set(["ai"]));
+    expect(result).toHaveLength(1);
+    expect(result[0]).toHaveProperty("keywordId", 1);
+    expect(result[0]).toHaveProperty("slug", "ai-chatbot");
   });
 });
 

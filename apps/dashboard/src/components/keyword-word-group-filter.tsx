@@ -5,14 +5,16 @@ import type { WordGroup } from "@/lib/keyword-word-groups";
 
 interface KeywordWordGroupFilterProps {
   wordGroups: WordGroup[];
-  activeWord: string | null;
-  onSelect: (word: string | null) => void;
+  activeWords: Set<string>;
+  onToggle: (word: string) => void;
+  onClear: () => void;
 }
 
 export function KeywordWordGroupFilter({
   wordGroups,
-  activeWord,
-  onSelect,
+  activeWords,
+  onToggle,
+  onClear,
 }: KeywordWordGroupFilterProps) {
   if (wordGroups.length === 0) return null;
 
@@ -20,11 +22,11 @@ export function KeywordWordGroupFilter({
     <div className="flex items-center gap-1.5 flex-wrap">
       <span className="text-xs text-muted-foreground mr-1">Common words:</span>
       {wordGroups.map((group) => {
-        const isActive = activeWord === group.word;
+        const isActive = activeWords.has(group.word);
         return (
           <button
             key={group.word}
-            onClick={() => onSelect(isActive ? null : group.word)}
+            onClick={() => onToggle(group.word)}
             className={cn(
               "rounded-md px-2 py-0.5 text-xs font-medium transition-colors border",
               isActive
@@ -44,9 +46,9 @@ export function KeywordWordGroupFilter({
           </button>
         );
       })}
-      {activeWord && (
+      {activeWords.size > 0 && (
         <button
-          onClick={() => onSelect(null)}
+          onClick={onClear}
           className="text-xs text-muted-foreground hover:text-foreground ml-1"
         >
           Clear

@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { isPlatformId, PLATFORMS } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
 import type { KeywordOpportunityMetrics } from "@appranks/shared";
-import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
+import { extractWordGroups, filterKeywordsByWords } from "@/lib/keyword-word-groups";
 import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import type { SimpleApp } from "./keywords-section-types";
 import { getDetailValue } from "./keywords-section-types";
@@ -30,7 +30,7 @@ export function useKeywordsSection(appSlug: string) {
   } | null>(null);
   const [tags, setTags] = useState<any[]>([]);
   const [activeTagFilter, setActiveTagFilter] = useState<Set<string>>(new Set());
-  const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
+  const [activeWordFilters, setActiveWordFilters] = useState<Set<string>>(new Set());
   const [pendingKeywordIds, setPendingKeywordIds] = useState<Set<number>>(new Set());
   const [resolvedKeywordIds, setResolvedKeywordIds] = useState<Set<number>>(new Set());
   const [opportunityData, setOpportunityData] = useState<Record<string, KeywordOpportunityMetrics>>({});
@@ -98,11 +98,9 @@ export function useKeywordsSection(appSlug: string) {
         kw.tags?.some((t: any) => activeTagFilter.has(t.id))
       );
     }
-    if (activeWordFilter) {
-      result = filterKeywordsByWord(result, activeWordFilter);
-    }
+    result = filterKeywordsByWords(result, activeWordFilters);
     return result;
-  }, [keywords, activeTagFilter, activeWordFilter]);
+  }, [keywords, activeTagFilter, activeWordFilters]);
 
   // Sorted keywords by selected app ranking, alphabetically, or by score
   const sortedKeywords = useMemo(() => {
@@ -142,12 +140,15 @@ export function useKeywordsSection(appSlug: string) {
     });
   }, [filteredKeywords, sortBySlug, sortDirection, opportunityData]);
 
-  // Clear word filter if the active word no longer exists in word groups
+  // Clear word filters if active words no longer exist in word groups
   useEffect(() => {
-    if (activeWordFilter && !wordGroups.some((g) => g.word === activeWordFilter)) {
-      setActiveWordFilter(null);
+    if (activeWordFilters.size === 0) return;
+    const validWords = new Set(wordGroups.map((g) => g.word));
+    const cleaned = new Set([...activeWordFilters].filter((w) => validWords.has(w)));
+    if (cleaned.size !== activeWordFilters.size) {
+      setActiveWordFilters(cleaned);
     }
-  }, [wordGroups, activeWordFilter]);
+  }, [wordGroups, activeWordFilters]);
 
   // Load main app + competitors on mount
   useEffect(() => {
@@ -574,8 +575,8 @@ export function useKeywordsSection(appSlug: string) {
     updateTag,
 
     // Word filter
-    activeWordFilter,
-    setActiveWordFilter,
+    activeWordFilters,
+    setActiveWordFilters,
 
     // App selector
     mainApp,

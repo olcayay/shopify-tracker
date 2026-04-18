@@ -41,7 +41,7 @@ import { KeywordTagBadge } from "@/components/keyword-tag-badge";
 import { KeywordTagManager } from "@/components/keyword-tag-manager";
 import { KeywordTagFilter } from "@/components/keyword-tag-filter";
 import { KeywordWordGroupFilter } from "@/components/keyword-word-group-filter";
-import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
+import { extractWordGroups, filterKeywordsByWords } from "@/lib/keyword-word-groups";
 
 type SortKey = "keyword" | "totalResults" | "tracked" | "competitor" | "ads" | "lastUpdated";
 type SortDir = "asc" | "desc";
@@ -56,7 +56,7 @@ export default function KeywordsPage() {
   const [activeTagFilter, setActiveTagFilter] = useState<Set<string>>(
     new Set()
   );
-  const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
+  const [activeWordFilters, setActiveWordFilters] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("keyword");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -90,9 +90,7 @@ export default function KeywordsPage() {
           kw.tags?.some((t: any) => activeTagFilter.has(t.id))
         );
 
-    if (activeWordFilter) {
-      result = filterKeywordsByWord(result, activeWordFilter);
-    }
+    result = filterKeywordsByWords(result, activeWordFilters);
 
     result = [...result].sort((a, b) => {
       let cmp = 0;
@@ -120,7 +118,7 @@ export default function KeywordsPage() {
     });
 
     return result;
-  }, [keywords, activeTagFilter, activeWordFilter, sortKey, sortDir]);
+  }, [keywords, activeTagFilter, activeWordFilters, sortKey, sortDir]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -440,8 +438,16 @@ export default function KeywordsPage() {
       {wordGroups.length > 0 && (
         <KeywordWordGroupFilter
           wordGroups={wordGroups}
-          activeWord={activeWordFilter}
-          onSelect={setActiveWordFilter}
+          activeWords={activeWordFilters}
+          onToggle={(word) =>
+            setActiveWordFilters((prev) => {
+              const next = new Set(prev);
+              if (next.has(word)) next.delete(word);
+              else next.add(word);
+              return next;
+            })
+          }
+          onClear={() => setActiveWordFilters(new Set())}
         />
       )}
 

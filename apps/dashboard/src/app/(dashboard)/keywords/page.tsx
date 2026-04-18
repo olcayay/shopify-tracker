@@ -24,7 +24,7 @@ import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PlatformId } from "@appranks/shared";
 import { KeywordWordGroupFilter } from "@/components/keyword-word-group-filter";
-import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
+import { extractWordGroups, filterKeywordsByWords } from "@/lib/keyword-word-groups";
 
 interface TrackedApp {
   iconUrl: string | null;
@@ -60,7 +60,7 @@ export default function CrossPlatformKeywordsPage() {
   const [sort, setSort] = useState("keyword");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
-  const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
+  const [activeWordFilters, setActiveWordFilters] = useState<Set<string>>(new Set());
   const { viewMode, changeViewMode } = useViewMode("keywords-view-mode", () => setPage(1));
   const limit = viewMode === "grouped" ? 200 : 25;
 
@@ -115,8 +115,8 @@ export default function CrossPlatformKeywordsPage() {
   );
 
   const items = useMemo(
-    () => activeWordFilter ? filterKeywordsByWord(allItems, activeWordFilter) : allItems,
-    [allItems, activeWordFilter]
+    () => filterKeywordsByWords(allItems, activeWordFilters),
+    [allItems, activeWordFilters]
   );
 
   const platformGroups = useMemo<PlatformGroup<KeywordItem>[]>(() => {
@@ -244,8 +244,16 @@ export default function CrossPlatformKeywordsPage() {
       {wordGroups.length > 0 && (
         <KeywordWordGroupFilter
           wordGroups={wordGroups}
-          activeWord={activeWordFilter}
-          onSelect={setActiveWordFilter}
+          activeWords={activeWordFilters}
+          onToggle={(word) =>
+            setActiveWordFilters((prev) => {
+              const next = new Set(prev);
+              if (next.has(word)) next.delete(word);
+              else next.add(word);
+              return next;
+            })
+          }
+          onClear={() => setActiveWordFilters(new Set())}
         />
       )}
 

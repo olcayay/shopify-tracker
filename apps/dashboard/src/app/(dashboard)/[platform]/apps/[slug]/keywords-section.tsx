@@ -84,8 +84,16 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       {state.wordGroups.length > 0 && (
         <KeywordWordGroupFilter
           wordGroups={state.wordGroups}
-          activeWord={state.activeWordFilter}
-          onSelect={state.setActiveWordFilter}
+          activeWords={state.activeWordFilters}
+          onToggle={(word) =>
+            state.setActiveWordFilters((prev) => {
+              const next = new Set(prev);
+              if (next.has(word)) next.delete(word);
+              else next.add(word);
+              return next;
+            })
+          }
+          onClear={() => state.setActiveWordFilters(new Set())}
         />
       )}
 

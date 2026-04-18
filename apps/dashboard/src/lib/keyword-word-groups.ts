@@ -45,3 +45,18 @@ export function filterKeywordsByWord<T extends { keyword: string }>(
     kw.keyword.toLowerCase().split(/\s+/).includes(lower)
   );
 }
+
+/**
+ * Filter keywords to only those containing ANY of the specified words (OR logic, whole-word match).
+ */
+export function filterKeywordsByWords<T extends { keyword: string }>(
+  keywords: T[],
+  words: Set<string>
+): T[] {
+  if (words.size === 0) return keywords;
+  const lowerWords = new Set([...words].map((w) => w.toLowerCase()));
+  return keywords.filter((kw) => {
+    const kwWords = kw.keyword.toLowerCase().split(/\s+/);
+    return kwWords.some((w) => lowerWords.has(w));
+  });
+}

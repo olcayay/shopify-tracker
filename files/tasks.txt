@@ -1,3 +1,10 @@
+Upgrade Common Words filter to multi-select across all keyword pages (PLA-1138, 2026-04-18)
+  - Component: activeWord → activeWords (Set), onSelect → onToggle + onClear
+  - New filterKeywordsByWords() utility with OR logic
+  - All 3 pages updated: app keywords, platform keywords, cross-platform keywords
+  - Tests rewritten for multi-select + new filterKeywordsByWords tests
+  - 5011 tests passing
+
 Fix Activity Log still showing slugs for old entries (PLA-1132 follow-up, 2026-04-18)
   - API: retroactive name resolution — batch lookup missing app names from apps table
   - Frontend: formatSlug fallback converts slugs to Title Case when no name found

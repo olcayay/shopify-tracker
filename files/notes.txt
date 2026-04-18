@@ -1,3 +1,26 @@
+Upgrade Common Words filter to multi-select (PLA-1138, 2026-04-18)
+======================================================
+KeywordWordGroupFilter component upgraded from single-select (string | null)
+to multi-select (Set<string>) across all 3 keyword pages.
+
+Changes:
+- Component props: activeWord/onSelect → activeWords/onToggle/onClear
+- New utility: filterKeywordsByWords() (plural) with OR logic
+- use-keywords-section.ts: activeWordFilter → activeWordFilters (Set<string>)
+- Platform keywords page: same state change
+- Cross-platform keywords page: same state change
+- Tests rewritten for multi-select behavior + new filterKeywordsByWords tests
+
+Files changed:
+- apps/dashboard/src/components/keyword-word-group-filter.tsx
+- apps/dashboard/src/lib/keyword-word-groups.ts
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/use-keywords-section.ts
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/keywords-section.tsx
+- apps/dashboard/src/app/(dashboard)/[platform]/keywords/page.tsx
+- apps/dashboard/src/app/(dashboard)/keywords/page.tsx
+- apps/dashboard/src/__tests__/components/keyword-word-group-filter.test.tsx
+- apps/dashboard/src/__tests__/lib/keyword-word-groups.test.ts
+
 Fix Activity Log still showing slugs for old entries (PLA-1132 follow-up, 2026-04-18)
 ======================================================
 Original PLA-1132 fix only added names to NEW activity log entries. Old entries
