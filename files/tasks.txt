@@ -1,3 +1,9 @@
+Pin tracked apps to top of cross-platform apps list (PLA-1143, 2026-04-18)
+  - Added CASE WHEN primary ORDER BY in /api/cross-platform/apps SQL query
+  - Tracked apps sort to position 0, competitors to 1
+  - User-selected sort applied as secondary within each group
+  - Handles empty trackedAppIds gracefully (competitor-only filter)
+
 Change default sort on /developers to app count desc (PLA-1145, 2026-04-18)
   - Default sort: "name" asc → "apps" desc (starred first already handled by API)
   - Platform-specific page already had correct defaults

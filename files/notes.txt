@@ -1,3 +1,19 @@
+Pin tracked apps to top of cross-platform apps list (PLA-1143, 2026-04-18)
+======================================================
+Added tracked-first ordering to the /api/cross-platform/apps endpoint.
+Tracked apps now always appear above competitor apps in the /apps list,
+regardless of the user's selected sort column.
+
+Implementation: Added a CASE WHEN primary ORDER BY clause that assigns 0 to
+tracked app IDs and 1 to others. The user-selected sort (name, rating, reviews,
+platform) serves as the secondary ORDER BY within each group.
+
+Edge case: When trackedAppIds is empty (competitor-only filter), the CASE WHEN
+clause is omitted entirely to avoid SQL syntax errors.
+
+Files changed:
+- apps/api/src/routes/cross-platform.ts (ORDER BY clause, ~line 132)
+
 Change default sort on /developers to app count desc (PLA-1145, 2026-04-18)
 ======================================================
 Changed default sort on cross-platform /developers page from name ascending

@@ -129,7 +129,11 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
         WHERE a.id IN (${sql.join(allAppIds.map((id: number) => sql`${id}`), sql`, `)})
         AND ${platformIn}
         ${searchFilter}
-        ORDER BY ${orderClause} ${orderDir}
+        ORDER BY
+          ${trackedAppIds.length > 0
+            ? sql`CASE WHEN a.id IN (${sql.join(trackedAppIds.map((id: number) => sql`${id}`), sql`, `)}) THEN 0 ELSE 1 END,`
+            : sql``}
+          ${orderClause} ${orderDir}
         LIMIT ${limit} OFFSET ${offset}
       `);
 
