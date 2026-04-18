@@ -88,6 +88,37 @@ describe("Integration routes", () => {
       }
     });
 
+    it("resolves display name from matched_integration and strips it from apps", async () => {
+      const executeResult = {
+        rows: [
+          {
+            slug: "app-one",
+            name: "App One",
+            average_rating: 4.5,
+            rating_count: 10,
+            pricing: "Free",
+            matched_integration: "Service Cloud",
+          },
+        ],
+      };
+      const app = await buildIntegrationsApp({ executeResult });
+      try {
+        const res = await app.inject({
+          method: "GET",
+          url: "/api/integrations/service-cloud",
+          headers: authHeaders(userToken()),
+        });
+        const body = res.json();
+        // Should use the resolved display name, not the slug
+        expect(body.name).toBe("Service Cloud");
+        // matched_integration should be stripped from app objects
+        expect(body.apps[0]).not.toHaveProperty("matched_integration");
+        expect(body.apps[0]).toHaveProperty("slug", "app-one");
+      } finally {
+        await app.close();
+      }
+    });
+
     it("works with platform query param", async () => {
       const executeResult = {
         rows: [

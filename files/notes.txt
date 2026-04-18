@@ -1,3 +1,23 @@
+Fix integration page 404 for slugified URLs (PLA-1142, 2026-04-18)
+======================================================
+Integration detail page returned "Integration not found" for slugified URLs
+(e.g. /salesforce/integrations/service-cloud) because the @> JSONB containment
+operator requires exact case-sensitive matches.
+
+Fix: Same pattern as PLA-1126 (platform-attributes.ts) — replaced @> with
+EXISTS + jsonb_array_elements_text + REGEXP_REPLACE fuzzy match.
+- Exact match tried first (fast path)
+- Slug match via LOWER(REGEXP_REPLACE(elem, '[[:space:]&/]+', '-', 'g'))
+- Uses [[:space:]] not \s to avoid JS template literal escaping bug
+
+Also added: resolve display name from matched element for the page title
+(shows "Service Cloud" instead of "service-cloud") and strip matched_integration
+from the response app objects.
+
+Files changed:
+- apps/api/src/routes/integrations.ts
+- apps/api/src/__tests__/routes/integrations.test.ts (1 new test)
+
 Pin tracked apps to top of cross-platform apps list (PLA-1143, 2026-04-18)
 ======================================================
 Added tracked-first ordering to the /api/cross-platform/apps endpoint.

@@ -1,3 +1,9 @@
+Fix integration page 404 for slugified URLs (PLA-1142, 2026-04-18)
+  - Replaced @> JSONB containment with EXISTS + REGEXP_REPLACE fuzzy match
+  - Uses [[:space:]] not \s to avoid JS template literal escaping bug
+  - Resolves display name from matched element for page title
+  - 1 new test for slug-to-display-name resolution
+
 Pin tracked apps to top of cross-platform apps list (PLA-1143, 2026-04-18)
   - Added CASE WHEN primary ORDER BY in /api/cross-platform/apps SQL query
   - Tracked apps sort to position 0, competitors to 1

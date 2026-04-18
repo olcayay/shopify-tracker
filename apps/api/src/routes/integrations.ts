@@ -15,7 +15,9 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
       const platform = request.query.platform;
       const { limit: maxLimit, offset: parsedOffset } = parsePaginationQuery(request.query, 200);
 
-      // Find all apps that have this integration (from latest snapshot)
+      // Find all apps that have this integration (from latest snapshot).
+      // Supports both exact display names ("Service Cloud") and slugified URLs
+      // ("service-cloud") via REGEXP_REPLACE fuzzy match (same pattern as PLA-1126).
       const appsResult = await db.execute(sql`
         SELECT
           a.slug,
@@ -25,7 +27,13 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
           a.badges,
           s.average_rating,
           s.rating_count,
-          s.pricing
+          s.pricing,
+          (
+            SELECT elem FROM jsonb_array_elements_text(s.integrations) elem
+            WHERE elem = ${name}
+              OR LOWER(REGEXP_REPLACE(elem, '[[:space:]&/]+', '-', 'g')) = LOWER(${name})
+            LIMIT 1
+          ) AS matched_integration
         FROM (
           SELECT DISTINCT ON (app_id)
             id, app_id, integrations, average_rating, rating_count, pricing
@@ -33,7 +41,11 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
           ORDER BY app_id, scraped_at DESC
         ) s
         INNER JOIN apps a ON a.id = s.app_id
-        WHERE s.integrations @> to_jsonb(ARRAY[${name}])::jsonb
+        WHERE EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(s.integrations) elem
+          WHERE elem = ${name}
+            OR LOWER(REGEXP_REPLACE(elem, '[[:space:]&/]+', '-', 'g')) = LOWER(${name})
+        )
         ${platform ? sql`AND a.platform = ${platform}` : sql``}
         ORDER BY a.name
         LIMIT ${maxLimit} OFFSET ${parsedOffset}
@@ -44,9 +56,16 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "Integration not found" });
       }
 
+      // Use the resolved display name from the first matched row (e.g. "Service Cloud"
+      // instead of the slug "service-cloud")
+      const resolvedName = (rows[0] as any).matched_integration || name;
+
       return {
-        name,
-        apps: rows,
+        name: resolvedName,
+        apps: rows.map((r: any) => {
+          const { matched_integration, ...rest } = r;
+          return rest;
+        }),
       };
     }
   );
