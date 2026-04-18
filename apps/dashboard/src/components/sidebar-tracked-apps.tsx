@@ -32,21 +32,32 @@ export function SidebarTrackedApps({
   const { fetchWithAuth, account } = useAuth();
   const [apps, setApps] = useState<SidebarApp[]>([]);
 
-  // Wait until account is loaded before fetching
-  const trackedAppsCount = account?.usage?.trackedApps;
+  // Refetch when account loads or tracked app count changes
+  const isReady = !!account;
+  const trackedAppsCount = account?.usage?.trackedApps ?? 0;
   useEffect(() => {
-    if (trackedAppsCount == null) return; // auth not ready yet
+    if (!isReady) {
+      console.log("[SidebarTrackedApps] skipping fetch — account not ready");
+      return;
+    }
     let cancelled = false;
+    console.log("[SidebarTrackedApps] fetching for platform:", platform);
     fetchWithAuth("/api/account/tracked-apps/sidebar")
       .then(async (res) => {
-        if (!cancelled && res.ok) {
+        console.log("[SidebarTrackedApps] response status:", res.status);
+        if (cancelled) return;
+        if (res.ok) {
           const all: SidebarApp[] = await res.json();
-          setApps(all.filter((a) => a.platform === platform));
+          const filtered = all.filter((a) => a.platform === platform);
+          console.log("[SidebarTrackedApps] total:", all.length, "for platform:", filtered.length);
+          setApps(filtered);
         }
       })
-      .catch(() => {/* network error — ignore */});
+      .catch((err) => {
+        console.error("[SidebarTrackedApps] fetch error:", err);
+      });
     return () => { cancelled = true; };
-  }, [fetchWithAuth, platform, trackedAppsCount]);
+  }, [fetchWithAuth, platform, isReady, trackedAppsCount]);
 
   if (apps.length === 0) return null;
 
