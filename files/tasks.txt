@@ -1,3 +1,11 @@
+My Features collapsible section on features page (PLA-1137, 2026-04-18)
+  - New API /api/account/my-features: aggregates features from tracked+competitor app snapshots
+  - Collapsible section with localStorage persistence
+  - Expandable rows showing tracked (emerald) and competitor (amber) apps
+  - Search filter integration
+  - 3 new API tests
+  - 5776 tests passing
+
 Show tracked apps in sidebar (PLA-1140, 2026-04-18)
   - New API endpoint /api/account/tracked-apps/sidebar (all platforms)
   - SidebarTrackedApps component: expanded (icon+name), collapsed (icon-only)

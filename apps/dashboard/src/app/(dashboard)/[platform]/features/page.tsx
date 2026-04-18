@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { Fragment, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -29,7 +29,9 @@ import {
   FolderOpen,
   Target,
   Eye,
+  Layers,
 } from "lucide-react";
+import { AppIcon } from "@/components/app-icon";
 import { ConfirmModal } from "@/components/confirm-modal";
 import {
   buildFeatureCategoryPath,
@@ -69,6 +71,14 @@ export default function FeaturesPage() {
   } | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [filterQuery, setFilterQuery] = useState("");
+  const [myFeatures, setMyFeatures] = useState<any[]>([]);
+  const [myFeaturesOpen, setMyFeaturesOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`my-features-open-${platform}`);
+      return saved === "true";
+    } catch { return false; }
+  });
+  const [expandedMyFeature, setExpandedMyFeature] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -93,13 +103,23 @@ export default function FeaturesPage() {
 
   async function loadData() {
     setLoading(true);
-    const [starredRes, treeRes] = await Promise.all([
+    const [starredRes, treeRes, myFeatRes] = await Promise.all([
       fetchWithAuth("/api/account/starred-features"),
       fetchWithAuth("/api/features/tree"),
+      fetchWithAuth(`/api/account/my-features?platform=${platform}`),
     ]);
     if (starredRes.ok) setFeatures(await starredRes.json());
     if (treeRes.ok) setTree(await treeRes.json());
+    if (myFeatRes.ok) setMyFeatures(await myFeatRes.json());
     setLoading(false);
+  }
+
+  function toggleMyFeaturesOpen() {
+    setMyFeaturesOpen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(`my-features-open-${platform}`, String(next)); } catch {}
+      return next;
+    });
   }
 
   function handleSearchInput(value: string) {
@@ -162,6 +182,13 @@ export default function FeaturesPage() {
   }
 
   const starredHandles = new Set(features.map((f) => f.featureHandle));
+
+  // Filter My Features by search query
+  const filteredMyFeatures = useMemo(() => {
+    if (!filterQuery.trim()) return myFeatures;
+    const q = filterQuery.toLowerCase();
+    return myFeatures.filter((f) => f.title.toLowerCase().includes(q));
+  }, [myFeatures, filterQuery]);
 
   // Count total features in tree
   const totalFeatures = useMemo(() => {
@@ -425,6 +452,162 @@ export default function FeaturesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* My Features */}
+      {myFeatures.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3 cursor-pointer" onClick={toggleMyFeaturesOpen}>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Layers className="h-4 w-4 text-muted-foreground" />
+              My Features ({myFeatures.length})
+              {myFeaturesOpen ? (
+                <ChevronDown className="h-4 w-4 ml-auto text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" />
+              )}
+            </CardTitle>
+          </CardHeader>
+          {myFeaturesOpen && (
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-full">Feature</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Tracked</TableHead>
+                    <TableHead className="text-right">Competitor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(filterQuery ? filteredMyFeatures : myFeatures).map((f: any) => {
+                    const hasApps = f.trackedApps.length > 0 || f.competitorApps.length > 0;
+                    const isExpanded = expandedMyFeature === f.handle;
+                    return (
+                      <Fragment key={f.handle}>
+                        <TableRow
+                          className={hasApps ? "cursor-pointer hover:bg-muted/50" : ""}
+                          onClick={() => hasApps && setExpandedMyFeature(isExpanded ? null : f.handle)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm">
+                              {hasApps ? (
+                                isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                              ) : (
+                                <span className="w-4 shrink-0" />
+                              )}
+                              <Link
+                                href={`/${platform}/features/${encodeURIComponent(f.handle)}`}
+                                className="text-primary hover:underline font-medium"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {f.title}
+                              </Link>
+                              {starredHandles.has(f.handle) && (
+                                <Bookmark className="h-3 w-3 fill-amber-500 text-amber-500 shrink-0" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                            {f.categoryTitle ? (
+                              <>
+                                <Link
+                                  href={buildFeatureCategoryPath(platform as string, f.categoryTitle)}
+                                  className="hover:underline hover:text-foreground"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {f.categoryTitle}
+                                </Link>
+                                {f.subcategoryTitle && (
+                                  <>
+                                    {" > "}
+                                    <Link
+                                      href={buildFeatureSubcategoryPath(platform as string, f.categoryTitle, f.subcategoryTitle)}
+                                      className="hover:underline hover:text-foreground"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {f.subcategoryTitle}
+                                    </Link>
+                                  </>
+                                )}
+                              </>
+                            ) : "\u2014"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {f.trackedApps.length > 0 ? (
+                              <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
+                                <Target className="h-3 w-3 mr-1" />
+                                {f.trackedApps.length}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">{"\u2014"}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {f.competitorApps.length > 0 ? (
+                              <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
+                                <Eye className="h-3 w-3 mr-1" />
+                                {f.competitorApps.length}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">{"\u2014"}</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="bg-muted/30 p-4">
+                              <div className="space-y-1">
+                                {[
+                                  ...f.trackedApps.map((app: any) => ({ ...app, _type: "tracked" as const })),
+                                  ...f.competitorApps.map((app: any) => ({ ...app, _type: "competitor" as const })),
+                                ].map((app: any) => {
+                                  const isTracked = app._type === "tracked";
+                                  return (
+                                    <div
+                                      key={app.slug}
+                                      className={`flex items-center text-sm py-1 px-2 rounded border-l-2 ${
+                                        isTracked
+                                          ? "bg-emerald-500/10 border-l-emerald-500"
+                                          : "bg-amber-500/10 border-l-amber-500"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {isTracked
+                                          ? <Target className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                          : <Eye className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                        }
+                                        <AppIcon src={app.iconUrl} className="h-5 w-5 rounded" />
+                                        <Link
+                                          href={`/${platform}/apps/${app.slug}`}
+                                          className="text-primary hover:underline font-medium"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {app.name}
+                                        </Link>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                  {filterQuery && filteredMyFeatures.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                        No features matching &ldquo;{filterQuery}&rdquo;
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Filter tree */}
       <div className="relative max-w-md">

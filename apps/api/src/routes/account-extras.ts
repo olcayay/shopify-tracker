@@ -468,6 +468,100 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // GET /api/account/my-features — aggregate features from tracked + competitor apps
+  app.get("/my-features", async (request) => {
+    const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+    // Get tracked + competitor app IDs
+    const [trackedAppsRows, competitorAppsRows] = await Promise.all([
+      db.select({ appId: accountTrackedApps.appId, slug: apps.slug, name: apps.name, iconUrl: apps.iconUrl })
+        .from(accountTrackedApps)
+        .innerJoin(apps, and(eq(apps.id, accountTrackedApps.appId), eq(apps.platform, platform)))
+        .where(eq(accountTrackedApps.accountId, accountId)),
+      db.select({ appId: accountCompetitorApps.competitorAppId, slug: apps.slug, name: apps.name, iconUrl: apps.iconUrl })
+        .from(accountCompetitorApps)
+        .innerJoin(apps, and(eq(apps.id, accountCompetitorApps.competitorAppId), eq(apps.platform, platform)))
+        .where(eq(accountCompetitorApps.accountId, accountId)),
+    ]);
+
+    const allAppIds = [
+      ...trackedAppsRows.map((a) => a.appId),
+      ...competitorAppsRows.map((a) => a.appId),
+    ];
+    if (allAppIds.length === 0) return [];
+
+    const trackedSlugs = new Set(trackedAppsRows.map((a) => a.slug));
+    const competitorSlugs = new Set(competitorAppsRows.map((a) => a.slug));
+    const appInfoMap = new Map<string, { slug: string; name: string; iconUrl: string | null }>();
+    for (const a of [...trackedAppsRows, ...competitorAppsRows]) {
+      appInfoMap.set(a.slug, { slug: a.slug, name: a.name, iconUrl: a.iconUrl });
+    }
+
+    const appIdList = sql.join(allAppIds.map((id) => sql`${id}`), sql`,`);
+
+    // Get features + which app slug has each feature
+    const result = await db.execute(sql`
+      SELECT
+        f->>'feature_handle' AS handle,
+        f->>'title' AS title,
+        cat->>'title' AS category_title,
+        sub->>'title' AS subcategory_title,
+        a.slug AS app_slug
+      FROM (
+        SELECT DISTINCT ON (s.app_id) s.app_id, s.categories
+        FROM app_snapshots s
+        WHERE s.app_id IN (${appIdList})
+        ORDER BY s.app_id, s.scraped_at DESC
+      ) s
+      INNER JOIN apps a ON a.id = s.app_id,
+      jsonb_array_elements(s.categories) AS cat,
+      jsonb_array_elements(cat->'subcategories') AS sub,
+      jsonb_array_elements(sub->'features') AS f
+    `);
+    const rows: any[] = (result as any).rows ?? result;
+
+    // Group by feature handle
+    const featureMap = new Map<string, {
+      handle: string;
+      title: string;
+      categoryTitle: string;
+      subcategoryTitle: string;
+      trackedApps: { slug: string; name: string; iconUrl: string | null }[];
+      competitorApps: { slug: string; name: string; iconUrl: string | null }[];
+    }>();
+
+    for (const r of rows) {
+      if (!featureMap.has(r.handle)) {
+        featureMap.set(r.handle, {
+          handle: r.handle,
+          title: r.title,
+          categoryTitle: r.category_title,
+          subcategoryTitle: r.subcategory_title,
+          trackedApps: [],
+          competitorApps: [],
+        });
+      }
+      const feat = featureMap.get(r.handle)!;
+      const info = appInfoMap.get(r.app_slug);
+      if (!info) continue;
+      if (trackedSlugs.has(r.app_slug) && !feat.trackedApps.some((a) => a.slug === r.app_slug)) {
+        feat.trackedApps.push(info);
+      }
+      if (competitorSlugs.has(r.app_slug) && !feat.competitorApps.some((a) => a.slug === r.app_slug)) {
+        feat.competitorApps.push(info);
+      }
+    }
+
+    // Sort by total tracked+competitor count descending, then by title
+    return [...featureMap.values()]
+      .sort((a, b) => {
+        const countDiff = (b.trackedApps.length + b.competitorApps.length) - (a.trackedApps.length + a.competitorApps.length);
+        if (countDiff !== 0) return countDiff;
+        return a.title.localeCompare(b.title);
+      });
+  });
+
   // -- Keyword Tags --
 
   const TAG_COLORS = [

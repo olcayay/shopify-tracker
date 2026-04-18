@@ -1,3 +1,25 @@
+My Features collapsible section on features page (PLA-1137, 2026-04-18)
+======================================================
+Added "My Features" section between Bookmarked Features and All Features Tree
+on the features page. Shows all features used by tracked and competitor apps,
+with expandable rows showing which apps have each feature.
+
+API: New endpoint /api/account/my-features?platform={platform} aggregates
+features from tracked + competitor app snapshots (JSONB LATERAL join).
+Returns feature handle, title, category hierarchy, tracked/competitor app lists.
+
+Frontend:
+- Collapsible section (click header to toggle), state persisted in localStorage
+- Table with Feature, Category, Tracked count, Competitor count columns
+- Expandable rows show app icons/names (emerald for tracked, amber for competitor)
+- Integrates with filterQuery for search filtering
+- Hidden when no tracked/competitor apps exist
+
+Files changed:
+- apps/api/src/routes/account-extras.ts (new my-features endpoint)
+- apps/dashboard/src/app/(dashboard)/[platform]/features/page.tsx
+- apps/api/src/__tests__/routes/account-extras.test.ts (3 new tests)
+
 Show tracked apps in sidebar (PLA-1140, 2026-04-18)
 ======================================================
 Added tracked app icons/names directly into the sidebar under each platform.

@@ -167,6 +167,39 @@ describe("Account Extras Routes", () => {
   });
 
   // -----------------------------------------------------------------------
+  // My Features
+  // -----------------------------------------------------------------------
+
+  describe("GET /api/account/my-features", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/my-features?platform=shopify",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 200 for authenticated user", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/my-features?platform=shopify",
+        headers: authHeaders(ownerToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      expect(Array.isArray(res.json())).toBe(true);
+    });
+
+    it("viewer can access my-features (read-only)", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/my-features?platform=shopify",
+        headers: authHeaders(viewerToken()),
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Keyword Tags
   // -----------------------------------------------------------------------
 
