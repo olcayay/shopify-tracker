@@ -138,4 +138,22 @@ describe("PreviewPage close button", () => {
     // Should fall back to base URL since saved tab doesn't match
     expect(mockPush).toHaveBeenCalledWith("/shopify/apps/v2/test-app");
   });
+
+  it("does not loop back to preview when localStorage has preview URL saved", async () => {
+    // This is the bug scenario: app-nav.tsx saved the preview URL to localStorage,
+    // so closePreview() would navigate back to preview instead of away from it
+    localStorage.setItem("app-tab-test-app", "/shopify/apps/v2/test-app/preview");
+
+    setupAppData();
+    render(<PreviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Test App")).toBeInTheDocument();
+    });
+
+    await clickCloseButton();
+
+    // Should fall back to base URL, NOT navigate back to preview
+    expect(mockPush).toHaveBeenCalledWith("/shopify/apps/v2/test-app");
+    expect(mockPush).not.toHaveBeenCalledWith("/shopify/apps/v2/test-app/preview");
+  });
 });

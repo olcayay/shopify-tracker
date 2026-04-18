@@ -1,3 +1,9 @@
+Fix preview page close button loop (PLA-1146, 2026-04-18)
+  - app-nav.tsx: Skip saving preview URL to localStorage
+  - preview/page.tsx: Reject preview URL from saved tab in closePreview()
+  - 1 new test: preview URL in localStorage doesn't cause loop
+  - 5035 tests passing
+
 My Features collapsible section on features page (PLA-1137, 2026-04-18)
   - New API /api/account/my-features: aggregates features from tracked+competitor app snapshots
   - Collapsible section with localStorage persistence

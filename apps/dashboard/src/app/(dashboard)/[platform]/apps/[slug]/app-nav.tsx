@@ -39,9 +39,11 @@ export function AppNav({
         } catch {}
       }
     }
-    // Save current tab
+    // Save current tab (but never save preview URL — it causes close button loops)
     try {
-      localStorage.setItem(`app-tab-${slug}`, pathname);
+      if (!pathname.endsWith("/preview")) {
+        localStorage.setItem(`app-tab-${slug}`, pathname);
+      }
     } catch {}
   }, [pathname, slug, base, router]);
 

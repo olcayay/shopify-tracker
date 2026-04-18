@@ -1,3 +1,24 @@
+Fix preview page close button loop (PLA-1146, 2026-04-18)
+======================================================
+The close button (X) on the preview page navigated back to the preview
+instead of returning to the app detail page, trapping users in a loop.
+
+Root cause: app-nav.tsx saved the current pathname to localStorage on every
+navigation, including the preview URL. When closePreview() checked localStorage
+for a saved tab, it found the preview URL, which starts with the base URL,
+so it navigated right back to preview.
+
+Fix 1 (app-nav.tsx line 44): Don't save preview URLs to localStorage.
+Added guard: if (!pathname.endsWith("/preview"))
+
+Fix 2 (preview/page.tsx line 66): Reject preview URLs from saved tab.
+Added guard: && !savedTab.endsWith("/preview")
+
+Files changed:
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/app-nav.tsx
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/preview/page.tsx
+- apps/dashboard/src/__tests__/app/app-preview.test.tsx (1 new test)
+
 My Features collapsible section on features page (PLA-1137, 2026-04-18)
 ======================================================
 Added "My Features" section between Bookmarked Features and All Features Tree

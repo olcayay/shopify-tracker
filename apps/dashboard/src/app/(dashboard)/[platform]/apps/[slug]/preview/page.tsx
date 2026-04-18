@@ -63,7 +63,7 @@ export default function PreviewPage() {
     const base = buildAppLink(platform, slug, "", version);
     try {
       const savedTab = localStorage.getItem(`app-tab-${slug}`);
-      if (savedTab && savedTab.startsWith(base)) {
+      if (savedTab && savedTab.startsWith(base) && !savedTab.endsWith("/preview")) {
         router.push(savedTab);
         return;
       }
