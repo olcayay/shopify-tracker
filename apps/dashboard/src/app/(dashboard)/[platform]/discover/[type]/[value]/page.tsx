@@ -14,11 +14,18 @@ import {
 import { AppListTable } from "@/components/app-list-table";
 import type { PlatformId } from "@appranks/shared";
 
-/** Format a URL value into a readable title. Handles both encoded display names
- *  (e.g. "Horizontal Product") and legacy slugs (e.g. "horizontal-product"). */
+/** Format a URL value into a readable title. Handles encoded display names
+ *  (e.g. "Horizontal Product"), camelCase keys (e.g. "customerService"),
+ *  and legacy slugs (e.g. "horizontal-product"). */
 function formatTitle(value: string): string {
-  // If the value already has spaces or uppercase, it's a proper display name
-  if (/[A-Z]/.test(value) || value.includes(" ")) return value;
+  // If the value already has spaces, it's a proper display name
+  if (value.includes(" ")) return value;
+  // camelCase: insert space before uppercase letters (e.g. "customerService" → "Customer Service")
+  if (/[a-z][A-Z]/.test(value)) {
+    return value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+  }
+  // If all uppercase or title case without spaces, return as-is
+  if (/[A-Z]/.test(value)) return value;
   // Otherwise treat as a slug: replace hyphens with spaces and title-case
   return value
     .replace(/-/g, " ")

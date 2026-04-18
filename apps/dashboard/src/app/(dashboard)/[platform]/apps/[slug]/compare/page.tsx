@@ -324,6 +324,7 @@ export default function ComparePage() {
           {isSalesforce && (
             <>
               <BadgeComparisonSection id="sec-industries" title="Industries" sectionKey="industries" collapsed={isCollapsed("industries")} onToggle={toggleSection} apps={selectedApps} getItems={(app) => app.latestSnapshot?.platformData?.supportedIndustries || []} linkPrefix={`/${platform}/discover/industry`} />
+              <BadgeComparisonSection id="sec-business-needs" title="Business Needs" sectionKey="businessNeeds" collapsed={isCollapsed("businessNeeds")} onToggle={toggleSection} apps={selectedApps} getItems={(app) => { const bn = app.latestSnapshot?.platformData?.businessNeeds; if (Array.isArray(bn)) return bn; if (bn && typeof bn === "object") return Object.keys(bn); return []; }} linkPrefix={`/${platform}/discover/business-need`} />
               <BadgeComparisonSection id="sec-requires" title="Requires" sectionKey="requires" collapsed={isCollapsed("requires")} onToggle={toggleSection} apps={selectedApps} getItems={(app) => app.latestSnapshot?.platformData?.productsRequired || []} linkPrefix={`/${platform}/discover/product-required`} />
             </>
           )}

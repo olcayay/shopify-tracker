@@ -110,6 +110,38 @@ describe("SalesforceBadgeGrid", () => {
     expect(screen.queryByText("Business Needs")).not.toBeInTheDocument();
   });
 
+  it("extracts object-type businessNeeds keys and displays as readable labels", () => {
+    const props: Props = {
+      ...baseProps,
+      platformData: {
+        businessNeeds: {
+          customerService: { categories: ["fieldService"], isSelected: true },
+          marketing: { categories: [], isSelected: false },
+        },
+      } as any,
+      snapshot: {},
+    };
+    const { container } = render(<Component {...props} />);
+    expect(screen.getByText("Business Needs")).toBeInTheDocument();
+    // camelCase keys should be displayed as human-readable labels
+    expect(screen.getByText("Customer Service")).toBeInTheDocument();
+    expect(screen.getByText("Marketing")).toBeInTheDocument();
+    // Links should use the original camelCase key as the URL value
+    const link = container.querySelector('a[href="/salesforce/discover/business-need/customerService"]');
+    expect(link).toBeTruthy();
+  });
+
+  it("displays camelCase business need array values as readable labels", () => {
+    const props: Props = {
+      ...baseProps,
+      platformData: { businessNeeds: ["customerService", "itAndAdministration"] } as any,
+      snapshot: {},
+    };
+    render(<Component {...props} />);
+    expect(screen.getByText("Customer Service")).toBeInTheDocument();
+    expect(screen.getByText("It And Administration")).toBeInTheDocument();
+  });
+
   it("shouldRender returns false when all data is empty", () => {
     expect(Section.shouldRender!(baseProps)).toBe(false);
   });

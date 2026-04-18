@@ -42,10 +42,18 @@ export const platformAttributeRoutes: FastifyPluginAsync = async (app) => {
         ) s
         INNER JOIN apps a ON a.id = s.app_id
         WHERE a.platform = ${platform}
-          AND EXISTS (
-            SELECT 1 FROM jsonb_array_elements_text(s.platform_data -> ${jsonbField}) elem
-            WHERE elem = ${value}
-              OR LOWER(REGEXP_REPLACE(elem, '[\s&/]+', '-', 'g')) = LOWER(${value})
+          AND (
+            (jsonb_typeof(s.platform_data -> ${jsonbField}) = 'array' AND EXISTS (
+              SELECT 1 FROM jsonb_array_elements_text(s.platform_data -> ${jsonbField}) elem
+              WHERE elem = ${value}
+                OR LOWER(REGEXP_REPLACE(elem, '[[:space:]&/]+', '-', 'g')) = LOWER(${value})
+            ))
+            OR
+            (jsonb_typeof(s.platform_data -> ${jsonbField}) = 'object' AND EXISTS (
+              SELECT 1 FROM jsonb_object_keys(s.platform_data -> ${jsonbField}) k
+              WHERE k = ${value}
+                OR LOWER(REGEXP_REPLACE(k, '[[:space:]&/]+', '-', 'g')) = LOWER(${value})
+            ))
           )
         ORDER BY a.name
         LIMIT ${maxLimit} OFFSET ${parsedOffset}

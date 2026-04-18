@@ -5,9 +5,22 @@ import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"salesforce">;
 
+/** Convert camelCase key to readable label (e.g. "customerService" → "Customer Service") */
+function camelToLabel(s: string): string {
+  return s.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
+}
+
+/** Extract business needs as string[] regardless of whether stored as array or object */
+function extractBusinessNeeds(pd: any): string[] {
+  if (!pd?.businessNeeds) return [];
+  if (Array.isArray(pd.businessNeeds)) return pd.businessNeeds;
+  if (typeof pd.businessNeeds === "object") return Object.keys(pd.businessNeeds);
+  return [];
+}
+
 function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: Props) {
   const industries: string[] = pd?.supportedIndustries || [];
-  const businessNeeds: string[] = Array.isArray(pd?.businessNeeds) ? pd.businessNeeds : [];
+  const businessNeeds: string[] = extractBusinessNeeds(pd);
   const productsRequired: string[] = pd?.productsRequired || [];
   const languages: string[] = snapshot.languages || [];
   const integrations: string[] = snapshot.integrations || [];
@@ -39,7 +52,7 @@ function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: Props) {
               {businessNeeds.map((bn) => (
                 <Link key={bn} href={`/${platform}/discover/business-need/${encodeURIComponent(bn)}`}>
                   <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
-                    {bn}
+                    {camelToLabel(bn)}
                   </Badge>
                 </Link>
               ))}
