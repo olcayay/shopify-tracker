@@ -1,3 +1,9 @@
+Sort bookmarked features to top on category/subcategory pages (PLA-1136, 2026-04-18)
+  - Category detail page: starred features sorted first in feature table
+  - Subcategory page: same treatment
+  - Stable sort preserves original API order within each group
+  - 5 new tests (2 category detail + 3 subcategory)
+
 Add Common Words filter to Keyword Rankings chart (PLA-1139, 2026-04-18)
   - New KeywordRankingsSection client component wrapping RankingChart + filter
   - Extracts word groups from keyword labels, filters chart data by active words

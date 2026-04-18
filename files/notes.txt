@@ -1,3 +1,14 @@
+Sort bookmarked features to top on category/subcategory pages (PLA-1136, 2026-04-18)
+======================================================
+Both feature category detail page and subcategory page now sort starred features
+to the top of the list. Uses stable sort to preserve original order within each group.
+
+Files changed:
+- apps/dashboard/src/app/(dashboard)/[platform]/features/categories/[slug]/page.tsx
+- apps/dashboard/src/app/(dashboard)/[platform]/features/category/page.tsx
+- apps/dashboard/src/__tests__/app/feature-category-detail.test.tsx (2 new tests)
+- apps/dashboard/src/__tests__/app/feature-subcategory.test.tsx (NEW - 3 tests)
+
 Add Common Words filter to Keyword Rankings chart (PLA-1139, 2026-04-18)
 ======================================================
 Added multi-select Common Words filter to the Keyword Rankings chart on the

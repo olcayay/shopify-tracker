@@ -95,6 +95,38 @@ describe("FeatureCategoryDetailPage", () => {
     expect(screen.getByTestId("star-chatbot")).toHaveAttribute("aria-label", "Remove bookmark");
   });
 
+  it("sorts starred features to the top of the list", async () => {
+    // "chatbot" is starred (from beforeEach mock)
+    const page = await FeatureCategoryDetailPage({
+      params: Promise.resolve({ platform: "shopify", slug: "chat" }),
+    });
+    render(page);
+
+    const rows = screen.getAllByRole("row");
+    // rows[0] is header, rows[1-3] are data rows
+    // "chatbot" is starred and should appear first
+    const featureCells = rows.slice(1).map((r) => r.querySelector("td a")?.textContent);
+    expect(featureCells[0]).toBe("Chatbot");
+  });
+
+  it("preserves original order within starred and unstarred groups", async () => {
+    mockGetAccountStarredFeatures.mockResolvedValue([
+      { featureHandle: "chatbot" },
+      { featureHandle: "agent-inbox" },
+    ]);
+
+    const page = await FeatureCategoryDetailPage({
+      params: Promise.resolve({ platform: "shopify", slug: "chat" }),
+    });
+    render(page);
+
+    const rows = screen.getAllByRole("row");
+    const featureCells = rows.slice(1).map((r) => r.querySelector("td a")?.textContent);
+    // Starred: chatbot (idx 1), agent-inbox (idx 2) → maintain relative order
+    // Unstarred: live-chat (idx 0) → goes after starred
+    expect(featureCells).toEqual(["Chatbot", "Agent Inbox", "Live Chat"]);
+  });
+
   it("shows not found copy when the category request fails", async () => {
     mockGetFeatureCategoryDetail.mockRejectedValue(new Error("Not found"));
 

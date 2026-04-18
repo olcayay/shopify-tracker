@@ -38,6 +38,13 @@ export default async function FeatureCategoryDetailPage({
 
   const starredHandles = new Set(starredFeatures.map((feature: any) => feature.featureHandle));
 
+  // Sort starred features to top, preserving original order within each group
+  const sortedFeatures = [...(category.features || [])].sort((a: any, b: any) => {
+    const aStarred = starredHandles.has(a.handle) ? 0 : 1;
+    const bStarred = starredHandles.has(b.handle) ? 0 : 1;
+    return aStarred - bStarred;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -108,7 +115,7 @@ export default async function FeatureCategoryDetailPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {category.features.map((feature: any) => {
+                {sortedFeatures.map((feature: any) => {
                   const isStarred = starredHandles.has(feature.handle);
 
                   return (

@@ -41,6 +41,13 @@ export default async function FeaturesByCategoryPage({
 
   const starredHandles = new Set(starredFeatures.map((f: any) => f.featureHandle));
 
+  // Sort starred features to top, preserving original order within each group
+  const sortedFeatures = [...features].sort((a: any, b: any) => {
+    const aStarred = starredHandles.has(a.handle) ? 0 : 1;
+    const bStarred = starredHandles.has(b.handle) ? 0 : 1;
+    return aStarred - bStarred;
+  });
+
   const title = subcategory
     ? `${category ? `${category} > ` : ""}${subcategory}`
     : category!;
@@ -90,7 +97,7 @@ export default async function FeaturesByCategoryPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {features.map((f: any) => {
+                {sortedFeatures.map((f: any) => {
                   const isStarred = starredHandles.has(f.handle);
                   return (
                     <TableRow key={f.handle} className={isStarred ? "border-l-2 border-l-amber-500 bg-amber-500/5" : ""}>
