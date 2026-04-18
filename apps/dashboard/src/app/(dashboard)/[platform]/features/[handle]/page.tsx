@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import {
   getFeature,
   getAccountCompetitors,
@@ -84,6 +85,17 @@ export default async function FeatureDetailPage({
           <h1 className="text-2xl font-bold">{feature.title}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {feature.categoryUrl && (
+            <a
+              href={`${feature.categoryUrl.replace(/\/+$/, "")}/all?feature_handles%5B%5D=${encodeURIComponent(feature.handle)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors shrink-0"
+              title="Open in marketplace"
+            >
+              <ExternalLink className="h-5 w-5 text-muted-foreground" />
+            </a>
+          )}
           <StarFeatureButton
             featureHandle={feature.handle}
             featureTitle={feature.title}

@@ -1,3 +1,9 @@
+Add external Shopify links from feature pages (PLA-1133, 2026-04-18)
+  - Category detail page: external link → {category.url}/all (was missing /all suffix)
+  - Feature detail page: new ExternalLink icon → Shopify with feature_handles filter
+  - API: added categoryUrl to GET /api/features/:handle
+  - Tests: 2 new tests for categoryUrl field (with/without URL)
+
 Fix Salesforce discover/integrations dead links (PLA-1126, 2026-04-18)
   - Routes /discover/[type]/[value] and /integrations/[name] already existed
   - Root cause: salesforce-sections.tsx slugified values (toLowerCase + replace spaces)

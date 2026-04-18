@@ -57,7 +57,7 @@ export default async function FeatureCategoryDetailPage({
         </div>
         {category.url && (
           <a
-            href={category.url}
+            href={`${category.url.replace(/\/+$/, "")}/all`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors shrink-0"

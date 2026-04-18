@@ -239,6 +239,7 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
           f->>'feature_handle' AS handle,
           f->>'title' AS title,
           cat->>'title' AS category_title,
+          cat->>'url' AS category_url,
           sub->>'title' AS subcategory_title
         FROM app_snapshots,
           jsonb_array_elements(categories) AS cat,
@@ -297,6 +298,7 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         handle: feature.handle,
         title: feature.title,
         categoryTitle: feature.category_title || null,
+        categoryUrl: feature.category_url || null,
         subcategoryTitle: feature.subcategory_title || null,
         isStarredByAccount: !!tracked,
         apps: (appsResult as any).rows ?? appsResult,

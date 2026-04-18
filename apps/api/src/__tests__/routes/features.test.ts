@@ -50,6 +50,7 @@ const sampleFeatureDetail = [
     handle: "inventory-sync",
     title: "Inventory sync",
     category_title: "Store management",
+    category_url: "https://apps.shopify.com/categories/store-management",
     subcategory_title: "Inventory",
   },
 ];
@@ -249,6 +250,69 @@ describe("Feature routes", () => {
   });
 
   // -----------------------------------------------------------------------
+  // GET /api/features/:handle — feature detail
+  // -----------------------------------------------------------------------
+
+  describe("GET /api/features/:handle", () => {
+    let app: FastifyInstance;
+
+    beforeAll(async () => {
+      app = await buildTestApp({
+        routes: featureRoutes,
+        prefix: "/api/features",
+        db: {
+          executeResult: sampleFeatureDetail,
+          selectResult: [],
+        },
+      });
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it("returns categoryUrl in the response", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/features/inventory-sync",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.handle).toBe("inventory-sync");
+      expect(body.categoryUrl).toBe("https://apps.shopify.com/categories/store-management");
+    });
+
+    it("returns null categoryUrl when not available", async () => {
+      const appNoUrl = await buildTestApp({
+        routes: featureRoutes,
+        prefix: "/api/features",
+        db: {
+          executeResult: [{
+            handle: "some-feature",
+            title: "Some feature",
+            category_title: "Marketing",
+            category_url: null,
+            subcategory_title: "Email",
+          }],
+          selectResult: [],
+        },
+      });
+
+      const res = await appNoUrl.inject({
+        method: "GET",
+        url: "/api/features/some-feature",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().categoryUrl).toBeNull();
+      await appNoUrl.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // GET /api/features/categories/:slug
   // -----------------------------------------------------------------------
 
@@ -278,6 +342,7 @@ describe("Feature routes", () => {
       const body = res.json();
       expect(body.slug).toBe("store-management");
       expect(body.title).toBe("Store management");
+      expect(body.url).toBe("https://example.com/store-management");
       expect(body.subcategoryCount).toBe(1);
       expect(body.featureCount).toBe(2);
       expect(body.subcategories[0]).toEqual({

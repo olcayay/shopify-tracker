@@ -1,3 +1,19 @@
+Add external Shopify links from feature pages (PLA-1133, 2026-04-18)
+======================================================
+Added "Open in marketplace" external links from feature category and feature detail pages
+to their corresponding Shopify App Store pages.
+
+1. Category detail page: external link now points to {category.url}/all (appended /all)
+2. Feature detail page: new external link icon that opens
+   {categoryUrl}/all?feature_handles[]={handle} on Shopify
+3. API: Added categoryUrl field to GET /api/features/:handle response
+
+Files changed:
+- apps/api/src/routes/features.ts (added cat->>'url' to feature detail query + categoryUrl in response)
+- apps/dashboard/src/app/(dashboard)/[platform]/features/categories/[slug]/page.tsx (appended /all)
+- apps/dashboard/src/app/(dashboard)/[platform]/features/[handle]/page.tsx (added ExternalLink icon)
+- apps/api/src/__tests__/routes/features.test.ts (added tests for categoryUrl field)
+
 Fix Salesforce discover/integrations dead links (PLA-1126, 2026-04-18)
 ======================================================
 Problem: Salesforce badge grid slugified values (toLowerCase + replace spaces)
