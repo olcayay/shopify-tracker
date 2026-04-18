@@ -4,6 +4,8 @@ resource "google_compute_instance" "email" {
   zone         = var.zone
   tags         = ["redis-server", "ssh"]
 
+  allow_stopping_for_update = true
+
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2404-lts-amd64"
