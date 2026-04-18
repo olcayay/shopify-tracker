@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { SidebarTrackedApps } from "@/components/sidebar-tracked-apps";
 
 const mockFetchWithAuth = vi.fn();
@@ -87,7 +88,7 @@ describe("SidebarTrackedApps", () => {
     expect(activeLink?.className).toContain("font-medium");
   });
 
-  it("shows overflow link when more than 6 apps (expanded)", async () => {
+  it("shows overflow button when more than 5 apps (expanded)", async () => {
     const manyApps = Array.from({ length: 8 }, (_, i) => ({
       platform: "shopify",
       slug: `app-${i}`,
@@ -97,8 +98,25 @@ describe("SidebarTrackedApps", () => {
     mockFetch(manyApps);
     await renderAndWait(<SidebarTrackedApps platform="shopify" collapsed={false} />);
     expect(screen.getByText("App 0")).toBeInTheDocument();
-    expect(screen.getByText(/Show all/)).toBeInTheDocument();
-    expect(screen.queryByText("App 7")).not.toBeInTheDocument();
+    expect(screen.getByText("App 4")).toBeInTheDocument();
+    expect(screen.queryByText("App 5")).not.toBeInTheDocument();
+    expect(screen.getByText(/3 more/)).toBeInTheDocument();
+  });
+
+  it("opens overflow panel showing all apps when +N is clicked (expanded)", async () => {
+    const user = userEvent.setup();
+    const manyApps = Array.from({ length: 7 }, (_, i) => ({
+      platform: "shopify",
+      slug: `app-${i}`,
+      name: `App ${i}`,
+      iconUrl: null,
+    }));
+    mockFetch(manyApps);
+    await renderAndWait(<SidebarTrackedApps platform="shopify" collapsed={false} />);
+    await user.click(screen.getByText(/2 more/));
+    // Panel should show ALL apps
+    expect(screen.getByText("All tracked apps (7)")).toBeInTheDocument();
+    expect(screen.getByText("App 6")).toBeInTheDocument();
   });
 
   it("renders icons in collapsed mode", async () => {

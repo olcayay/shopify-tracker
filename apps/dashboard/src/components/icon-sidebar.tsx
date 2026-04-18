@@ -109,73 +109,73 @@ export function IconSidebar() {
           ? { backgroundColor: accentColor, color: "var(--primary-foreground)" }
           : undefined;
 
+        const isAppsItem = isPlatformPage && item.href === `/${activePlatform}/apps`;
+
         if (expanded) {
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
-                isActive
-                  ? "font-medium text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-              style={
-                isActive
-                  ? activeStyle ?? { backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }
-                  : undefined
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
-              {item.badge && (
-                <span className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                  {item.badge}
-                </span>
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                className={`flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
+                  isActive
+                    ? "font-medium text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+                style={
+                  isActive
+                    ? activeStyle ?? { backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }
+                    : undefined
+                }
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+                {item.badge && (
+                  <span className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {item.badge}
+                  </span>
+                )}
+                {item.adminOnly && (
+                  <Shield className="h-3 w-3 ml-auto text-amber-500 shrink-0" />
+                )}
+              </Link>
+              {isAppsItem && (
+                <SidebarTrackedApps platform={activePlatform} collapsed={false} />
               )}
-              {item.adminOnly && (
-                <Shield className="h-3 w-3 ml-auto text-amber-500 shrink-0" />
-              )}
-            </Link>
+            </div>
           );
         }
 
         return (
-          <Tooltip key={item.href}>
-            <TooltipTrigger asChild>
-              <Link
-                href={item.href}
-                className={`h-9 w-9 mx-auto flex items-center justify-center rounded-md text-sm transition-colors relative ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-                style={activeStyle}
-              >
-                <Icon className="h-4 w-4" />
-                {item.badge && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
-                )}
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              {item.label}
-              {item.adminOnly && " (Admin)"}
-              {item.badge && ` (${item.badge})`}
-            </TooltipContent>
-          </Tooltip>
+          <div key={item.href}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href={item.href}
+                  className={`h-9 w-9 mx-auto flex items-center justify-center rounded-md text-sm transition-colors relative ${
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                  style={activeStyle}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.badge && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+                  )}
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {item.label}
+                {item.adminOnly && " (Admin)"}
+                {item.badge && ` (${item.badge})`}
+              </TooltipContent>
+            </Tooltip>
+            {isAppsItem && (
+              <SidebarTrackedApps platform={activePlatform} collapsed />
+            )}
+          </div>
         );
       })}
-
-      {/* Tracked apps */}
-      {isPlatformPage && (
-        <>
-          <div className={`${expanded ? "mx-3" : "mx-auto w-6"} border-t my-1`} />
-          <SidebarTrackedApps
-            platform={activePlatform}
-            collapsed={!expanded}
-          />
-        </>
-      )}
 
       {/* Spacer */}
       <div className="flex-1" />
