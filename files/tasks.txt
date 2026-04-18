@@ -1,3 +1,9 @@
+Unify feature tracking UI/UX to match category bookmark pattern (PLA-1134, 2026-04-18)
+  - Replaced Shadcn Button/Tooltip with raw button + native title
+  - Added error modal for API failures (matching category pattern)
+  - Added size prop for consistent sizing
+  - Kept canEdit permission gate
+
 Show app count per feature on category & subcategory lists (PLA-1135, 2026-04-18)
   - API by-category: SELECT DISTINCT → GROUP BY with COUNT(DISTINCT app_id)
   - API categories/:slug: separate count query, merged into features array

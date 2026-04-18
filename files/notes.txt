@@ -1,3 +1,16 @@
+Unify feature tracking UI/UX to match category bookmark pattern (PLA-1134, 2026-04-18)
+======================================================
+Refactored StarFeatureButton to match BookmarkCategoryButton pattern:
+- Replaced Shadcn <Button> with raw <button> element
+- Replaced Shadcn <Tooltip> with native title attribute
+- Added error modal on API failure (star + unstar)
+- Added size prop ("default" | "sm") matching category button
+- Kept permission gating (canEdit check)
+- Same visual style: rounded-md, hover:bg-accent, amber bookmark icon
+
+File changed:
+- apps/dashboard/src/app/(dashboard)/[platform]/features/[handle]/track-button.tsx
+
 Show app count per feature on category & subcategory lists (PLA-1135, 2026-04-18)
 ======================================================
 Added app count column to feature tables on category detail and subcategory pages.
