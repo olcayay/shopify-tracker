@@ -104,7 +104,7 @@ export default async function FeatureCategoryDetailPage({
                   <TableHead>Feature</TableHead>
                   <TableHead>Subcategory</TableHead>
                   <TableHead className="text-right">Apps</TableHead>
-                  <TableHead className="w-36" />
+                  <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>

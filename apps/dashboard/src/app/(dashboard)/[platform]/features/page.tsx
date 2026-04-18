@@ -352,9 +352,27 @@ export default function FeaturesPage() {
                       </Link>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {[f.categoryTitle, f.subcategoryTitle]
-                        .filter(Boolean)
-                        .join(" > ") || "\u2014"}
+                      {f.categoryTitle ? (
+                        <>
+                          <Link
+                            href={buildFeatureCategoryPath(platform as string, f.categoryTitle)}
+                            className="hover:underline hover:text-foreground"
+                          >
+                            {f.categoryTitle}
+                          </Link>
+                          {f.subcategoryTitle && (
+                            <>
+                              {" > "}
+                              <Link
+                                href={buildFeatureSubcategoryPath(platform as string, f.categoryTitle, f.subcategoryTitle)}
+                                className="hover:underline hover:text-foreground"
+                              >
+                                {f.subcategoryTitle}
+                              </Link>
+                            </>
+                          )}
+                        </>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {f.appCount ?? "\u2014"}
