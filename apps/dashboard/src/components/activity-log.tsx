@@ -122,7 +122,9 @@ function formatFullDate(date: string): string {
 
 /** Format a slug into a display name: "my-cool-app" → "my-cool-app" (keep as-is for slugs) */
 function formatSlug(slug: string): string {
-  return slug;
+  return slug
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Truncate a name with an ellipsis when longer than `max` characters. */

@@ -1,3 +1,20 @@
+Fix Activity Log still showing slugs for old entries (PLA-1132 follow-up, 2026-04-18)
+  - API: retroactive name resolution — batch lookup missing app names from apps table
+  - Frontend: formatSlug fallback converts slugs to Title Case when no name found
+  - Tests updated for new formatSlug behavior
+
+Fix preview page close button returning to Overview instead of active tab (PLA-1116, 2026-04-18)
+  - Root cause: document.referrer unreliable in SPA — always empty on client navigation
+  - Fix: read saved tab from localStorage (app-tab-{slug}) and navigate there
+  - Fallback: base app URL if no saved tab
+  - Tests rewritten for new localStorage-based navigation
+
+Fix Salesforce discover pages showing empty app lists for slug URLs (PLA-1126 follow-up, 2026-04-18)
+  - API: JSONB query now matches both exact values and slugified URLs
+    using REGEXP_REPLACE normalization in EXISTS subquery
+  - Frontend: formatTitle helper shows proper Title Case for slug-style URLs
+  - Both /discover/industry/Horizontal%20Product and /discover/industry/horizontal-product now work
+
 Unify feature tracking UI/UX to match category bookmark pattern (PLA-1134, 2026-04-18)
   - Replaced Shadcn Button/Tooltip with raw button + native title
   - Added error modal for API failures (matching category pattern)

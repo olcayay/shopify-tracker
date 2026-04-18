@@ -76,16 +76,7 @@ import PreviewPage from "@/app/(dashboard)/[platform]/apps/[slug]/preview/page";
 describe("PreviewPage close button", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: simulate in-app navigation (history > 1, same-origin referrer)
-    Object.defineProperty(window, "history", {
-      writable: true,
-      value: { length: 3 },
-    });
-    Object.defineProperty(document, "referrer", {
-      writable: true,
-      configurable: true,
-      value: window.location.origin + "/shopify/apps/test-app/compare",
-    });
+    localStorage.clear();
   });
 
   function setupAppData() {
@@ -106,7 +97,9 @@ describe("PreviewPage close button", () => {
     fireEvent.click(closeBtn);
   }
 
-  it("calls router.back() when user came from within the app", async () => {
+  it("returns to saved tab from localStorage when available", async () => {
+    localStorage.setItem("app-tab-test-app", "/shopify/apps/v2/test-app/competitors");
+
     setupAppData();
     render(<PreviewPage />);
     await waitFor(() => {
@@ -115,21 +108,10 @@ describe("PreviewPage close button", () => {
 
     await clickCloseButton();
 
-    expect(mockBack).toHaveBeenCalled();
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith("/shopify/apps/v2/test-app/competitors");
   });
 
-  it("calls router.push() when there is no in-app referrer (direct visit)", async () => {
-    Object.defineProperty(window, "history", {
-      writable: true,
-      value: { length: 1 },
-    });
-    Object.defineProperty(document, "referrer", {
-      writable: true,
-      configurable: true,
-      value: "",
-    });
-
+  it("falls back to base app URL when no saved tab", async () => {
     setupAppData();
     render(<PreviewPage />);
     await waitFor(() => {
@@ -138,16 +120,12 @@ describe("PreviewPage close button", () => {
 
     await clickCloseButton();
 
-    expect(mockPush).toHaveBeenCalled();
-    expect(mockBack).not.toHaveBeenCalled();
+    // Should go to the base app URL (overview) with version prefix
+    expect(mockPush).toHaveBeenCalledWith("/shopify/apps/v2/test-app");
   });
 
-  it("calls router.push() when referrer is from a different origin", async () => {
-    Object.defineProperty(document, "referrer", {
-      writable: true,
-      configurable: true,
-      value: "https://external-site.com/page",
-    });
+  it("ignores saved tab that does not start with base URL", async () => {
+    localStorage.setItem("app-tab-test-app", "/other-platform/apps/v2/other-app/details");
 
     setupAppData();
     render(<PreviewPage />);
@@ -157,7 +135,7 @@ describe("PreviewPage close button", () => {
 
     await clickCloseButton();
 
-    expect(mockPush).toHaveBeenCalled();
-    expect(mockBack).not.toHaveBeenCalled();
+    // Should fall back to base URL since saved tab doesn't match
+    expect(mockPush).toHaveBeenCalledWith("/shopify/apps/v2/test-app");
   });
 });

@@ -14,6 +14,17 @@ import {
 import { AppListTable } from "@/components/app-list-table";
 import type { PlatformId } from "@appranks/shared";
 
+/** Format a URL value into a readable title. Handles both encoded display names
+ *  (e.g. "Horizontal Product") and legacy slugs (e.g. "horizontal-product"). */
+function formatTitle(value: string): string {
+  // If the value already has spaces or uppercase, it's a proper display name
+  if (/[A-Z]/.test(value) || value.includes(" ")) return value;
+  // Otherwise treat as a slug: replace hyphens with spaces and title-case
+  return value
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const TYPE_LABELS: Record<string, string> = {
   industry: "Industry",
   "business-need": "Business Need",
@@ -58,7 +69,7 @@ export default async function DiscoverPage({
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">{typeLabel}</p>
-        <h1 className="text-2xl font-bold">{decodedValue}</h1>
+        <h1 className="text-2xl font-bold">{formatTitle(decodedValue)}</h1>
       </div>
 
       <AppListTable

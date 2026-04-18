@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, and, desc, sql } from "drizzle-orm";
-import { accountActivityLog, users } from "@appranks/db";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { accountActivityLog, users, apps } from "@appranks/db";
 
 export const accountActivityLogRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
@@ -67,6 +67,63 @@ export const accountActivityLogRoutes: FastifyPluginAsync = async (app) => {
         .from(accountActivityLog)
         .where(where),
     ]);
+
+    // Enrich metadata: resolve missing app names from slugs
+    const slugsToResolve = new Set<string>();
+    for (const log of logs) {
+      const m = log.metadata as Record<string, unknown> | null;
+      if (!m) continue;
+      const action = log.action;
+      if (action === "competitor_added" || action === "competitor_removed") {
+        if (m.competitorSlug && !m.competitorName) slugsToResolve.add(m.competitorSlug as string);
+        if (m.trackedAppSlug && !m.trackedAppName) slugsToResolve.add(m.trackedAppSlug as string);
+      } else if (action === "app_tracked" || action === "app_untracked") {
+        if (m.slug && !m.appName) slugsToResolve.add(m.slug as string);
+      } else if (action === "keyword_tracked") {
+        if (m.appSlug && !m.appName) slugsToResolve.add(m.appSlug as string);
+      }
+    }
+
+    if (slugsToResolve.size > 0) {
+      const slugArr = [...slugsToResolve];
+      const appRows = await db
+        .select({ slug: apps.slug, name: apps.name, platform: apps.platform })
+        .from(apps)
+        .where(inArray(apps.slug, slugArr));
+      // Build lookup: "platform:slug" → name (fallback to slug-only key)
+      const nameMap = new Map<string, string>();
+      for (const row of appRows) {
+        nameMap.set(`${row.platform}:${row.slug}`, row.name);
+        if (!nameMap.has(row.slug)) nameMap.set(row.slug, row.name);
+      }
+
+      for (const log of logs) {
+        const m = log.metadata as Record<string, unknown> | null;
+        if (!m) continue;
+        const platform = m.platform as string | undefined;
+        const action = log.action;
+        if (action === "competitor_added" || action === "competitor_removed") {
+          if (m.competitorSlug && !m.competitorName) {
+            const key = platform ? `${platform}:${m.competitorSlug}` : (m.competitorSlug as string);
+            m.competitorName = nameMap.get(key) ?? nameMap.get(m.competitorSlug as string);
+          }
+          if (m.trackedAppSlug && !m.trackedAppName) {
+            const key = platform ? `${platform}:${m.trackedAppSlug}` : (m.trackedAppSlug as string);
+            m.trackedAppName = nameMap.get(key) ?? nameMap.get(m.trackedAppSlug as string);
+          }
+        } else if (action === "app_tracked" || action === "app_untracked") {
+          if (m.slug && !m.appName) {
+            const key = platform ? `${platform}:${m.slug}` : (m.slug as string);
+            m.appName = nameMap.get(key) ?? nameMap.get(m.slug as string);
+          }
+        } else if (action === "keyword_tracked") {
+          if (m.appSlug && !m.appName) {
+            const key = platform ? `${platform}:${m.appSlug}` : (m.appSlug as string);
+            m.appName = nameMap.get(key) ?? nameMap.get(m.appSlug as string);
+          }
+        }
+      }
+    }
 
     return { logs, total, page, limit };
   });

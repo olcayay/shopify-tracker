@@ -98,7 +98,7 @@ describe("ActivityLog", () => {
     render(<ActivityLog />);
     await waitFor(() => {
       // App slug shown as link
-      const slackLink = screen.getByRole("link", { name: "slack" });
+      const slackLink = screen.getByRole("link", { name: "Slack" });
       expect(slackLink).toBeInTheDocument();
       expect(slackLink).toHaveAttribute("href", "/shopify/apps/slack");
       // Member email shown in bold
@@ -223,9 +223,9 @@ describe("ActivityLog", () => {
     mockFetchWithAuth.mockResolvedValue(mockApiResponse([compEntry], 1));
     render(<ActivityLog />);
     await waitFor(() => {
-      const rivalLink = screen.getByRole("link", { name: "rival-app" });
+      const rivalLink = screen.getByRole("link", { name: "Rival App" });
       expect(rivalLink).toHaveAttribute("href", "/shopify/apps/rival-app");
-      const myAppLink = screen.getByRole("link", { name: "my-app" });
+      const myAppLink = screen.getByRole("link", { name: "My App" });
       expect(myAppLink).toHaveAttribute("href", "/shopify/apps/my-app");
     });
   });
@@ -244,7 +244,7 @@ describe("ActivityLog", () => {
     render(<ActivityLog />);
     await waitFor(() => {
       expect(screen.getByText(/email marketing/)).toBeInTheDocument();
-      const appLink = screen.getByRole("link", { name: "mailchimp" });
+      const appLink = screen.getByRole("link", { name: "Mailchimp" });
       expect(appLink).toHaveAttribute("href", "/shopify/apps/mailchimp");
     });
   });
@@ -351,11 +351,11 @@ describe("ActivityLog", () => {
       render(<ActivityLog />);
       await waitFor(() => expect(mockFetchWithAuth).toHaveBeenCalled());
       const link = await screen.findByRole("link", {
-        name: /my-cool-app-builder/,
+        name: /My Cool App Builder/,
       });
-      expect(link.getAttribute("title")).toBe("my-cool-app-builder-pro");
-      // With APP_NAME_MAX_CHARS=36, this 24-char slug fits without truncation
-      expect(link.textContent).toBe("my-cool-app-builder-pro");
+      expect(link.getAttribute("title")).toBe("My Cool App Builder Pro");
+      // With APP_NAME_MAX_CHARS=36, this 24-char formatted slug fits without truncation
+      expect(link.textContent).toBe("My Cool App Builder Pro");
     });
   });
 });

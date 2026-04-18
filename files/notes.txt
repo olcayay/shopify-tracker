@@ -1,3 +1,47 @@
+Fix Activity Log still showing slugs for old entries (PLA-1132 follow-up, 2026-04-18)
+======================================================
+Original PLA-1132 fix only added names to NEW activity log entries. Old entries
+(created before fix) had no competitorName/trackedAppName in metadata, showing raw slugs.
+
+Two-layer fix:
+1. API enrichment: after querying activity logs, collect slugs missing names,
+   batch-lookup from apps table, inject into response metadata.
+2. Frontend formatSlug: converts "my-cool-app" to "My Cool App" as last fallback.
+
+Files changed:
+- apps/api/src/routes/account-activity-log.ts (slug-to-name enrichment post-query)
+- apps/dashboard/src/components/activity-log.tsx (formatSlug: replace hyphens, title case)
+- apps/dashboard/src/__tests__/components/activity-log.test.tsx (updated assertions)
+
+Fix preview page close button (PLA-1116, 2026-04-18)
+======================================================
+Close button always returned to Overview tab because document.referrer is unreliable
+in SPAs (empty on client-side navigation). The cameFromWithinApp check was almost always
+false, falling back to base URL.
+
+Fix: use localStorage (app-tab-{slug}) to retrieve the last active tab and navigate
+there directly via router.push. AppNav already saves the current tab path to localStorage.
+
+Files changed:
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/preview/page.tsx
+- apps/dashboard/src/__tests__/app/app-preview.test.tsx
+
+Fix Salesforce discover pages empty (PLA-1126 follow-up, 2026-04-18)
+======================================================
+Commit 1d351d48 fixed link generation (encodeURIComponent) but old slug-format URLs
+like /discover/industry/horizontal-product still returned 0 results because the API
+used exact JSONB containment match and DB stores "Horizontal Product" (with spaces).
+
+Fix:
+1. API: replaced @> containment with EXISTS + REGEXP_REPLACE normalization to match
+   both exact values and slugified URLs.
+2. Frontend: formatTitle helper detects slug-style values (no uppercase, no spaces)
+   and converts to Title Case for the page heading.
+
+Files changed:
+- apps/api/src/routes/platform-attributes.ts (flexible JSONB matching)
+- apps/dashboard/src/app/(dashboard)/[platform]/discover/[type]/[value]/page.tsx (formatTitle)
+
 Unify feature tracking UI/UX to match category bookmark pattern (PLA-1134, 2026-04-18)
 ======================================================
 Refactored StarFeatureButton to match BookmarkCategoryButton pattern:

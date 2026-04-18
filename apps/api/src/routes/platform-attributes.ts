@@ -42,7 +42,11 @@ export const platformAttributeRoutes: FastifyPluginAsync = async (app) => {
         ) s
         INNER JOIN apps a ON a.id = s.app_id
         WHERE a.platform = ${platform}
-          AND (s.platform_data -> ${jsonbField}) @> to_jsonb(ARRAY[${value}])::jsonb
+          AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(s.platform_data -> ${jsonbField}) elem
+            WHERE elem = ${value}
+              OR LOWER(REGEXP_REPLACE(elem, '[\s&/]+', '-', 'g')) = LOWER(${value})
+          )
         ORDER BY a.name
         LIMIT ${maxLimit} OFFSET ${parsedOffset}
       `);

@@ -58,17 +58,17 @@ export default function PreviewPage() {
   }
 
   function closePreview() {
-    const cameFromWithinApp =
-      typeof window !== "undefined" &&
-      window.history.length > 1 &&
-      document.referrer &&
-      new URL(document.referrer).origin === window.location.origin;
-
-    if (cameFromWithinApp) {
-      router.back();
-    } else {
-      router.push(buildAppLink(platform, slug, "", version));
-    }
+    // Try to return to the saved tab (e.g., competitors, keywords, changes)
+    // rather than always landing on the overview tab.
+    const base = buildAppLink(platform, slug, "", version);
+    try {
+      const savedTab = localStorage.getItem(`app-tab-${slug}`);
+      if (savedTab && savedTab.startsWith(base)) {
+        router.push(savedTab);
+        return;
+      }
+    } catch {}
+    router.push(base);
   }
 
   return (
