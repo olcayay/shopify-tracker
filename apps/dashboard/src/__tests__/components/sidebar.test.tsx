@@ -50,6 +50,10 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }));
 
+vi.mock("@/components/sidebar-tracked-apps", () => ({
+  SidebarTrackedApps: () => null,
+}));
+
 import React from "react";
 import { Sidebar, MobileSidebar } from "@/components/sidebar";
 

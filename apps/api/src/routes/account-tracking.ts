@@ -262,6 +262,25 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     return rows;
   });
 
+  // GET /api/account/tracked-apps/sidebar — lightweight list for sidebar navigation
+  app.get("/tracked-apps/sidebar", async (request) => {
+    const { accountId } = request.user;
+
+    const rows = await db
+      .select({
+        platform: apps.platform,
+        slug: apps.slug,
+        name: apps.name,
+        iconUrl: apps.iconUrl,
+      })
+      .from(accountTrackedApps)
+      .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+      .where(eq(accountTrackedApps.accountId, accountId))
+      .orderBy(apps.platform, apps.name);
+
+    return rows;
+  });
+
   // POST /api/account/tracked-apps
   app.post(
     "/tracked-apps",

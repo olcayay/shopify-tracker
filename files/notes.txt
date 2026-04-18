@@ -1,3 +1,25 @@
+Show tracked apps in sidebar (PLA-1140, 2026-04-18)
+======================================================
+Added tracked app icons/names directly into the sidebar under each platform.
+Users can now navigate to any tracked app in one click from anywhere in the dashboard.
+
+API: New endpoint /api/account/tracked-apps/sidebar returns all tracked apps
+across all platforms (platform, slug, name, iconUrl).
+
+Component: New SidebarTrackedApps renders apps under the expanded platform
+accordion. Supports both expanded (icon + name) and collapsed (icon-only with
+tooltip) modes. Overflow caps at 6 expanded / 5 collapsed with "Show all" link.
+Active app is highlighted with the platform accent color.
+
+Files changed:
+- apps/api/src/routes/account-tracking.ts (new sidebar endpoint)
+- apps/dashboard/src/components/sidebar-tracked-apps.tsx (NEW)
+- apps/dashboard/src/components/sidebar.tsx (integration)
+- apps/dashboard/src/__tests__/components/sidebar-tracked-apps.test.tsx (NEW - 8 tests)
+- apps/dashboard/src/__tests__/components/sidebar.test.tsx (mock update)
+- apps/dashboard/src/__tests__/components/sidebar-impersonation.test.tsx (mock update)
+- apps/api/src/__tests__/routes/account-tracking.test.ts (3 new tests)
+
 Sort bookmarked features to top on category/subcategory pages (PLA-1136, 2026-04-18)
 ======================================================
 Both feature category detail page and subcategory page now sort starred features

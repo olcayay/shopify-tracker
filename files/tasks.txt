@@ -1,3 +1,11 @@
+Show tracked apps in sidebar (PLA-1140, 2026-04-18)
+  - New API endpoint /api/account/tracked-apps/sidebar (all platforms)
+  - SidebarTrackedApps component: expanded (icon+name), collapsed (icon-only)
+  - Overflow cap: 6 expanded, 5 collapsed with Show all link
+  - Active app highlighted with platform accent color
+  - 11 new tests (8 component + 3 API)
+  - 5773 tests passing
+
 Sort bookmarked features to top on category/subcategory pages (PLA-1136, 2026-04-18)
   - Category detail page: starred features sorted first in feature table
   - Subcategory page: same treatment

@@ -57,6 +57,10 @@ vi.mock("@/components/ui/sheet", () => ({
   ),
 }));
 
+vi.mock("@/components/sidebar-tracked-apps", () => ({
+  SidebarTrackedApps: () => null,
+}));
+
 import React from "react";
 import { Sidebar } from "@/components/sidebar";
 

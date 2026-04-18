@@ -22,6 +22,7 @@ import { PLATFORMS, type PlatformId, platformFeatureFlagSlug } from "@appranks/s
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "radix-ui";
+import { SidebarTrackedApps } from "@/components/sidebar-tracked-apps";
 
 function SidebarContent({
   collapsed = false,
@@ -155,14 +156,26 @@ function SidebarContent({
       <nav className="flex flex-col gap-1 flex-1">
         {collapsed ? (
           /* Collapsed: show appropriate nav icons */
-          activePlatformItems.map((item) => {
-            const isActive = item.exact
-              ? pathname === item.href
-              : pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} />
-            );
-          })
+          <>
+            {activePlatformItems.map((item) => {
+              const isActive = item.exact
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} />
+              );
+            })}
+            {isPlatformPage && currentPlatform && (
+              <>
+                <div className="border-t my-1 mx-2" />
+                <SidebarTrackedApps
+                  platform={currentPlatform}
+                  collapsed
+                  onNavigate={onNavigate}
+                />
+              </>
+            )}
+          </>
         ) : isGlobalPage && !isPlatformPage ? (
           /* Global page: show global nav items as flat list */
           filteredGlobalNav.map((item) => {
@@ -222,14 +235,23 @@ function SidebarContent({
                     <ChevronRight className="h-3.5 w-3.5 ml-auto shrink-0" />
                   )}
                 </Link>
-                {isExpanded && items.map((item) => {
-                  const isActive = item.exact
-                    ? pathname === item.href
-                    : pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
-                    <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} className="pl-6" />
-                  );
-                })}
+                {isExpanded && (
+                  <>
+                    {items.map((item) => {
+                      const isActive = item.exact
+                        ? pathname === item.href
+                        : pathname === item.href || pathname.startsWith(item.href + "/");
+                      return (
+                        <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} className="pl-6" />
+                      );
+                    })}
+                    <SidebarTrackedApps
+                      platform={platformId}
+                      collapsed={false}
+                      onNavigate={onNavigate}
+                    />
+                  </>
+                )}
               </div>
             );
           })

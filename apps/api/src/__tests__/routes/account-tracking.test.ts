@@ -316,6 +316,75 @@ describe("GET /api/account/tracked-apps", () => {
 });
 
 // ==========================================================================
+// GET /api/account/tracked-apps/sidebar
+// ==========================================================================
+
+describe("GET /api/account/tracked-apps/sidebar", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    const { accountTrackingRoutes } = await import(
+      "../../routes/account-tracking.js"
+    );
+    app = await buildTestApp({
+      routes: accountTrackingRoutes,
+      prefix: "/api/account",
+      db: {
+        selectResult: [
+          {
+            platform: "shopify",
+            slug: "test-app",
+            name: "Test App",
+            iconUrl: "https://example.com/icon.png",
+          },
+          {
+            platform: "canva",
+            slug: "canva-app",
+            name: "Canva App",
+            iconUrl: null,
+          },
+        ],
+      },
+    });
+  });
+
+  afterAll(() => app.close());
+
+  it("returns 401 without auth", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/tracked-apps/sidebar",
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns all tracked apps across platforms", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/tracked-apps/sidebar",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.length).toBe(2);
+    expect(body[0]).toHaveProperty("platform");
+    expect(body[0]).toHaveProperty("slug");
+    expect(body[0]).toHaveProperty("name");
+    expect(body[0]).toHaveProperty("iconUrl");
+  });
+
+  it("viewer can access sidebar endpoint", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/account/tracked-apps/sidebar",
+      headers: authHeaders(viewerToken()),
+    });
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+// ==========================================================================
 // DELETE /api/account/tracked-apps/:slug
 // ==========================================================================
 
