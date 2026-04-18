@@ -165,7 +165,7 @@ async function syncKeywordActiveFlag(db: FastifyInstance["db"], keywordId: numbe
 }
 
 export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // --- Platform Stats (lightweight badge counts) ---
 

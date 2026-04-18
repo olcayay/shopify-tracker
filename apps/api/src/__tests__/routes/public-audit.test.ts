@@ -40,9 +40,11 @@ async function buildApp(executeResult: any = null): Promise<FastifyInstance> {
   const mockDb = createMockDb({});
   mockDb.execute = () => Promise.resolve(executeResult ? [executeResult] : []);
   app.decorate("db", mockDb);
+  app.decorate("writeDb", mockDb);
   await app.register(
     async (instance) => {
       instance.db = mockDb;
+      instance.writeDb = mockDb;
       await publicRoutes(instance);
     },
     { prefix: "/api/public" },

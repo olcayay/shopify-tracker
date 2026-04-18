@@ -49,3 +49,9 @@ variable "db_tier" {
   type        = string
   default     = "db-f1-micro"
 }
+
+variable "db_replica_tier" {
+  description = "Cloud SQL read replica machine tier"
+  type        = string
+  default     = "db-f1-micro"
+}

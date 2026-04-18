@@ -143,6 +143,38 @@ export function createHealthCheckDb(databaseUrl: string) {
 export type Database = ReturnType<typeof createDb>;
 
 /**
+ * Dual-pool setup for read/write splitting.
+ * `read` connects to a replica, `write` connects to the primary.
+ */
+export interface ReadWriteDb {
+  read: Database;
+  write: Database;
+}
+
+/**
+ * Create a dual-pool DB setup for read/write splitting.
+ * If replicaUrl is the same as primaryUrl (e.g. local dev), both pools
+ * point to the same database — safe and transparent.
+ */
+export function createReadWriteDb(
+  primaryUrl: string,
+  replicaUrl: string,
+  opts?: { readPool?: DbPoolOptions; writePool?: DbPoolOptions }
+): ReadWriteDb {
+  return {
+    read: createDb(replicaUrl, opts?.readPool),
+    write: createDb(primaryUrl, opts?.writePool),
+  };
+}
+
+/**
+ * Close both pools of a ReadWriteDb instance.
+ */
+export async function closeReadWriteDb(rwDb: ReadWriteDb): Promise<void> {
+  await Promise.allSettled([closeDb(rwDb.read), closeDb(rwDb.write)]);
+}
+
+/**
  * Build a PostgreSQL ARRAY literal safe for use inside raw SQL.
  * Use this instead of `ANY(${jsArray})` which fails because Drizzle's
  * sql`` template does not auto-cast JS arrays to PG arrays.

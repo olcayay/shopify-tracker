@@ -55,7 +55,7 @@ const EMAIL_TYPE_CATEGORIES = {
 };
 
 export const emailPreferenceRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/email-preferences — get current user's email preferences
   app.get("/", async (request, reply) => {

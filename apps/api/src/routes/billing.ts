@@ -23,7 +23,7 @@ function getStripe() {
 }
 
 export const billingRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/billing/status — current subscription status
   app.get("/status", async (request, reply) => {

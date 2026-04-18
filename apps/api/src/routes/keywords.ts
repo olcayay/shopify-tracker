@@ -49,7 +49,7 @@ function getScraperQueue(): Queue {
 }
 
 export const keywordRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/keywords — list account's tracked keywords
   app.get("/", async (request) => {

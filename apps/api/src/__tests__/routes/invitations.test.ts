@@ -111,12 +111,14 @@ async function buildInvitationApp(mockDb: any): Promise<FastifyInstance> {
   });
 
   app.decorate("db", mockDb);
+  app.decorate("writeDb", mockDb);
   app.decorateRequest("user", null as any);
   app.decorateRequest("isImpersonating", false);
   // Invitation routes are public (no auth hook needed)
   await app.register(
     async (instance) => {
       (instance as any).db = mockDb;
+      (instance as any).writeDb = mockDb;
       await invitationRoutes(instance);
     },
     { prefix: "/api/invitations" }

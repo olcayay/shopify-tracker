@@ -18,7 +18,7 @@ import type { EmailType, TemplateVariable } from "@appranks/shared";
 import type { NotificationType } from "@appranks/shared";
 
 export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // --- Email Logs ---
 

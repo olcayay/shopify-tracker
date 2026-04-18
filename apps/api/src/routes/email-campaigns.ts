@@ -86,7 +86,7 @@ interface CampaignConfig {
 }
 
 export const emailCampaignRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // POST /campaigns — create a campaign (draft) (PLA-708: scheduling)
   app.post("/campaigns", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {

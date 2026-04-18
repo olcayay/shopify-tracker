@@ -27,6 +27,17 @@ output "database_url" {
   sensitive   = true
 }
 
+output "db_replica_private_ip" {
+  description = "Cloud SQL read replica private IP"
+  value       = google_sql_database_instance.read_replica.private_ip_address
+}
+
+output "database_read_url" {
+  description = "Read replica DATABASE_URL for read-only services"
+  value       = "postgresql://postgres:${var.db_password}@${google_sql_database_instance.read_replica.private_ip_address}:5432/appranks"
+  sensitive   = true
+}
+
 output "redis_url" {
   description = "Redis URL (on Email VM)"
   value       = "redis://${google_compute_instance.email.network_interface[0].network_ip}:6379"

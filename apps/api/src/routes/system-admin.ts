@@ -131,7 +131,7 @@ function getScraperQueue(): Queue {
 }
 
 export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/system-admin/accounts — all accounts with usage stats
   app.get("/accounts", async () => {
@@ -3324,7 +3324,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       tag?: string;
     };
   }>("/ai-logs", async (request) => {
-    const db = app.db;
+    const db = app.writeDb;
     const {
       limit: limitStr = String(PAGINATION_DEFAULT_LIMIT),
       offset: offsetStr = "0",
@@ -3407,7 +3407,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.get<{
     Querystring: { period?: string; days?: string };
   }>("/ai-logs/analytics/timeseries", async (request) => {
-    const db = app.db;
+    const db = app.writeDb;
     const { period: rawPeriod = "day", days: daysStr = "30" } = request.query;
 
     const allowedPeriods: Record<string, string> = { daily: "day", weekly: "week", monthly: "month", day: "day", week: "week", month: "month" };
@@ -3442,7 +3442,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.get<{
     Querystring: { days?: string };
   }>("/ai-logs/analytics/per-account", async (request) => {
-    const db = app.db;
+    const db = app.writeDb;
     const days = Math.min(parseInt(request.query.days || "30", 10) || 30, 365);
     const since = new Date();
     since.setDate(since.getDate() - days);
@@ -3471,7 +3471,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.patch<{ Params: { id: string }; Body: { tags?: string[]; notes?: string } }>(
     "/ai-logs/:id",
     async (request, reply) => {
-      const db = app.db;
+      const db = app.writeDb;
       const { id } = request.params;
       const { tags, notes } = request.body || {};
 

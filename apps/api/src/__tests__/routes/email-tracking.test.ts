@@ -6,9 +6,11 @@ async function buildEmailTestApp(db?: MockDbOverrides): Promise<FastifyInstance>
   const app = Fastify({ logger: false });
   const mockDb = createMockDb(db);
   app.decorate("db", mockDb);
+  app.decorate("writeDb", mockDb);
   await app.register(
     async (instance) => {
       instance.db = mockDb;
+      instance.writeDb = mockDb;
       await emailTrackingRoutes(instance);
     },
     { prefix: "/api/emails" }

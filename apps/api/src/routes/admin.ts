@@ -39,7 +39,7 @@ function getScraperQueue(): Queue {
 
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // --- Tracked Apps ---
 

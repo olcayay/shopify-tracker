@@ -98,6 +98,7 @@ async function buildAuthApp(dbOverrides: {
   }));
 
   app.decorate("db", mockDb);
+  app.decorate("writeDb", mockDb);
 
   registerAuthMiddleware(app);
 

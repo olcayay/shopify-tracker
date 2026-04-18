@@ -269,7 +269,7 @@ function buildResearchSummary(data: any, projectName: string) {
 }
 
 export const researchRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // ─── Project CRUD ──────────────────────────────────────────
 

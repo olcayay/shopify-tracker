@@ -21,7 +21,7 @@ function getRedisConnection() {
 }
 
 export const dlqRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/system-admin/dlq — list dead letter jobs
   app.get("/", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {

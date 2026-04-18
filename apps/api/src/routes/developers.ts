@@ -19,7 +19,7 @@ import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL, PAGINATION_DEFAUL
 import { getVisiblePlatformsForAccount } from "../utils/platform-visibility.js";
 
 export async function developerRoutes(app: FastifyInstance) {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/developers — list global developers (paginated, searchable)
   app.get(

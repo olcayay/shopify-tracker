@@ -9,7 +9,7 @@ import {
 import { requireSystemAdmin } from "../middleware/authorize.js";
 
 export const supportAdminRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // All routes require system admin
   app.addHook("preHandler", requireSystemAdmin());

@@ -55,7 +55,7 @@ function buildAudienceQuery(audience: string): string {
 }
 
 export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // POST /api/system-admin/notifications/broadcast/preview — preview audience size
   app.post("/broadcast/preview", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {

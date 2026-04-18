@@ -18,7 +18,7 @@ import { updateAccountSchema } from "../schemas/account.js";
 
 
 export const accountInfoRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/account — account details + limits + usage
   app.get("/", async (request) => {

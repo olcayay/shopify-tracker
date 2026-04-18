@@ -17,7 +17,7 @@ vi.mock("drizzle-orm/postgres-js", () => ({
 }));
 
 // Import after mocks are set up
-import { createDb, createHealthCheckDb, closeDb, schema } from "../index.js";
+import { createDb, createHealthCheckDb, closeDb, createReadWriteDb, closeReadWriteDb, schema } from "../index.js";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -229,5 +229,92 @@ describe("createHealthCheckDb", () => {
     const db = createHealthCheckDb("postgres://localhost/db");
     expect(db).toBe(mockDrizzleReturn);
     expect(mockDrizzle).toHaveBeenCalledWith(mockPostgresClient, { schema });
+  });
+});
+
+describe("createReadWriteDb", () => {
+  it("returns an object with read and write database instances", () => {
+    const rwDb = createReadWriteDb(
+      "postgres://primary:5432/db",
+      "postgres://replica:5432/db"
+    );
+    expect(rwDb).toHaveProperty("read");
+    expect(rwDb).toHaveProperty("write");
+  });
+
+  it("creates read pool with replica URL", () => {
+    createReadWriteDb(
+      "postgres://primary:5432/db",
+      "postgres://replica:5432/db"
+    );
+    // First call is write (primary), second call is read (replica)
+    // Actually createReadWriteDb calls createDb(replicaUrl) for read first in the object literal
+    // but object property order: read is first, write is second
+    const calls = mockPostgres.mock.calls;
+    const urls = calls.map((c: any[]) => c[0]);
+    expect(urls).toContain("postgres://replica:5432/db");
+    expect(urls).toContain("postgres://primary:5432/db");
+  });
+
+  it("applies custom pool options to each pool", () => {
+    createReadWriteDb(
+      "postgres://primary:5432/db",
+      "postgres://replica:5432/db",
+      {
+        readPool: { max: 10 },
+        writePool: { max: 3 },
+      }
+    );
+    const calls = mockPostgres.mock.calls;
+    const maxValues = calls.map((c: any[]) => c[1].max);
+    expect(maxValues).toContain(10);
+    expect(maxValues).toContain(3);
+  });
+
+  it("works when primary and replica URLs are the same (local dev)", () => {
+    const rwDb = createReadWriteDb(
+      "postgres://localhost:5432/db",
+      "postgres://localhost:5432/db"
+    );
+    expect(rwDb.read).toBeDefined();
+    expect(rwDb.write).toBeDefined();
+  });
+
+  it("uses default pool options when none provided", () => {
+    createReadWriteDb(
+      "postgres://primary:5432/db",
+      "postgres://replica:5432/db"
+    );
+    const calls = mockPostgres.mock.calls;
+    // Both should use default max: 10
+    expect(calls[0][1].max).toBe(10);
+    expect(calls[1][1].max).toBe(10);
+  });
+});
+
+describe("closeReadWriteDb", () => {
+  it("closes both read and write pools", async () => {
+    const mockEndRead = vi.fn().mockResolvedValue(undefined);
+    const mockEndWrite = vi.fn().mockResolvedValue(undefined);
+    const rwDb = {
+      read: { __pgClient: { end: mockEndRead } } as any,
+      write: { __pgClient: { end: mockEndWrite } } as any,
+    };
+    await closeReadWriteDb(rwDb);
+    expect(mockEndRead).toHaveBeenCalledWith({ timeout: 5 });
+    expect(mockEndWrite).toHaveBeenCalledWith({ timeout: 5 });
+  });
+
+  it("does not throw if one pool close fails", async () => {
+    const mockEndRead = vi.fn().mockRejectedValue(new Error("read close failed"));
+    const mockEndWrite = vi.fn().mockResolvedValue(undefined);
+    const rwDb = {
+      read: { __pgClient: { end: mockEndRead } } as any,
+      write: { __pgClient: { end: mockEndWrite } } as any,
+    };
+    // Should not throw — uses Promise.allSettled
+    await closeReadWriteDb(rwDb);
+    expect(mockEndRead).toHaveBeenCalled();
+    expect(mockEndWrite).toHaveBeenCalled();
   });
 });

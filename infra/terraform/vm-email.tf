@@ -1,6 +1,6 @@
 resource "google_compute_instance" "email" {
   name         = "appranks-email"
-  machine_type = "e2-custom-2-4096" # 2 vCPU, 4GB RAM
+  machine_type = "e2-small" # 2 vCPU, 2GB RAM (downgraded from e2-custom-2-4096)
   zone         = var.zone
   tags         = ["redis-server", "ssh"]
 

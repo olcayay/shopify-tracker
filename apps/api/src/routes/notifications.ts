@@ -15,7 +15,7 @@ import {
 } from "../services/web-push.js";
 
 export const notificationRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /notifications — List notifications (cursor-based pagination)
   app.get<{

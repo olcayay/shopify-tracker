@@ -40,7 +40,7 @@ import {
 
 
 export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // --- Starred Categories ---
 

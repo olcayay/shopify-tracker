@@ -9,7 +9,7 @@ import { requireSystemAdmin } from "../middleware/authorize.js";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
 
 export const suppressionRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/system-admin/suppression — list suppressed addresses
   app.get("/", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {

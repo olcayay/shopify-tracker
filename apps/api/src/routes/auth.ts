@@ -126,7 +126,7 @@ export async function invalidateAuthMe(userId: string): Promise<void> {
 }
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // POST /api/auth/register — create account + owner user
   app.post("/register", async (request, reply) => {

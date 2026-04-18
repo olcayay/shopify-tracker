@@ -19,7 +19,7 @@ function dbErrorCode(err: unknown): string {
 }
 
 export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // POST /api/support-tickets — create ticket + first message
   app.post(

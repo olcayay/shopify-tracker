@@ -245,7 +245,7 @@ async function processBounceEvent(db: any, event: ParsedEvent): Promise<{ suppre
 // ── Routes ─────────────────────────────────────────────────────────
 
 export const emailWebhookRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // POST /api/webhooks/email/bounce
   app.post("/bounce", async (request, reply) => {

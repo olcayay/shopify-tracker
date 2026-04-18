@@ -21,7 +21,7 @@ export const waitlistLimiter = new RateLimiter({
 });
 
 export const waitlistRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // POST /public/waitlist — join the waitlist (public, no auth)
   app.post("/waitlist", async (request, reply) => {

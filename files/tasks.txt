@@ -1,3 +1,13 @@
+Database read/write splitting — Cloud SQL read replica (PLA-1147→1152, 2026-04-19)
+  - Phase 1: Terraform read replica + VM3 downgrade (code ready, needs terraform apply)
+  - Phase 2: ReadWriteDb abstraction in packages/db (7 new tests)
+  - Phase 3: API dual pool (28 write routes → writeDb, read routes → db replica)
+  - Phase 4: Worker pool max:10→8, scheduler reads from replica
+  - Phase 5: DATABASE_READ_URL in env files (placeholder REPLICA_IP)
+  - Phase 6: VM3 e2-custom-2-4096 → e2-small (code ready, needs terraform apply)
+  - Net cost: +$3-4/mo (replica +$10, VM3 downgrade -$6)
+  - All 5144 tests passing
+
 Fix integration page 404 for slugified URLs (PLA-1142, 2026-04-18)
   - Replaced @> JSONB containment with EXISTS + REGEXP_REPLACE fuzzy match
   - Uses [[:space:]] not \s to avoid JS template literal escaping bug

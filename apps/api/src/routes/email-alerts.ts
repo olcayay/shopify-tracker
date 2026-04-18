@@ -8,7 +8,7 @@ import { emailAlertRules, emailAlertsLog } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 
 export const emailAlertRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET /api/system-admin/email-alerts/rules — list all alert rules
   app.get("/rules", { preHandler: [requireSystemAdmin()] }, async (_request, reply) => {

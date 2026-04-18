@@ -67,7 +67,7 @@ const VALID_NOTIFICATION_TYPES = new Set(Object.keys(NOTIFICATION_TEMPLATE_VARIA
 const VALID_EMAIL_TYPES = new Set(Object.keys(EMAIL_TEMPLATE_VARIABLES));
 
 export const templateRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // -----------------------------------------------------------------------
   // Notification Templates

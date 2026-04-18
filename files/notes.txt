@@ -1,3 +1,47 @@
+Database read/write splitting with Cloud SQL read replica (PLA-1147→1152, 2026-04-19)
+======================================================
+Added infrastructure and application code for read/write splitting:
+
+Terraform:
+- Added read replica resource (appranks-db-replica, db-f1-micro, same VPC)
+- Added db_replica_tier variable and replica IP/URL outputs
+- Downgraded VM3 (appranks-email) from e2-custom-2-4096 to e2-small (-$5-7/mo)
+
+packages/db:
+- Added ReadWriteDb interface, createReadWriteDb(), closeReadWriteDb()
+- 7 new unit tests for the dual-pool abstraction
+
+API (apps/api):
+- Created dual pool: db (read, replica, max:10) + writeDb (write, primary, max:5)
+- DATABASE_READ_URL env var (falls back to DATABASE_URL for local dev)
+- Updated 28 write routes to use app.writeDb (auth, tracking, admin, etc.)
+- Read-only routes unchanged (app.db → replica)
+- Pool health monitor checks both pools, auto-fallback to primary if replica fails
+- Connection warming covers both pools
+- Updated all test helpers and 8 test files with writeDb mock
+
+Worker/Scheduler:
+- Worker pool reduced from max:10 to max:8 (primary only)
+- Scheduler reads use DATABASE_READ_URL (replica)
+- Cleanup cron stays on DATABASE_URL (primary, does DELETEs)
+
+Environment:
+- Added DATABASE_READ_URL to .env.api and .env.scraper
+- Placeholder REPLICA_IP — fill after terraform apply
+
+Connection distribution after change:
+- Primary: 19 (API write 5 + worker 8 + email 4 + notif 2) — limit 25 ✅
+- Replica: 12 (API read 10 + health 1 + scheduler 1) — limit 25 ✅
+
+Files changed:
+- infra/terraform/cloud-sql.tf, variables.tf, outputs.tf, vm-email.tf
+- packages/db/src/index.ts, packages/db/src/__tests__/create-db.test.ts
+- apps/api/src/index.ts, apps/api/src/types/fastify.ts
+- 28 route files in apps/api/src/routes/
+- 8 test files in apps/api/src/__tests__/
+- apps/scraper/src/process-job.ts, apps/scraper/src/scheduler.ts
+- infra/compose/env/.env.api, .env.scraper
+
 Fix integration page 404 for slugified URLs (PLA-1142, 2026-04-18)
 ======================================================
 Integration detail page returned "Integration not found" for slugified URLs

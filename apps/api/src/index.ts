@@ -80,9 +80,12 @@ import Redis from "ioredis";
 validateEnv([...API_REQUIRED_ENV]);
 
 const databaseUrl = process.env.DATABASE_URL!;
+const databaseReadUrl = process.env.DATABASE_READ_URL || databaseUrl;
 
-let db = createDb(databaseUrl, { max: 10 });
-const healthDb = createHealthCheckDb(databaseUrl);
+// Read pool → replica (dashboard reads), Write pool → primary (mutations)
+let db = createDb(databaseReadUrl, { max: 10 });
+let writeDb = createDb(databaseUrl, { max: 5 });
+const healthDb = createHealthCheckDb(databaseReadUrl);
 
 // Proxy that always delegates to the current `db` reference.
 // Route handlers capture this proxy at registration time via `const db = app.db`.
@@ -101,6 +104,21 @@ const dbProxy = new Proxy({} as typeof db, {
   },
 });
 
+// Write proxy — same pattern for primary (INSERT/UPDATE/DELETE)
+const writeDbProxy = new Proxy({} as typeof writeDb, {
+  get(_target, prop, receiver) {
+    const value = (writeDb as any)[prop];
+    if (typeof value === "function") {
+      return value.bind(writeDb);
+    }
+    return value;
+  },
+  set(_target, prop, value) {
+    (writeDb as any)[prop] = value;
+    return true;
+  },
+});
+
 // NOTE: Migrations are now handled by the standalone migration runner
 // (packages/db/src/migrate.ts). In Docker, the 'migrate' service runs
 // before the API starts. See docker-compose.prod.yml.
@@ -108,7 +126,7 @@ const dbProxy = new Proxy({} as typeof db, {
 // Safety net: ensure critical columns exist even if Drizzle migration tracking
 // marked them as applied before the SQL actually ran (PLA-647).
 try {
-  await db.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "past_due_since" timestamp`);
+  await writeDb.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "past_due_since" timestamp`);
 } catch (e: any) {
   log.warn("schema safety-net check failed (non-fatal)", { error: e.message });
 }
@@ -117,10 +135,10 @@ try {
 const adminEmail = process.env.ADMIN_EMAIL;
 const adminPassword = process.env.ADMIN_PASSWORD;
 if (adminEmail && adminPassword) {
-  const existingAccounts = await db.select().from(accounts).limit(1);
+  const existingAccounts = await writeDb.select().from(accounts).limit(1);
   if (existingAccounts.length === 0) {
     log.info("No accounts found, seeding admin user...");
-    const [account] = await db
+    const [account] = await writeDb
       .insert(accounts)
       .values({
         name: "Default Account",
@@ -130,7 +148,7 @@ if (adminEmail && adminPassword) {
       })
       .returning();
     const passwordHash = await bcrypt.hash(adminPassword, 12);
-    await db.insert(users).values({
+    await writeDb.insert(users).values({
       email: adminEmail.toLowerCase(),
       passwordHash,
       name: "System Admin",
@@ -169,6 +187,7 @@ import compress from "@fastify/compress";
 await app.register(compress);
 
 app.decorate("db", dbProxy);
+app.decorate("writeDb", writeDbProxy);
 
 // Security headers — defense-in-depth alongside Cloudflare
 app.addHook("onRequest", async (_request, reply) => {
@@ -597,7 +616,7 @@ try {
 
 // Scheduled cleanup for expired tokens, invitations, and email logs
 import { startScheduledCleanup } from "./utils/scheduled-cleanup.js";
-startScheduledCleanup(db);
+startScheduledCleanup(writeDb);
 
 // Pool health monitor — detect stuck pool and actively recover.
 // Runs every 30s. If main pool can't respond in 5s, it's likely stuck.
@@ -641,11 +660,14 @@ async function getRuntimeConnections(): Promise<Record<string, unknown>> {
   return {};
 }
 
-async function resetPool(): Promise<boolean> {
+async function resetPool(target: "read" | "write" = "read"): Promise<boolean> {
   poolResetCount++;
-  app.log.warn(`Attempting pool reset #${poolResetCount}...`);
+  app.log.warn(`Attempting ${target} pool reset #${poolResetCount}...`);
   try {
-    const oldDb = db;
+    const isRead = target === "read";
+    const oldDb = isRead ? db : writeDb;
+    const url = isRead ? databaseReadUrl : databaseUrl;
+    const maxConn = isRead ? 10 : 3;
     // Check connection headroom before creating new pool
     const conns = await getRuntimeConnections();
     const totalConns = Number(conns.total ?? 0);
@@ -654,31 +676,36 @@ async function resetPool(): Promise<boolean> {
       await closeDb(oldDb).catch(() => {});
     }
     // Create new pool, then close old one
-    const newDb = createDb(databaseUrl, { max: 10 });
+    const newDb = createDb(url, { max: maxConn });
     // Verify new pool works
     await Promise.race([
       newDb.execute(sql`SELECT 1`),
       new Promise((_, reject) => setTimeout(() => reject(new Error("new_pool_timeout")), POOL_CHECK_TIMEOUT_MS)),
     ]);
     // New pool works — swap it in.
-    // dbProxy (used by all routes via app.db) automatically delegates to
-    // the module-level `db`, so reassigning here propagates everywhere.
-    db = newDb;
+    // Proxies (used by all routes) automatically delegate to
+    // the module-level vars, so reassigning here propagates everywhere.
+    if (isRead) {
+      db = newDb;
+    } else {
+      writeDb = newDb;
+    }
     // Close old pool in background (don't block on stuck connections)
     if (totalConns < 20) {
       closeDb(oldDb).catch(() => {});
     }
-    app.log.info(`Pool reset #${poolResetCount} successful — new pool is healthy`);
+    app.log.info(`${target} pool reset #${poolResetCount} successful — new pool is healthy`);
     setGauge("db_pool_stuck", 0, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
     setGauge("db_pool_resets", poolResetCount, "Total number of pool resets since process start");
     return true;
   } catch (err) {
-    app.log.error({ msg: `Pool reset #${poolResetCount} failed`, error: err instanceof Error ? err.message : String(err) });
+    app.log.error({ msg: `${target} pool reset #${poolResetCount} failed`, error: err instanceof Error ? err.message : String(err) });
     return false;
   }
 }
 
 const poolMonitorInterval = setInterval(async () => {
+  // Check read pool (replica)
   try {
     await Promise.race([
       db.execute(sql`SELECT 1`),
@@ -687,7 +714,7 @@ const poolMonitorInterval = setInterval(async () => {
       ),
     ]);
     if (poolCheckFailures > 0) {
-      app.log.info(`DB pool recovered after ${poolCheckFailures} failed checks`);
+      app.log.info(`DB read pool recovered after ${poolCheckFailures} failed checks`);
       setGauge("db_pool_stuck", 0, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
     }
     poolCheckFailures = 0;
@@ -697,17 +724,31 @@ const poolMonitorInterval = setInterval(async () => {
     const poolStats = getPoolStats();
     const runtimeConnections = await getRuntimeConnections();
     app.log.error({
-      msg: `DB pool health check failed (${poolCheckFailures} consecutive).`,
+      msg: `DB read pool health check failed (${poolCheckFailures} consecutive).`,
       consecutiveFailures: poolCheckFailures,
       error: err instanceof Error ? err.message : String(err),
       pool: poolStats,
       connections: runtimeConnections,
     });
 
-    // Active recovery: reset pool on threshold
+    // Active recovery: reset read pool on threshold
     if (poolCheckFailures === POOL_RESET_THRESHOLD) {
-      import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures — attempting pool reset. Pool: ${JSON.stringify(poolStats)}`)).catch(() => {});
-      const recovered = await resetPool();
+      import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures — attempting read pool reset. Pool: ${JSON.stringify(poolStats)}`)).catch(() => {});
+      // Try resetting read pool; if that fails, fallback to primary URL
+      let recovered = await resetPool("read");
+      if (!recovered && databaseReadUrl !== databaseUrl) {
+        app.log.warn("Read pool reset failed — falling back to primary for reads");
+        try {
+          const fallbackDb = createDb(databaseUrl, { max: 10 });
+          await Promise.race([
+            fallbackDb.execute(sql`SELECT 1`),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("fallback_timeout")), POOL_CHECK_TIMEOUT_MS)),
+          ]);
+          db = fallbackDb;
+          recovered = true;
+          app.log.info("Read pool now using primary as fallback");
+        } catch { /* primary fallback also failed */ }
+      }
       if (recovered) {
         poolCheckFailures = 0;
         return;
@@ -716,28 +757,50 @@ const poolMonitorInterval = setInterval(async () => {
 
     // Last resort: process.exit after extended failure (even after reset attempt)
     if (poolCheckFailures >= POOL_EXIT_THRESHOLD) {
-      app.log.error(`DB pool stuck for ${poolCheckFailures * 30}s (after ${poolResetCount} reset attempts) — forcing process restart`);
+      app.log.error(`DB read pool stuck for ${poolCheckFailures * 30}s (after ${poolResetCount} reset attempts) — forcing process restart`);
       clearInterval(poolMonitorInterval);
       process.exit(1);
     }
+  }
+
+  // Check write pool (primary) — lighter check, just verify connectivity
+  try {
+    await Promise.race([
+      writeDb.execute(sql`SELECT 1`),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("write_pool_timeout")), POOL_CHECK_TIMEOUT_MS)
+      ),
+    ]);
+  } catch (err) {
+    app.log.error({
+      msg: "DB write pool health check failed",
+      error: err instanceof Error ? err.message : String(err),
+    });
+    await resetPool("write");
   }
 }, POOL_CHECK_INTERVAL_MS);
 
 // Don't let the interval keep the process alive if it's shutting down
 poolMonitorInterval.unref();
 
-// Connection warming — keep at least 1 connection alive in the pool.
+// Connection warming — keep at least 1 connection alive in each pool.
 // Runs every 60s. Also serves as early failure detection.
 const WARM_INTERVAL_MS = 60_000;
 const warmingInterval = setInterval(async () => {
   try {
-    await Promise.race([
-      db.execute(sql`SELECT 1`),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("warming_timeout")), POOL_CHECK_TIMEOUT_MS)),
+    await Promise.all([
+      Promise.race([
+        db.execute(sql`SELECT 1`),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("read_warming_timeout")), POOL_CHECK_TIMEOUT_MS)),
+      ]),
+      Promise.race([
+        writeDb.execute(sql`SELECT 1`),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("write_warming_timeout")), POOL_CHECK_TIMEOUT_MS)),
+      ]),
     ]);
   } catch {
     // Don't increment poolCheckFailures here — the pool monitor handles that.
-    // This just ensures the pool periodically exercises a connection.
+    // This just ensures the pools periodically exercise a connection.
     app.log.warn("Connection warming query failed — pool monitor will handle recovery");
   }
 }, WARM_INTERVAL_MS);

@@ -57,3 +57,33 @@ resource "google_sql_user" "postgres" {
   instance = google_sql_database_instance.main.name
   password = var.db_password
 }
+
+# Read Replica — serves dashboard API reads, offloading the primary for writes
+resource "google_sql_database_instance" "read_replica" {
+  name                 = "appranks-db-replica"
+  master_instance_name = google_sql_database_instance.main.name
+  database_version     = "POSTGRES_16"
+  region               = var.region
+
+  depends_on = [google_sql_database_instance.main]
+
+  replica_configuration {
+    failover_target = false
+  }
+
+  settings {
+    tier              = var.db_replica_tier
+    availability_type = "ZONAL"
+
+    ip_configuration {
+      ipv4_enabled    = false
+      private_network = google_compute_network.vpc.id
+    }
+
+    disk_autoresize = true
+    disk_size       = 10
+    disk_type       = "PD_SSD"
+  }
+
+  deletion_protection = true
+}

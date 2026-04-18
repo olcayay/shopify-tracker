@@ -10,7 +10,7 @@ import { invalidatePlatformAccessCache } from "../middleware/platform-access.js"
 const SLUG_REGEX = /^[a-z][a-z0-9-]*$/;
 
 export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // GET / — list all flags with account count
   app.get("/", async () => {

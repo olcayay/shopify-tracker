@@ -9,7 +9,7 @@ const TRANSPARENT_PIXEL = Buffer.from(
 );
 
 export const emailTrackingRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // --- Open tracking pixel ---
   app.get<{ Params: { logId: string } }>(

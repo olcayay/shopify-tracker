@@ -58,6 +58,7 @@ async function buildSupportAppWithDbError() {
   };
 
   app.decorate("db", mockDb);
+  app.decorate("writeDb", mockDb);
   app.decorateRequest("user", null as any);
   app.decorateRequest("isImpersonating", false);
 
@@ -76,6 +77,7 @@ async function buildSupportAppWithDbError() {
   await app.register(
     async (instance) => {
       instance.db = mockDb;
+      instance.writeDb = mockDb;
       await supportTicketRoutes(instance);
     },
     { prefix: "/api/support-tickets" }

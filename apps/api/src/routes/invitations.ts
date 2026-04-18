@@ -10,7 +10,7 @@ import { acceptInvitationSchema } from "../schemas/invitations.js";
 
 
 export const invitationRoutes: FastifyPluginAsync = async (app) => {
-  const db = app.db;
+  const db = app.writeDb;
 
   // POST /api/invitations/accept/:token — accept an invitation
   app.post<{ Params: { token: string } }>(

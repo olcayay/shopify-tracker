@@ -199,6 +199,7 @@ export async function buildTestApp(options: TestAppOptions): Promise<FastifyInst
 
   const mockDb = createMockDb(options.db);
   app.decorate("db", mockDb);
+  app.decorate("writeDb", mockDb);
 
   // Register auth middleware
   const { registerAuthMiddleware } = await import("../../middleware/auth.js");
@@ -241,6 +242,7 @@ export async function buildTestApp(options: TestAppOptions): Promise<FastifyInst
     async (instance) => {
       // Make db accessible to routes
       instance.db = mockDb;
+      instance.writeDb = mockDb;
       await options.routes(instance);
     },
     { prefix: options.prefix }

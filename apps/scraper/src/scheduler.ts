@@ -11,8 +11,9 @@ import { cleanupOldNotifications } from "./notifications/retention-cleanup.js";
 
 const log = createLogger("scheduler");
 
-// Lightweight DB connection for scraper visibility checks (1 connection)
-const schedulerDb = process.env.DATABASE_URL ? createDb(process.env.DATABASE_URL, { max: 1 }) : null;
+// Lightweight DB connection for scraper visibility checks (read-only, uses replica if available)
+const schedulerDbUrl = process.env.DATABASE_READ_URL || process.env.DATABASE_URL;
+const schedulerDb = schedulerDbUrl ? createDb(schedulerDbUrl, { max: 1 }) : null;
 
 /** PLA-1095: gate scheduler enqueue on platformVisibility.scraperEnabled only. */
 async function isScraperEnabled(platform: string): Promise<boolean> {

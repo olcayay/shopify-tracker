@@ -10,9 +10,11 @@ async function buildWaitlistApp(dbOverrides?: any): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   const mockDb = createMockDb(dbOverrides);
   app.decorate("db", mockDb);
+    app.decorate("writeDb", mockDb);
   await app.register(
     async (instance) => {
       instance.db = mockDb;
+      instance.writeDb = mockDb;
       await waitlistRoutes(instance);
     },
     { prefix: "/api/public" },
@@ -25,9 +27,11 @@ async function buildAdminApp(dbOverrides?: any): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   const mockDb = createMockDb(dbOverrides);
   app.decorate("db", mockDb);
+    app.decorate("writeDb", mockDb);
   await app.register(
     async (instance) => {
       instance.db = mockDb;
+      instance.writeDb = mockDb;
       await waitlistAdminRoutes(instance);
     },
     { prefix: "/api/system-admin" },
@@ -73,9 +77,11 @@ describe("POST /api/public/waitlist", () => {
       return chain;
     };
     app.decorate("db", mockDb);
+    app.decorate("writeDb", mockDb);
     await app.register(
       async (instance) => {
         instance.db = mockDb;
+        instance.writeDb = mockDb;
         await waitlistRoutes(instance);
       },
       { prefix: "/api/public" },
@@ -157,9 +163,11 @@ describe("POST /api/public/waitlist", () => {
       return chain;
     };
     app.decorate("db", mockDb);
+    app.decorate("writeDb", mockDb);
     await app.register(
       async (instance) => {
         instance.db = mockDb;
+        instance.writeDb = mockDb;
         await waitlistRoutes(instance);
       },
       { prefix: "/api/public" },
@@ -251,9 +259,11 @@ describe("DELETE /api/system-admin/waitlist/:id", () => {
       return deleteChain;
     };
     app.decorate("db", mockDb);
+    app.decorate("writeDb", mockDb);
     await app.register(
       async (instance) => {
         instance.db = mockDb;
+        instance.writeDb = mockDb;
         await waitlistAdminRoutes(instance);
       },
       { prefix: "/api/system-admin" },
