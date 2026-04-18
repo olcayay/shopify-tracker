@@ -225,9 +225,8 @@ registerPlatformAccessGuard(app);
 // Idempotency: cache responses for requests with Idempotency-Key header
 registerIdempotencyOnSend(app);
 
-// Retry GET requests once on transient DB connection errors (pool recovery, maintenance)
-import { registerDbRetry } from "./middleware/db-retry.js";
-registerDbRetry(app);
+// DB retry helper — used inside setErrorHandler (not as a hook, since onError can't call reply.send)
+import { tryDbRetry } from "./middleware/db-retry.js";
 
 // Global API rate limiting (runs after auth so request.user is available)
 const HEALTH_PATHS = ["/health", "/health/live", "/health/ready"];
@@ -544,7 +543,7 @@ app.get("/health", async (_request, reply) => {
 });
 
 // Error handler
-app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => {
+app.setErrorHandler<Error & { statusCode?: number }>(async (error, request, reply) => {
   const requestId = request.id;
 
   // Premature close — client disconnected before response completed.
@@ -554,6 +553,10 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
     request.log.info({ reqId: requestId, url: request.url }, "client disconnected (premature close)");
     return;
   }
+
+  // Retry GET requests once on transient DB errors (pool recovery, Cloud SQL maintenance)
+  const retried = await tryDbRetry(app, error as Error & { code?: string; errno?: string }, request, reply);
+  if (retried) return;
 
   // ApiError — standardized error responses
   if (error instanceof ApiError) {
@@ -667,7 +670,7 @@ async function resetPool(target: "read" | "write" = "read"): Promise<boolean> {
     const isRead = target === "read";
     const oldDb = isRead ? db : writeDb;
     const url = isRead ? databaseReadUrl : databaseUrl;
-    const maxConn = isRead ? 10 : 3;
+    const maxConn = isRead ? 10 : 5;
     // Check connection headroom before creating new pool
     const conns = await getRuntimeConnections();
     const totalConns = Number(conns.total ?? 0);
