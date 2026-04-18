@@ -244,8 +244,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return refreshPromiseRef.current;
   }, []);
 
-  // Redirect to login and broadcast logout to other tabs
+  // Redirect to login and broadcast logout to other tabs.
+  // Guard with a ref to prevent multiple concurrent redirects (e.g. when
+  // several useApiQuery hooks all hit 401 at the same time).
+  const isRedirectingRef = useRef(false);
   const redirectToLogin = useCallback(() => {
+    if (isRedirectingRef.current) return;
+    isRedirectingRef.current = true;
     deleteCookie("access_token");
     deleteCookie("refresh_token");
     setUser(null);
@@ -290,6 +295,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const doFetch = useCallback(
     async (path: string, options?: RequestInit): Promise<Response> => {
+      // If we're already redirecting to login, don't make any more API calls
+      if (isRedirectingRef.current) {
+        return new Response(JSON.stringify({ error: "Session expired" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
       let token = getCookie("access_token");
       if (!token && !path.includes("/api/auth/")) {
         // Access token missing — try silent refresh before giving up
@@ -298,7 +311,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           token = getCookie("access_token");
         }
         if (!token) {
-          return new Response(JSON.stringify({ error: "Not authenticated" }), {
+          toast.error("Session expired. Redirecting to login...", { duration: 3000 });
+          redirectToLogin();
+          return new Response(JSON.stringify({ error: "Session expired" }), {
             status: 401,
             headers: { "Content-Type": "application/json" },
           });
@@ -332,6 +347,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Handle expired token — try silent refresh, then redirect to login
       if (res.status === 401 && token && !path.includes("/api/auth/")) {
+        // Check again — another concurrent request may have already triggered redirect
+        if (isRedirectingRef.current) {
+          return new Response(JSON.stringify({ error: "Session expired" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
         const refreshed = await silentRefresh();
         if (refreshed) {
           // Retry the original request with the new token
@@ -343,7 +365,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }
         }
-        // Refresh failed — clear state and redirect to login (PLA-559)
+        // Refresh failed — clear state and redirect to login (PLA-559/PLA-1141)
         toast.error("Session expired. Redirecting to login...", { duration: 3000 });
         redirectToLogin();
       }

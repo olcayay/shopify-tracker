@@ -5,7 +5,14 @@ export function makeQueryClient() {
     defaultOptions: {
       queries: {
         staleTime: 30 * 1000, // 30 seconds
-        retry: 1,
+        retry: (failureCount, error) => {
+          // Never retry on auth failures — prevents infinite 401 loops (PLA-1141)
+          if (error instanceof Error) {
+            const msg = error.message?.toLowerCase() || "";
+            if (msg.includes("401") || msg.includes("session expired") || msg.includes("not authenticated")) return false;
+          }
+          return failureCount < 1;
+        },
         refetchOnWindowFocus: false,
       },
     },
