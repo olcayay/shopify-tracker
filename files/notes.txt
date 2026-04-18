@@ -1,3 +1,19 @@
+Add Common Words filter to Keyword Rankings chart (PLA-1139, 2026-04-18)
+======================================================
+Added multi-select Common Words filter to the Keyword Rankings chart on the
+app rankings page. Users can now filter which keyword lines are visible on the
+chart by clicking word groups.
+
+Implementation: Created a new KeywordRankingsSection client component that wraps
+RankingChart with word group extraction and filtering. The server component
+(rankings page) passes data to this client component.
+
+Files changed:
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/rankings/keyword-rankings-section.tsx (NEW)
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/rankings/page.tsx
+- apps/dashboard/src/__tests__/app/keyword-rankings-section.test.tsx (NEW - 6 tests)
+- apps/dashboard/src/__tests__/app/rankings-page.test.tsx (updated mock)
+
 Upgrade Common Words filter to multi-select (PLA-1138, 2026-04-18)
 ======================================================
 KeywordWordGroupFilter component upgraded from single-select (string | null)

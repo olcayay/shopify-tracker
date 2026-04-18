@@ -19,6 +19,10 @@ vi.mock("@/components/ranking-chart", () => ({
   RankingChart: ({ data }: any) => <div data-testid="ranking-chart">{data.length} entries</div>,
 }));
 
+vi.mock("@/app/(dashboard)/[platform]/apps/[slug]/rankings/keyword-rankings-section", () => ({
+  KeywordRankingsSection: ({ data }: any) => <div data-testid="ranking-chart">{data.length} entries</div>,
+}));
+
 vi.mock("@/components/ad-heatmap", () => ({
   AdHeatmap: ({ sightings }: any) => <div data-testid="ad-heatmap">{sightings.length} sightings</div>,
 }));

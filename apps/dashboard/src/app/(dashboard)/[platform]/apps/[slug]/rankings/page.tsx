@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RankingChart } from "@/components/ranking-chart";
+import { KeywordRankingsSection } from "./keyword-rankings-section";
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { DataFreshness } from "@/components/data-freshness";
 import { hasServerFeature } from "@/lib/score-features-server";
@@ -122,7 +123,7 @@ export default async function RankingsPage({
             <CardTitle>Keyword Rankings</CardTitle>
           </CardHeader>
           <CardContent>
-            <RankingChart
+            <KeywordRankingsSection
               data={rankings.keywordRankings.map((r: any) => ({
                 date: formatDateOnly(r.scrapedAt),
                 position: r.position,

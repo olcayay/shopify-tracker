@@ -1,3 +1,10 @@
+Add Common Words filter to Keyword Rankings chart (PLA-1139, 2026-04-18)
+  - New KeywordRankingsSection client component wrapping RankingChart + filter
+  - Extracts word groups from keyword labels, filters chart data by active words
+  - 6 new tests: all keywords, filter toggle, multi-select OR, clear, toggle off
+  - Rankings page mock updated for new component
+  - 5018 tests passing
+
 Upgrade Common Words filter to multi-select across all keyword pages (PLA-1138, 2026-04-18)
   - Component: activeWord → activeWords (Set), onSelect → onToggle + onClear
   - New filterKeywordsByWords() utility with OR logic
