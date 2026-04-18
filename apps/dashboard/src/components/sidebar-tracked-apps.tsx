@@ -36,26 +36,17 @@ export function SidebarTrackedApps({
   const isReady = !!account;
   const trackedAppsCount = account?.usage?.trackedApps ?? 0;
   useEffect(() => {
-    if (!isReady) {
-      console.log("[SidebarTrackedApps] skipping fetch — account not ready");
-      return;
-    }
+    if (!isReady) return;
     let cancelled = false;
-    console.log("[SidebarTrackedApps] fetching for platform:", platform);
     fetchWithAuth("/api/account/tracked-apps/sidebar")
       .then(async (res) => {
-        console.log("[SidebarTrackedApps] response status:", res.status);
         if (cancelled) return;
         if (res.ok) {
           const all: SidebarApp[] = await res.json();
-          const filtered = all.filter((a) => a.platform === platform);
-          console.log("[SidebarTrackedApps] total:", all.length, "for platform:", filtered.length);
-          setApps(filtered);
+          setApps(all.filter((a) => a.platform === platform));
         }
       })
-      .catch((err) => {
-        console.error("[SidebarTrackedApps] fetch error:", err);
-      });
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [fetchWithAuth, platform, isReady, trackedAppsCount]);
 

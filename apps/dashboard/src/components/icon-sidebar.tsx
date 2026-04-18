@@ -9,6 +9,7 @@ import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
 import { type PlatformId } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { SidebarTrackedApps } from "@/components/sidebar-tracked-apps";
 
 export function IconSidebar() {
   const pathname = usePathname();
@@ -164,6 +165,17 @@ export function IconSidebar() {
           </Tooltip>
         );
       })}
+
+      {/* Tracked apps */}
+      {isPlatformPage && (
+        <>
+          <div className={`${expanded ? "mx-3" : "mx-auto w-6"} border-t my-1`} />
+          <SidebarTrackedApps
+            platform={activePlatform}
+            collapsed={!expanded}
+          />
+        </>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

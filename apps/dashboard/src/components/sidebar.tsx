@@ -72,7 +72,6 @@ function SidebarContent({
 
   const isGlobalPage = isOnGlobalPage(pathname);
   const isPlatformPage = isOnPlatformPage(pathname);
-  console.log("[Sidebar]", { collapsed, isGlobalPage, isPlatformPage, currentPlatform, expandedPlatform, pathname });
 
   // Accent color for active links — platform color on platform pages, default otherwise
   const accentColor = isPlatformPage ? PLATFORM_COLORS[currentPlatform] : undefined;

@@ -30,6 +30,10 @@ vi.mock("@/components/ui/tooltip", () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock("@/components/sidebar-tracked-apps", () => ({
+  SidebarTrackedApps: () => null,
+}));
+
 import React from "react";
 import { IconSidebar } from "@/components/icon-sidebar";
 
