@@ -152,13 +152,14 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
     let rows: any;
     if (subcategory) {
       rows = await db.execute(sql`
-        SELECT DISTINCT
+        SELECT
           f->>'feature_handle' AS handle,
           f->>'title' AS title,
           cat->>'title' AS category_title,
-          sub->>'title' AS subcategory_title
+          sub->>'title' AS subcategory_title,
+          COUNT(DISTINCT latest.app_id)::int AS app_count
         FROM (
-          SELECT DISTINCT ON (app_id) categories
+          SELECT DISTINCT ON (app_id) app_id, categories
           FROM app_snapshots
           ORDER BY app_id, scraped_at DESC
         ) latest,
@@ -167,17 +168,19 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         jsonb_array_elements(sub->'features') AS f
         WHERE sub->>'title' = ${subcategory}
         ${category ? sql`AND cat->>'title' = ${category}` : sql``}
+        GROUP BY handle, title, category_title, subcategory_title
         ORDER BY title
       `);
     } else {
       rows = await db.execute(sql`
-        SELECT DISTINCT
+        SELECT
           f->>'feature_handle' AS handle,
           f->>'title' AS title,
           cat->>'title' AS category_title,
-          sub->>'title' AS subcategory_title
+          sub->>'title' AS subcategory_title,
+          COUNT(DISTINCT latest.app_id)::int AS app_count
         FROM (
-          SELECT DISTINCT ON (app_id) categories
+          SELECT DISTINCT ON (app_id) app_id, categories
           FROM app_snapshots
           ORDER BY app_id, scraped_at DESC
         ) latest,
@@ -185,6 +188,7 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         jsonb_array_elements(cat->'subcategories') AS sub,
         jsonb_array_elements(sub->'features') AS f
         WHERE cat->>'title' = ${category}
+        GROUP BY handle, title, category_title, subcategory_title
         ORDER BY title
       `);
     }
@@ -211,6 +215,31 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         })),
       );
 
+      // Fetch app counts per feature handle in this category
+      const featureHandles = features.map((f) => f.handle);
+      let appCountMap: Record<string, number> = {};
+      if (featureHandles.length > 0) {
+        const countRows = await db.execute(sql`
+          SELECT
+            f->>'feature_handle' AS handle,
+            COUNT(DISTINCT latest.app_id)::int AS app_count
+          FROM (
+            SELECT DISTINCT ON (app_id) app_id, categories
+            FROM app_snapshots
+            ORDER BY app_id, scraped_at DESC
+          ) latest,
+          jsonb_array_elements(latest.categories) AS cat,
+          jsonb_array_elements(cat->'subcategories') AS sub,
+          jsonb_array_elements(sub->'features') AS f
+          WHERE cat->>'title' = ${category.title}
+          GROUP BY handle
+        `);
+        const countData = (countRows as any).rows ?? countRows;
+        for (const row of countData) {
+          appCountMap[row.handle] = row.app_count;
+        }
+      }
+
       return {
         slug: category.slug,
         title: category.title,
@@ -221,7 +250,10 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
           title: subcategory.title,
           featureCount: subcategory.features.length,
         })),
-        features,
+        features: features.map((f) => ({
+          ...f,
+          appCount: appCountMap[f.handle] ?? 0,
+        })),
       };
     },
   );

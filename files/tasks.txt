@@ -1,3 +1,9 @@
+Show app count per feature on category & subcategory lists (PLA-1135, 2026-04-18)
+  - API by-category: SELECT DISTINCT → GROUP BY with COUNT(DISTINCT app_id)
+  - API categories/:slug: separate count query, merged into features array
+  - Frontend: "Apps" column on both category detail and subcategory pages
+  - Tests: updated mock data and assertions for app_count/appCount
+
 Add external Shopify links from feature pages (PLA-1133, 2026-04-18)
   - Category detail page: external link → {category.url}/all (was missing /all suffix)
   - Feature detail page: new ExternalLink icon → Shopify with feature_handles filter

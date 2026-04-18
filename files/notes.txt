@@ -1,3 +1,19 @@
+Show app count per feature on category & subcategory lists (PLA-1135, 2026-04-18)
+======================================================
+Added app count column to feature tables on category detail and subcategory pages.
+
+1. API /api/features/by-category: Changed SELECT DISTINCT to GROUP BY with
+   COUNT(DISTINCT app_id)::int, exposed app_id in subquery
+2. API /api/features/categories/:slug: Added separate count query per category,
+   merged app_count into features array as appCount
+3. Frontend: Added "Apps" column (right-aligned) to both tables
+
+Files changed:
+- apps/api/src/routes/features.ts (by-category: GROUP BY + COUNT, categories: count query)
+- apps/dashboard/src/app/(dashboard)/[platform]/features/categories/[slug]/page.tsx (Apps column)
+- apps/dashboard/src/app/(dashboard)/[platform]/features/category/page.tsx (Apps column)
+- apps/api/src/__tests__/routes/features.test.ts (updated test data + assertions)
+
 Add external Shopify links from feature pages (PLA-1133, 2026-04-18)
 ======================================================
 Added "Open in marketplace" external links from feature category and feature detail pages

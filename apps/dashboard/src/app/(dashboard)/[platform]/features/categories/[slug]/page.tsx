@@ -103,6 +103,7 @@ export default async function FeatureCategoryDetailPage({
                 <TableRow>
                   <TableHead>Feature</TableHead>
                   <TableHead>Subcategory</TableHead>
+                  <TableHead className="text-right">Apps</TableHead>
                   <TableHead className="w-36" />
                 </TableRow>
               </TableHeader>
@@ -135,6 +136,9 @@ export default async function FeatureCategoryDetailPage({
                         >
                           {feature.subcategoryTitle}
                         </Link>
+                      </TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">
+                        {feature.appCount ?? 0}
                       </TableCell>
                       <TableCell>
                         <StarFeatureButton

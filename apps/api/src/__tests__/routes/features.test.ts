@@ -215,6 +215,7 @@ describe("Feature routes", () => {
               title: "Email campaigns",
               category_title: "Marketing",
               subcategory_title: "Email",
+              app_count: 5,
             },
           ],
         },
@@ -236,7 +237,7 @@ describe("Feature routes", () => {
       expect(res.json()).toEqual([]);
     });
 
-    it("returns features filtered by category", async () => {
+    it("returns features filtered by category with app_count", async () => {
       const res = await app.inject({
         method: "GET",
         url: "/api/features/by-category?category=Marketing",
@@ -246,6 +247,8 @@ describe("Feature routes", () => {
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(Array.isArray(body)).toBe(true);
+      expect(body[0]).toHaveProperty("app_count");
+      expect(body[0].app_count).toBe(5);
     });
   });
 
@@ -350,6 +353,8 @@ describe("Feature routes", () => {
         featureCount: 2,
       });
       expect(body.features[0]).toHaveProperty("subcategoryTitle");
+      expect(body.features[0]).toHaveProperty("appCount");
+      expect(typeof body.features[0].appCount).toBe("number");
     });
 
     it("returns 404 for an unknown category slug", async () => {

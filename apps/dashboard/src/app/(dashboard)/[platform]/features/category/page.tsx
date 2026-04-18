@@ -85,6 +85,7 @@ export default async function FeaturesByCategoryPage({
                 <TableRow>
                   <TableHead>Feature</TableHead>
                   {!subcategory && <TableHead>Subcategory</TableHead>}
+                  <TableHead className="text-right">Apps</TableHead>
                   <TableHead className="w-36" />
                 </TableRow>
               </TableHeader>
@@ -111,6 +112,9 @@ export default async function FeaturesByCategoryPage({
                           {f.subcategory_title || "\u2014"}
                         </TableCell>
                       )}
+                      <TableCell className="text-right text-sm text-muted-foreground">
+                        {f.app_count ?? 0}
+                      </TableCell>
                       <TableCell>
                         <StarFeatureButton
                           featureHandle={f.handle}
