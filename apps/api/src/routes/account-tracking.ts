@@ -715,17 +715,18 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const t_wave1 = Date.now();
       const [rankedData, adCounts, featuredCounts] = await Promise.all([
-        // Ranked keyword counts — simple COUNT(DISTINCT) instead of expensive DISTINCT ON subquery
+        // Ranked keyword counts — correlated subquery (427ms vs 15s for flat COUNT DISTINCT JOIN)
         (trackedKeywordIds.length > 0
           ? db.execute(sql`
-              SELECT a.slug AS app_slug, COUNT(DISTINCT akr.keyword_id)::int AS ranked_keywords
-              FROM app_keyword_rankings akr
-              INNER JOIN apps a ON a.id = akr.app_id
-              WHERE akr.app_id IN (${appIdList})
-                AND akr.keyword_id IN (${sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`, `)})
-                AND akr.position IS NOT NULL
-              GROUP BY a.slug
-            `).then((res: any) => ((res as any).rows ?? res) as any[])
+              SELECT a.slug AS app_slug, (
+                SELECT COUNT(DISTINCT akr.keyword_id)::int
+                FROM app_keyword_rankings akr
+                WHERE akr.app_id = a.id
+                  AND akr.keyword_id IN (${sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`, `)})
+                  AND akr.position IS NOT NULL
+              ) AS ranked_keywords
+              FROM apps a WHERE a.id IN (${appIdList})
+            `).then((res: any) => ((res as any).rows ?? res).filter((r: any) => r.ranked_keywords > 0) as any[])
           : Promise.resolve([] as any[])
         ),
         // Ad keyword counts (last 30 days)
@@ -1369,19 +1370,23 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             for (const r of simRows) { const compSlug = r.app_slug_a === slug ? r.app_slug_b : r.app_slug_a; similarityMap2.set(compSlug, { overall: r.overall_score, category: r.category_score, feature: r.feature_score, keyword: r.keyword_score, text: r.text_score }); }
           } catch {}
 
-          // Ranked keyword counts
+          // Ranked keyword counts — correlated subquery approach (427ms vs 15s for COUNT DISTINCT)
+          // PostgreSQL plans correlated subqueries as per-row index scans which is far more
+          // efficient than the hash join + bitmap heap scan that COUNT DISTINCT triggers.
           {
             const kwRows = await db.select({ keywordId: accountTrackedKeywords.keywordId }).from(accountTrackedKeywords)
               .where(and(eq(accountTrackedKeywords.accountId, accountId), eq(accountTrackedKeywords.trackedAppId, trackedAppRow.id)));
             if (kwRows.length > 0) {
               const kwIdList = sql.join(kwRows.map((r) => sql`${r.keywordId}`), sql`,`);
               const rankedRows: any[] = await db.execute(sql`
-                SELECT a.slug AS app_slug, COUNT(DISTINCT akr.keyword_id)::int AS cnt
-                FROM app_keyword_rankings akr INNER JOIN apps a ON a.id = akr.app_id
-                WHERE akr.app_id IN (${compIdSql}) AND akr.keyword_id IN (${kwIdList}) AND akr.position IS NOT NULL
-                GROUP BY a.slug
+                SELECT a.slug AS app_slug, (
+                  SELECT COUNT(DISTINCT akr.keyword_id)::int
+                  FROM app_keyword_rankings akr
+                  WHERE akr.app_id = a.id AND akr.keyword_id IN (${kwIdList}) AND akr.position IS NOT NULL
+                ) AS cnt
+                FROM apps a WHERE a.id IN (${compIdSql})
               `).then((res: any) => (res as any).rows ?? res);
-              for (const r of rankedRows) rankedKeywordMap.set(r.app_slug, r.cnt);
+              for (const r of rankedRows) if (r.cnt > 0) rankedKeywordMap.set(r.app_slug, r.cnt);
             }
           }
 
