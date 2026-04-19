@@ -700,19 +700,15 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const t_wave1 = Date.now();
       const [rankedData, adCounts, featuredCounts] = await Promise.all([
-        // Ranked keyword counts
+        // Ranked keyword counts — simple COUNT(DISTINCT) instead of expensive DISTINCT ON subquery
         (trackedKeywordIds.length > 0
           ? db.execute(sql`
-              SELECT a.slug AS app_slug, COUNT(DISTINCT keyword_id)::int AS ranked_keywords
-              FROM (
-                SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id, position
-                FROM app_keyword_rankings
-                WHERE app_id IN (${appIdList})
-                  AND keyword_id IN (${sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`, `)})
-                ORDER BY app_id, keyword_id, scraped_at DESC
-              ) latest
-              INNER JOIN apps a ON a.id = latest.app_id
-              WHERE position IS NOT NULL
+              SELECT a.slug AS app_slug, COUNT(DISTINCT akr.keyword_id)::int AS ranked_keywords
+              FROM app_keyword_rankings akr
+              INNER JOIN apps a ON a.id = akr.app_id
+              WHERE akr.app_id IN (${appIdList})
+                AND akr.keyword_id IN (${sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`, `)})
+                AND akr.position IS NOT NULL
               GROUP BY a.slug
             `).then((res: any) => ((res as any).rows ?? res) as any[])
           : Promise.resolve([] as any[])
