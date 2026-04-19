@@ -6,17 +6,20 @@ import type { ChangeEntry } from "./unified-change-log";
  * Fetch unified change entries for an app — self changes + competitor changes (if tracked).
  * Returns sorted entries (newest first) and app data.
  *
- * Optimized to minimize waterfall: app, self changes, and competitors are fetched in parallel.
+ * Uses a single batch endpoint for competitor changes (includeChanges=true)
+ * instead of N+1 separate API calls.
  */
 export async function fetchChangeEntries(
   slug: string,
   platform: PlatformId
 ): Promise<{ app: any; entries: ChangeEntry[] }> {
-  // Fetch app info, self changes, and competitors list all in parallel
+  // Fetch app info, self changes, and competitors+changes all in parallel.
+  // getAppCompetitors with includeChanges=true returns competitor data with
+  // recentChanges embedded — single SQL query on the API side instead of 10+ separate calls.
   const [app, selfChanges, competitors] = await Promise.all([
     getApp(slug, platform),
     getAppChanges(slug, 50, platform).catch(() => []),
-    getAppCompetitors(slug, platform).catch(() => []),
+    getAppCompetitors(slug, platform, true).catch(() => []),
   ]);
 
   // Guard: if getApp returned null/undefined, return empty entries
@@ -38,31 +41,23 @@ export async function fetchChangeEntries(
       detectedAt: c.detectedAt,
     }));
 
-  // Fetch competitor changes in parallel (competitors already fetched above)
-  if (app.isTrackedByAccount) {
-    const topCompetitors = (competitors || []).slice(0, 10).filter((c: any) => c && c.appSlug);
-
-    if (topCompetitors.length > 0) {
-      const competitorChanges = await Promise.all(
-        topCompetitors.map((c: any) =>
-          getAppChanges(c.appSlug, 20, platform)
-            .then((changes: any[]) =>
-              (changes || [])
-                .filter((ch: any) => ch && ch.field && ch.detectedAt)
-                .map((ch: any) => ({
-                  appSlug: c.appSlug,
-                  appName: c.appName || c.appSlug,
-                  isSelf: false,
-                  field: ch.field,
-                  oldValue: typeof ch.oldValue === "string" ? ch.oldValue : JSON.stringify(ch.oldValue),
-                  newValue: typeof ch.newValue === "string" ? ch.newValue : JSON.stringify(ch.newValue),
-                  detectedAt: ch.detectedAt,
-                }))
-            )
-            .catch(() => [])
-        )
-      );
-      entries.push(...competitorChanges.flat());
+  // Extract competitor changes from the batch response (already included via includeChanges=true)
+  if (app.isTrackedByAccount && competitors?.length > 0) {
+    for (const comp of competitors.slice(0, 10)) {
+      if (!comp?.appSlug) continue;
+      const changes = comp.recentChanges ?? [];
+      for (const ch of changes) {
+        if (!ch || !ch.field || !ch.detectedAt) continue;
+        entries.push({
+          appSlug: comp.appSlug,
+          appName: comp.appName || comp.appSlug,
+          isSelf: false,
+          field: ch.field,
+          oldValue: typeof ch.oldValue === "string" ? ch.oldValue : JSON.stringify(ch.oldValue),
+          newValue: typeof ch.newValue === "string" ? ch.newValue : JSON.stringify(ch.newValue),
+          detectedAt: ch.detectedAt,
+        });
+      }
     }
   }
 

@@ -29,24 +29,33 @@ describe("fetchChangeEntries", () => {
     expect(entries[0].isSelf).toBe(true);
     expect(entries[0].appSlug).toBe("test-app");
     expect(entries[0].field).toBe("name");
-    // Competitors are fetched in parallel but not used for untracked apps
+    // Only 1 getAppChanges call (self), no separate competitor calls
     expect(mockGetAppChanges).toHaveBeenCalledTimes(1);
   });
 
-  it("includes competitor changes for tracked app", async () => {
+  it("includes competitor changes from batch response", async () => {
     mockGetApp.mockResolvedValue({ name: "Test App", isTrackedByAccount: true });
-    mockGetAppChanges.mockImplementation((slug: string) => {
-      if (slug === "test-app") return Promise.resolve([{ field: "name", oldValue: "A", newValue: "B", detectedAt: "2026-03-02" }]);
-      if (slug === "comp-1") return Promise.resolve([{ field: "price", oldValue: "10", newValue: "20", detectedAt: "2026-03-01" }]);
-      return Promise.resolve([]);
-    });
-    mockGetAppCompetitors.mockResolvedValue([{ appSlug: "comp-1", appName: "Comp 1" }]);
+    mockGetAppChanges.mockResolvedValue([
+      { field: "name", oldValue: "A", newValue: "B", detectedAt: "2026-03-02" },
+    ]);
+    // getAppCompetitors with includeChanges=true returns recentChanges embedded
+    mockGetAppCompetitors.mockResolvedValue([
+      {
+        appSlug: "comp-1",
+        appName: "Comp 1",
+        recentChanges: [
+          { field: "price", oldValue: "10", newValue: "20", detectedAt: "2026-03-01" },
+        ],
+      },
+    ]);
 
     const { entries } = await fetchChangeEntries("test-app", "shopify");
     expect(entries).toHaveLength(2);
     expect(entries[0].isSelf).toBe(true);
     expect(entries[1].isSelf).toBe(false);
     expect(entries[1].appName).toBe("Comp 1");
+    // Competitors are fetched with includeChanges=true — third arg is true
+    expect(mockGetAppCompetitors).toHaveBeenCalledWith("test-app", "shopify", true);
   });
 
   it("sorts entries by date descending", async () => {
@@ -55,6 +64,7 @@ describe("fetchChangeEntries", () => {
       { field: "description", oldValue: "A", newValue: "B", detectedAt: "2026-03-01" },
       { field: "name", oldValue: "C", newValue: "D", detectedAt: "2026-03-05" },
     ]);
+    mockGetAppCompetitors.mockResolvedValue([]);
 
     const { entries } = await fetchChangeEntries("test-app", "shopify");
     expect(entries[0].field).toBe("name");
@@ -74,19 +84,42 @@ describe("fetchChangeEntries", () => {
   it("handles empty changes", async () => {
     mockGetApp.mockResolvedValue({ name: "Test App", isTrackedByAccount: false });
     mockGetAppChanges.mockResolvedValue([]);
+    mockGetAppCompetitors.mockResolvedValue([]);
 
     const { entries } = await fetchChangeEntries("test-app", "shopify");
     expect(entries).toHaveLength(0);
   });
 
-  it("limits to 10 competitors", async () => {
+  it("limits to 10 competitors from batch response", async () => {
     mockGetApp.mockResolvedValue({ name: "Test App", isTrackedByAccount: true });
     mockGetAppChanges.mockResolvedValue([]);
-    const competitors = Array.from({ length: 15 }, (_, i) => ({ appSlug: `comp-${i}`, appName: `Comp ${i}` }));
+    // API returns 15 competitors with changes
+    const competitors = Array.from({ length: 15 }, (_, i) => ({
+      appSlug: `comp-${i}`,
+      appName: `Comp ${i}`,
+      recentChanges: [{ field: "name", oldValue: "A", newValue: "B", detectedAt: "2026-03-01" }],
+    }));
     mockGetAppCompetitors.mockResolvedValue(competitors);
 
+    const { entries } = await fetchChangeEntries("test-app", "shopify");
+    // Only 10 competitors' changes included (1 change each)
+    expect(entries).toHaveLength(10);
+    // Only 1 getAppChanges call (self) — no separate per-competitor calls
+    expect(mockGetAppChanges).toHaveBeenCalledTimes(1);
+  });
+
+  it("makes only 3 API calls total (app + self changes + competitors batch)", async () => {
+    mockGetApp.mockResolvedValue({ name: "Test App", isTrackedByAccount: true });
+    mockGetAppChanges.mockResolvedValue([{ field: "name", oldValue: "A", newValue: "B", detectedAt: "2026-03-01" }]);
+    mockGetAppCompetitors.mockResolvedValue([
+      { appSlug: "c1", appName: "C1", recentChanges: [{ field: "price", oldValue: "5", newValue: "10", detectedAt: "2026-03-01" }] },
+      { appSlug: "c2", appName: "C2", recentChanges: [{ field: "desc", oldValue: "x", newValue: "y", detectedAt: "2026-03-01" }] },
+    ]);
+
     await fetchChangeEntries("test-app", "shopify");
-    // 1 call for self + 10 for competitors (max)
-    expect(mockGetAppChanges).toHaveBeenCalledTimes(11);
+    // Exactly 1 call each — no N+1
+    expect(mockGetApp).toHaveBeenCalledTimes(1);
+    expect(mockGetAppChanges).toHaveBeenCalledTimes(1);
+    expect(mockGetAppCompetitors).toHaveBeenCalledTimes(1);
   });
 });

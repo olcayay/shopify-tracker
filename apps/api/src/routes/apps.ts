@@ -1072,38 +1072,21 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
       if (!changeApp) return [];
 
-      // Single query with LEFT JOIN anti-pattern instead of correlated NOT EXISTS.
-      // The dismissal label IDs are resolved in a subquery (tiny table, always cached).
-      // This avoids re-executing the NOT EXISTS subquery for every row.
-      const rows = await db.execute<{
-        id: number;
-        app_id: number;
-        field: string;
-        old_value: string | null;
-        new_value: string | null;
-        detected_at: Date;
-        scrape_run_id: string;
-      }>(sql`
-        SELECT afc.id, afc.app_id, afc.field, afc.old_value, afc.new_value,
-               afc.detected_at, afc.scrape_run_id
-        FROM app_field_changes afc
-        LEFT JOIN app_update_label_assignments ula ON ula.change_id = afc.id
-          AND ula.label_id IN (SELECT id FROM app_update_labels WHERE is_dismissal = TRUE)
-        WHERE afc.app_id = ${changeApp.id}
-          AND ula.id IS NULL
-        ORDER BY afc.detected_at DESC
-        LIMIT ${maxLimit}
-      `);
-
-      return rows.map((r) => ({
-        id: r.id,
-        appId: r.app_id,
-        field: r.field,
-        oldValue: r.old_value,
-        newValue: r.new_value,
-        detectedAt: r.detected_at,
-        scrapeRunId: r.scrape_run_id,
-      }));
+      return db
+        .select()
+        .from(appFieldChanges)
+        .where(
+          and(
+            eq(appFieldChanges.appId, changeApp.id),
+            sql`NOT EXISTS (
+              SELECT 1 FROM app_update_label_assignments ula
+              JOIN app_update_labels aul ON aul.id = ula.label_id
+              WHERE ula.change_id = ${appFieldChanges.id} AND aul.is_dismissal = TRUE
+            )`
+          )
+        )
+        .orderBy(desc(appFieldChanges.detectedAt))
+        .limit(maxLimit);
     }
   );
 
