@@ -33,9 +33,10 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
           GROUP BY aca.tracked_app_id
         ),
         dev_names AS (
-          SELECT s.app_id, s.developer->>'name' AS developer_name
+          SELECT DISTINCT ON (s.app_id) s.app_id, s.developer->>'name' AS developer_name
           FROM app_snapshots s
-          WHERE s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = s.app_id ORDER BY s2.scraped_at DESC LIMIT 1)
+          JOIN account_tracked_apps ata2 ON ata2.app_id = s.app_id AND ata2.account_id = ${accountId}
+          ORDER BY s.app_id, s.scraped_at DESC
         )
         SELECT a.id, a.platform, a.slug, a.name, a.icon_url, a.average_rating, a.rating_count,
           COALESCE(kc.keyword_count, 0) AS keyword_count,

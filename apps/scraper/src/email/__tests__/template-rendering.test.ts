@@ -10,7 +10,7 @@
  * 6. No broken images — all img src start with http(s)
  * 7. Snapshot — track visual changes across commits
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import {
   passwordResetTemplate,
   emailVerificationTemplate,
@@ -20,6 +20,14 @@ import {
 } from "../templates/transactional/index.js";
 import { emailLayout, header, ctaButton } from "../components/index.js";
 import { templateRenderers } from "../process-instant-email.js";
+
+// Pin the date so date-dependent snapshots don't break daily
+beforeAll(() => {
+  vi.useFakeTimers({ now: new Date("2026-01-15T12:00:00Z") });
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 // ── Helpers ────────────────────────────────────────────────────────
 

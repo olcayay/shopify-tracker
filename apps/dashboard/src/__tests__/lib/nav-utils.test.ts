@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractPlatform, extractSection, isOnPlatformPage, isOnGlobalPage, getNavItems, systemAdminItems, globalNavItems } from "../../lib/nav-utils";
+import { extractPlatform, extractSection, isOnPlatformPage, isOnGlobalPage, getNavItems, systemAdminItems, globalNavItems, utilityNavItems } from "../../lib/nav-utils";
 
 describe("nav-utils", () => {
   describe("extractPlatform", () => {
@@ -128,12 +128,19 @@ describe("nav-utils", () => {
   describe("globalNavItems", () => {
     it("has correct items", () => {
       const labels = globalNavItems.map((i) => i.label);
-      expect(labels).toEqual(["Overview", "All Apps", "All Keywords", "All Competitors", "Developers", "Notifications", "Support", "Organization", "Settings"]);
+      expect(labels).toEqual(["Overview", "All Apps", "All Keywords", "All Competitors", "Developers", "Notifications"]);
     });
 
     it("Overview is exact match", () => {
       const overview = globalNavItems.find((i) => i.label === "Overview");
       expect(overview?.exact).toBe(true);
+    });
+  });
+
+  describe("utilityNavItems", () => {
+    it("has correct items", () => {
+      const labels = utilityNavItems.map((i) => i.label);
+      expect(labels).toEqual(["Support", "Organization", "Settings"]);
     });
   });
 
