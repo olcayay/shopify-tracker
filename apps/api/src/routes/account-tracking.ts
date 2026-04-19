@@ -649,9 +649,10 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // GET /api/account/competitors — aggregate view (all competitors with trackedAppSlug)
-  app.get("/competitors", async (request) => {
+  app.get<{ Querystring: { platform?: string; fields?: string } }>("/competitors", async (request) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+    const isBasicAggregate = request.query.fields === "basic";
 
     // Per-phase timing instrumentation for Phase 1 measurement (PLA-1105).
     // Each request issues ~12 DB round-trips grouped into 4 parallel waves; the
@@ -767,7 +768,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     const similarityMap = new Map<string, Map<string, { overall: string; category: string; feature: string; keyword: string; text: string }>>();
     const velocityMap = new Map<string, { v7d: number | null; v30d: number | null; v90d: number | null; momentum: string | null }>();
 
-    if (competitorAppIds.length > 0) {
+    if (competitorAppIds.length > 0 && !isBasicAggregate) {
       const trackedAppIds = [...new Set(rows.map((r) => r._trackedAppId))];
       const allPairIds = [...new Set([...trackedAppIds, ...competitorAppIds])];
       const compIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `);
@@ -853,8 +854,8 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
     const t_wave3 = Date.now();
     const [visRows, powRows, snapshotRows, changeRows] = await Promise.all([
-      // Visibility scores
-      (compIdListForBatch
+      // Visibility scores (skip in basic mode)
+      (compIdListForBatch && !isBasicAggregate
         ? db.execute(sql`
             SELECT ta.slug AS tracked_app_slug, ca.slug AS app_slug,
                    v.visibility_score, v.keyword_count, v.visibility_raw
@@ -871,8 +872,8 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           `).then((res: any) => ((res as any).rows ?? res) as any[]).catch(() => [] as any[])
         : Promise.resolve([] as any[])
       ),
-      // Power scores
-      (compIdListForBatch
+      // Power scores (skip in basic mode)
+      (compIdListForBatch && !isBasicAggregate
         ? db.execute(sql`
             WITH latest_power AS (
               SELECT DISTINCT ON (app_id, category_slug)

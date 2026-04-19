@@ -245,7 +245,7 @@ export default function OverviewPage() {
         flipInitial();
       });
 
-    fetchWithAuth("/api/account/competitors")
+    fetchWithAuth("/api/account/competitors?fields=basic")
       .then((r) => safeJson<any[]>(r, []))
       .catch(() => [])
       .then((d) => {

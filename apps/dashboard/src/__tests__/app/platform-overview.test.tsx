@@ -90,7 +90,7 @@ function setupFetchMocks(overrides: Record<string, any> = {}) {
   mockFetchWithAuth.mockImplementation((url: string, opts?: any) => {
     if (url === "/api/apps") return Promise.resolve(makeJsonResponse(apps));
     if (url === "/api/keywords") return Promise.resolve(makeJsonResponse(keywords));
-    if (url === "/api/account/competitors") return Promise.resolve(makeJsonResponse(competitors));
+    if (url === "/api/account/competitors?fields=basic") return Promise.resolve(makeJsonResponse(competitors));
     if (url === "/api/account/starred-features") return Promise.resolve(makeJsonResponse(features));
     if (url === "/api/account/starred-categories") return Promise.resolve(makeJsonResponse(categories));
     if (url === "/api/system-admin/stats") return Promise.resolve(makeJsonResponse(overrides.systemStats ?? null));
@@ -133,7 +133,7 @@ describe("OverviewPage", () => {
       if (url === "/api/apps")
         return Promise.resolve(makeJsonResponse([{ slug: "fast-app", name: "Fast App" }]));
       if (url === "/api/keywords") return Promise.resolve(makeJsonResponse([]));
-      if (url === "/api/account/competitors") return Promise.resolve(makeJsonResponse([]));
+      if (url === "/api/account/competitors?fields=basic") return Promise.resolve(makeJsonResponse([]));
       if (url === "/api/account/starred-features") return new Promise(() => {}); // hangs
       if (url === "/api/account/starred-categories") return Promise.resolve(makeJsonResponse([]));
       if (url === "/api/apps/categories") return Promise.resolve(makeJsonResponse({}));
@@ -178,7 +178,7 @@ describe("OverviewPage", () => {
     await waitFor(() => {
       expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/apps");
       expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/keywords");
-      expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/account/competitors");
+      expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/account/competitors?fields=basic");
       expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/account/starred-categories");
     });
   });

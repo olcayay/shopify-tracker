@@ -17,6 +17,9 @@ import { getCategoryTotalsForPlatform } from "../utils/category-totals.js";
 import { developerNameToSlug } from "@appranks/shared";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL, PAGINATION_DEFAULT_DEVELOPER_APPS, PAGINATION_MAX_DEVELOPER_APPS, PAGINATION_MAX_LIMIT } from "../constants.js";
 import { getVisiblePlatformsForAccount } from "../utils/platform-visibility.js";
+import { cacheGet } from "../utils/cache.js";
+
+const DEVELOPERS_LIST_TTL_S = 60;
 
 export async function developerRoutes(app: FastifyInstance) {
   const db = app.writeDb;
@@ -178,16 +181,18 @@ export async function developerRoutes(app: FastifyInstance) {
       `);
 
       // Phase 2: fetch top_apps + app_counts_by_platform only for the page IDs.
-      // Skipping the LATERAL join entirely when the page is empty avoids a
-      // pointless empty-array-parameter round trip.
+      // Cached for 60s — developer top apps rarely change, and the LATERAL join
+      // on app_snapshots is the main bottleneck (~2.5s for 25 developers).
       const pageIds = phase1Rows.map((r: any) => Number(r.id));
       const topAppsByDev = new Map<number, any[]>();
       const countsByDev = new Map<number, Record<string, number>>();
       if (pageIds.length > 0) {
-        const phase2PlatformFilter = platforms.length > 0
-          ? sql`AND a.platform = ANY(${sqlArray(platforms)})`
-          : sql``;
-        const phase2Rows: any[] = await db.execute(sql`
+        const cacheKey = `dev-phase2:${platforms.join(",")}:${pageIds.join(",")}`;
+        const phase2Rows: any[] = await cacheGet(cacheKey, async () => {
+          const phase2PlatformFilter = platforms.length > 0
+            ? sql`AND a.platform = ANY(${sqlArray(platforms)})`
+            : sql``;
+          return db.execute(sql`
           WITH dev_apps AS (
             SELECT pd.global_developer_id, a.id AS app_id, a.slug, a.name, a.icon_url, a.platform
             FROM apps a
@@ -243,7 +248,8 @@ export async function developerRoutes(app: FastifyInstance) {
           LEFT JOIN top t ON t.global_developer_id = g.id
           LEFT JOIN counts c ON c.global_developer_id = g.id
           WHERE g.id = ANY(${sqlArray(pageIds)})
-        `);
+        `).then((res: any) => (res as any).rows ?? res);
+        }, DEVELOPERS_LIST_TTL_S);
         for (const r of phase2Rows) {
           const devId = Number(r.global_developer_id);
           topAppsByDev.set(devId, Array.isArray(r.top_apps) ? r.top_apps : []);

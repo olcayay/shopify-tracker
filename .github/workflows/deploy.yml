@@ -125,7 +125,7 @@ jobs:
       - name: Deploy to all VMs
         run: |
           FAILED=""
-          DEPLOY_CMD="cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d"
+          DEPLOY_CMD="cd /opt/appranks && sudo docker image prune -af --filter 'until=2h' && sudo docker compose pull && sudo docker compose up -d"
           SSH_OPTS="--zone=europe-west1-b --tunnel-through-iap --quiet --ssh-key-expire-after=5m"
 
           # Required VMs (on-demand instances)
