@@ -77,6 +77,7 @@ export function TopBar({
       {/* Logo */}
       <Link
         href="/overview"
+        prefetch={false}
         className="flex items-center gap-1.5 font-semibold text-lg hover:text-primary transition-colors shrink-0"
       >
         <AnimatedLogo animating={isNavigating} />
@@ -192,6 +193,7 @@ export function TopBar({
       {/* Settings */}
       <Link
         href="/settings"
+        prefetch={false}
         className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${
           pathname.startsWith("/settings")
             ? "bg-primary text-primary-foreground"
