@@ -5,14 +5,18 @@ import type { ChangeEntry } from "./unified-change-log";
 /**
  * Fetch unified change entries for an app — self changes + competitor changes (if tracked).
  * Returns sorted entries (newest first) and app data.
+ *
+ * Optimized to minimize waterfall: app, self changes, and competitors are fetched in parallel.
  */
 export async function fetchChangeEntries(
   slug: string,
   platform: PlatformId
 ): Promise<{ app: any; entries: ChangeEntry[] }> {
-  const [app, selfChanges] = await Promise.all([
+  // Fetch app info, self changes, and competitors list all in parallel
+  const [app, selfChanges, competitors] = await Promise.all([
     getApp(slug, platform),
     getAppChanges(slug, 50, platform).catch(() => []),
+    getAppCompetitors(slug, platform).catch(() => []),
   ]);
 
   // Guard: if getApp returned null/undefined, return empty entries
@@ -34,9 +38,8 @@ export async function fetchChangeEntries(
       detectedAt: c.detectedAt,
     }));
 
-  // Fetch competitor changes if tracked
+  // Fetch competitor changes in parallel (competitors already fetched above)
   if (app.isTrackedByAccount) {
-    const competitors = await getAppCompetitors(slug, platform).catch(() => []);
     const topCompetitors = (competitors || []).slice(0, 10).filter((c: any) => c && c.appSlug);
 
     if (topCompetitors.length > 0) {

@@ -21,6 +21,7 @@ describe("fetchChangeEntries", () => {
     mockGetAppChanges.mockResolvedValue([
       { field: "name", oldValue: "Old", newValue: "New", detectedAt: "2026-03-01" },
     ]);
+    mockGetAppCompetitors.mockResolvedValue([]);
 
     const { app, entries } = await fetchChangeEntries("test-app", "shopify");
     expect(app.name).toBe("Test App");
@@ -28,7 +29,8 @@ describe("fetchChangeEntries", () => {
     expect(entries[0].isSelf).toBe(true);
     expect(entries[0].appSlug).toBe("test-app");
     expect(entries[0].field).toBe("name");
-    expect(mockGetAppCompetitors).not.toHaveBeenCalled();
+    // Competitors are fetched in parallel but not used for untracked apps
+    expect(mockGetAppChanges).toHaveBeenCalledTimes(1);
   });
 
   it("includes competitor changes for tracked app", async () => {
