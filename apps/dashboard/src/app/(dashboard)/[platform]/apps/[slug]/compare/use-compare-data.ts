@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import type { AppData, CategoryRanking } from "./compare-types";
 
@@ -23,6 +23,8 @@ export function useCompareData(slug: string) {
 
   // Track whether initial selection was loaded from localStorage
   const selectionInitialized = useRef(false);
+  // Prevent duplicate loadData calls (React Strict Mode, fast re-renders)
+  const loadingRef = useRef(false);
 
   // Persist selected slugs per app
   useEffect(() => {
@@ -34,115 +36,126 @@ export function useCompareData(slug: string) {
     }
   }, [selectedSlugs, slug, competitors.length]);
 
-  useEffect(() => {
-    loadData();
-  }, [slug]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
+    // Guard against concurrent calls (React Strict Mode double-mount)
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     selectionInitialized.current = false;
 
-    // Fetch main app + competitor list in parallel
-    const [appRes, compRes] = await Promise.all([
-      fetchWithAuth(`/api/apps/${encodeURIComponent(slug)}`),
-      fetchWithAuth(
-        `/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors?fields=basic`
-      ),
-    ]);
+    try {
+      // Fetch main app + competitor list in parallel
+      const [appRes, compRes] = await Promise.all([
+        fetchWithAuth(`/api/apps/${encodeURIComponent(slug)}`),
+        fetchWithAuth(
+          `/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors?fields=basic`
+        ),
+      ]);
 
-    let mainAppData: AppData | null = null;
-    let compList: { slug: string; name: string; iconUrl: string | null }[] = [];
+      let mainAppData: AppData | null = null;
+      let compList: { slug: string; name: string; iconUrl: string | null }[] = [];
 
-    if (appRes.ok) {
-      mainAppData = await appRes.json();
-      setMainApp(mainAppData);
-      setActiveDetailSlug(mainAppData!.slug);
-    }
+      if (appRes.ok) {
+        mainAppData = await appRes.json();
+        setMainApp(mainAppData);
+        setActiveDetailSlug(mainAppData!.slug);
+      }
 
-    if (compRes.ok) {
-      const comps = await compRes.json();
-      compList = comps.map((c: any) => ({
-        slug: c.appSlug,
-        name: c.appName || c.appSlug,
-        iconUrl: c.iconUrl,
-      }));
-      setCompetitors(compList);
+      if (compRes.ok) {
+        const comps = await compRes.json();
+        compList = comps.map((c: any) => ({
+          slug: c.appSlug,
+          name: c.appName || c.appSlug,
+          iconUrl: c.iconUrl,
+        }));
+        setCompetitors(compList);
 
-      // Restore saved selection or default to all
-      try {
-        const saved = localStorage.getItem(`compare-selected-${slug}`);
-        if (saved) {
-          const savedArr: string[] = JSON.parse(saved);
-          const validSlugs = new Set(
-            savedArr.filter((s) => compList.some((c) => c.slug === s))
-          );
-          setSelectedSlugs(
-            validSlugs.size > 0
-              ? validSlugs
-              : new Set(compList.map((c) => c.slug))
-          );
-        } else {
+        // Restore saved selection or default to all
+        try {
+          const saved = localStorage.getItem(`compare-selected-${slug}`);
+          if (saved) {
+            const savedArr: string[] = JSON.parse(saved);
+            const validSlugs = new Set(
+              savedArr.filter((s) => compList.some((c) => c.slug === s))
+            );
+            setSelectedSlugs(
+              validSlugs.size > 0
+                ? validSlugs
+                : new Set(compList.map((c) => c.slug))
+            );
+          } else {
+            setSelectedSlugs(new Set(compList.map((c) => c.slug)));
+          }
+        } catch {
           setSelectedSlugs(new Set(compList.map((c) => c.slug)));
         }
-      } catch {
-        setSelectedSlugs(new Set(compList.map((c) => c.slug)));
       }
-    }
 
-    // Fetch full data for all competitors in parallel
-    if (compList.length > 0) {
-      const results = await Promise.all(
-        compList.map(async (c) => {
+      // Fetch competitor app data + all rankings in parallel (single wave)
+      const allSlugs = [slug, ...compList.map((c) => c.slug)];
+      const [compResults, ...rankingResults] = await Promise.all([
+        // Batch: fetch all competitor app data
+        compList.length > 0
+          ? Promise.all(
+              compList.map(async (c) => {
+                const res = await fetchWithAuth(
+                  `/api/apps/${encodeURIComponent(c.slug)}`
+                );
+                if (res.ok) {
+                  const data: AppData = await res.json();
+                  return [c.slug, data] as [string, AppData];
+                }
+                return null;
+              })
+            )
+          : Promise.resolve([]),
+        // Batch: fetch all rankings in the same Promise.all
+        ...allSlugs.map(async (s) => {
           const res = await fetchWithAuth(
-            `/api/apps/${encodeURIComponent(c.slug)}`
+            `/api/apps/${encodeURIComponent(s)}/rankings?days=7`
           );
           if (res.ok) {
-            const data: AppData = await res.json();
-            return [c.slug, data] as [string, AppData];
+            const data = await res.json();
+            const latestPerCat = new Map<string, CategoryRanking>();
+            for (const r of data.categoryRankings || []) {
+              latestPerCat.set(r.categorySlug, {
+                categorySlug: r.categorySlug,
+                categoryTitle: r.categoryTitle,
+                position: r.position,
+              });
+            }
+            return [s, [...latestPerCat.values()]] as [string, CategoryRanking[]];
           }
-          return null;
-        })
-      );
+          return [s, []] as [string, CategoryRanking[]];
+        }),
+      ]);
 
-      const map = new Map<string, AppData>();
-      for (const r of results) {
-        if (r) map.set(r[0], r[1]);
-      }
-      setCompetitorData(map);
-    }
-
-    // Fetch category rankings for all apps in parallel
-    const allSlugs = [slug, ...compList.map((c) => c.slug)];
-    const rankingResults = await Promise.all(
-      allSlugs.map(async (s) => {
-        const res = await fetchWithAuth(
-          `/api/apps/${encodeURIComponent(s)}/rankings?days=7`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          // Get latest position per category (ordered asc by scrapedAt, so last wins)
-          const latestPerCat = new Map<string, CategoryRanking>();
-          for (const r of data.categoryRankings || []) {
-            latestPerCat.set(r.categorySlug, {
-              categorySlug: r.categorySlug,
-              categoryTitle: r.categoryTitle,
-              position: r.position,
-            });
-          }
-          return [s, [...latestPerCat.values()]] as [string, CategoryRanking[]];
+      // Set competitor data
+      if (compResults) {
+        const map = new Map<string, AppData>();
+        for (const r of compResults as ([string, AppData] | null)[]) {
+          if (r) map.set(r[0], r[1]);
         }
-        return [s, []] as [string, CategoryRanking[]];
-      })
-    );
-    const rankMap = new Map<string, CategoryRanking[]>();
-    for (const [s, rankings] of rankingResults) {
-      rankMap.set(s, rankings);
-    }
-    setRankingsData(rankMap);
+        setCompetitorData(map);
+      }
 
-    selectionInitialized.current = true;
-    setLoading(false);
-  }
+      // Set rankings data
+      const rankMap = new Map<string, CategoryRanking[]>();
+      for (const [s, rankings] of rankingResults as [string, CategoryRanking[]][]) {
+        rankMap.set(s, rankings);
+      }
+      setRankingsData(rankMap);
+
+      selectionInitialized.current = true;
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  }, [slug, fetchWithAuth]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   function toggleCompetitor(compSlug: string) {
     setSelectedSlugs((prev) => {
