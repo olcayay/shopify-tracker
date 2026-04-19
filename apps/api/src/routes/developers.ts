@@ -231,7 +231,7 @@ export async function developerRoutes(app: FastifyInstance) {
             SELECT global_developer_id,
               jsonb_agg(jsonb_build_object(
                 'icon_url', icon_url, 'name', name, 'slug', slug, 'platform', platform
-              ) ORDER BY name) FILTER (WHERE rn <= 10) AS top_apps
+              ) ORDER BY name) FILTER (WHERE rn <= 5) AS top_apps
             FROM ranked
             GROUP BY global_developer_id
           )

@@ -22,6 +22,7 @@ import { PlatformFilterChips } from "@/components/platform-filter-chips";
 import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
 import { DeveloperTopSection } from "@/components/developer-top-section";
+import { AppIcon } from "@/components/app-icon";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { toast } from "sonner";
 import type { PlatformId } from "@appranks/shared";
@@ -153,7 +154,7 @@ export default function DevelopersPage() {
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>([]);
   const { viewMode, changeViewMode } = useViewMode("developers-view-mode", () => setPage(1));
-  const limit = viewMode === "grouped" ? 200 : 25;
+  const limit = viewMode === "grouped" ? 50 : 25;
 
   function togglePlatform(pid: PlatformId) {
     setActivePlatforms((prev) =>
@@ -305,7 +306,7 @@ export default function DevelopersPage() {
       .map(([platform, devs]) => ({ platform, items: devs }));
   }, [developers, viewMode, enabledPlatforms, sort, order]);
 
-  const maxIcons = 10;
+  const maxIcons = 5;
 
   function renderAppsCell(dev: Developer) {
     const visibleApps = dev.topApps.slice(0, maxIcons);
@@ -325,7 +326,7 @@ export default function DevelopersPage() {
                   href={`/${app.platform}/apps/${app.slug}`}
                   className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
                 >
-                  <img src={app.iconUrl} alt={app.name} className="w-5 h-5 rounded" />
+                  <AppIcon src={app.iconUrl} alt={app.name} className="w-5 h-5 rounded" size={20} />
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">{app.name}</TooltipContent>

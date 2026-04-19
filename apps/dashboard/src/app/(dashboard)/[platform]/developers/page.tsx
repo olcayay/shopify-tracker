@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -248,7 +249,7 @@ function PlatformDevelopersContent() {
     ? "No developers found matching your search."
     : "No developers found.";
 
-  const maxIcons = 10;
+  const maxIcons = 5;
 
   function renderAppsCell(dev: Developer) {
     const visibleApps = dev.topApps.slice(0, maxIcons);
@@ -268,11 +269,7 @@ function PlatformDevelopersContent() {
                   href={`/${app.platform}/apps/${app.slug}`}
                   className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
                 >
-                  <img
-                    src={app.iconUrl}
-                    alt={app.name}
-                    className="w-5 h-5 rounded"
-                  />
+                  <AppIcon src={app.iconUrl} alt={app.name} className="w-5 h-5 rounded" size={20} />
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">

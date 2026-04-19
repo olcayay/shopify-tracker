@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppIcon } from "@/components/app-icon";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 
 export interface DeveloperTopSectionApp {
@@ -263,14 +264,7 @@ export function DeveloperTopSection({
                               className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
                               title={app.name}
                             >
-                              {app.iconUrl && (
-                                <img
-                                  src={app.iconUrl}
-                                  alt=""
-                                  aria-hidden="true"
-                                  className="w-4 h-4 rounded shrink-0"
-                                />
-                              )}
+                              <AppIcon src={app.iconUrl} className="w-4 h-4 rounded shrink-0" size={16} />
                               <span className="truncate max-w-[120px]">{app.name}</span>
                             </Link>
                           ))}
