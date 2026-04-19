@@ -1090,6 +1090,107 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // GET /api/apps/:slug/changes-feed — self + competitor changes in one shot
+  // Lightweight alternative to calling /changes + /competitors?includeChanges=true
+  // Returns { selfChanges: [...], competitorChanges: { [slug]: [...] } }
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/changes-feed",
+    async (request) => {
+      const { slug } = request.params;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+      const { accountId } = request.user;
+
+      // Look up app
+      const [appRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
+        .limit(1);
+
+      if (!appRow) return { selfChanges: [], competitorChanges: {} };
+
+      // Fetch self changes + competitor IDs in parallel
+      const selfChangesPromise = db
+        .select()
+        .from(appFieldChanges)
+        .where(
+          and(
+            eq(appFieldChanges.appId, appRow.id),
+            sql`NOT EXISTS (
+              SELECT 1 FROM app_update_label_assignments ula
+              JOIN app_update_labels aul ON aul.id = ula.label_id
+              WHERE ula.change_id = ${appFieldChanges.id} AND aul.is_dismissal = TRUE
+            )`
+          )
+        )
+        .orderBy(desc(appFieldChanges.detectedAt))
+        .limit(50);
+
+      // Only look up competitors if the request is authenticated
+      let competitorIdsPromise: Promise<{ id: number; slug: string; name: string }[]> = Promise.resolve([]);
+      if (accountId) {
+        competitorIdsPromise = db
+          .select({
+            id: apps.id,
+            slug: apps.slug,
+            name: apps.name,
+          })
+          .from(accountCompetitorApps)
+          .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
+          .innerJoin(accountTrackedApps, and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appId, appRow.id),
+            eq(accountTrackedApps.id, accountCompetitorApps.trackedAppId)
+          ))
+          .where(eq(accountCompetitorApps.accountId, accountId))
+          .limit(10)
+          .then(rows => rows as { id: number; slug: string; name: string }[]);
+      }
+
+      const [selfChanges, competitors] = await Promise.all([selfChangesPromise, competitorIdsPromise]);
+
+      // Batch-fetch competitor changes in a single query
+      const competitorChanges: Record<string, any[]> = {};
+      if (competitors.length > 0) {
+        const compIds = competitors.map(c => c.id);
+        const idToSlug = new Map(competitors.map(c => [c.id, c.slug]));
+
+        const compChangeRows: any[] = await db.execute(sql`
+          SELECT afc.*, a.slug AS app_slug, a.name AS app_name
+          FROM (
+            SELECT afc2.*, ROW_NUMBER() OVER (PARTITION BY afc2.app_id ORDER BY afc2.detected_at DESC) AS rn
+            FROM app_field_changes afc2
+            WHERE afc2.app_id = ANY(${sqlArray(compIds)})
+              AND NOT EXISTS (
+                SELECT 1 FROM app_update_label_assignments ula
+                JOIN app_update_labels aul ON aul.id = ula.label_id
+                WHERE ula.change_id = afc2.id AND aul.is_dismissal = TRUE
+              )
+          ) afc
+          JOIN apps a ON a.id = afc.app_id
+          WHERE afc.rn <= 20
+          ORDER BY afc.detected_at DESC
+        `).then((res: any) => (res as any).rows ?? res);
+
+        for (const row of compChangeRows) {
+          const s = row.app_slug;
+          if (!competitorChanges[s]) competitorChanges[s] = [];
+          competitorChanges[s].push({
+            id: row.id,
+            appId: row.app_id,
+            field: row.field,
+            oldValue: row.old_value,
+            newValue: row.new_value,
+            detectedAt: row.detected_at,
+            appName: row.app_name,
+          });
+        }
+      }
+
+      return { selfChanges, competitorChanges };
+    }
+  );
+
   // GET /api/apps/:slug/similar-apps — direct, reverse, 2nd degree similar apps
   app.get<{ Params: { slug: string } }>(
     "/:slug/similar-apps",

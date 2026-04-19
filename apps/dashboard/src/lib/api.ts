@@ -162,6 +162,12 @@ export const getAppChanges = cache((slug: string, limit = 50, platform?: Platfor
   return fetchApi<any[]>(withPlatform(`/api/apps/${slug}/changes?limit=${limit}`, platform));
 });
 
+export const getAppChangesFeed = cache((slug: string, platform?: PlatformId) => {
+  return fetchApi<{ selfChanges: any[]; competitorChanges: Record<string, any[]> }>(
+    withPlatform(`/api/apps/${slug}/changes-feed`, platform)
+  );
+});
+
 export const getAppSimilarApps = cache((slug: string, days = 30, platform?: PlatformId) => {
   return fetchApi<any>(withPlatform(`/api/apps/${slug}/similar-apps?days=${days}`, platform));
 });
