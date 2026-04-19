@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AlertTriangle, TrendingDown, TrendingUp, Star, Megaphone, Award, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 

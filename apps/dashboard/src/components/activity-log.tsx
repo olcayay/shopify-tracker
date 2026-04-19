@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollText, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { getPlatformColor, PLATFORM_DISPLAY } from "@/lib/platform-display";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 // ---------------------------------------------------------------------------
 // Types

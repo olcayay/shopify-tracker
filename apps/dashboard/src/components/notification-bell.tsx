@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { Bell, Check, CheckCheck, ExternalLink } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { timeAgo } from "@/lib/format-utils";

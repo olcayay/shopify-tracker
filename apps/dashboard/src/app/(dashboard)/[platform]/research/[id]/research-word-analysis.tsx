@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import { type PlatformId } from "@appranks/shared";

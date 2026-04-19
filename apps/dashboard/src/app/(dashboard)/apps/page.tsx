@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
@@ -147,7 +147,7 @@ export default function CrossPlatformAppsPage() {
             onTrackChange={(tracked) => updateAppState(app.id, { isTracked: tracked })}
             onCompetitorChange={(competitor) => updateAppState(app.id, { isCompetitor: competitor })}
           >
-            <Link href={`/${app.platform}/apps/${app.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+            <Link href={`/${app.platform}/apps/${app.slug}`} className="flex items-center gap-2 font-medium hover:underline">
               <AppIcon src={app.iconUrl} className="w-6 h-6 rounded" size={24} />
               {app.name}
             </Link>

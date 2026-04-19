@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { getApp, getAppMembership, getAppScores } from "@/lib/api";
 import { TrackAppButton } from "../../[slug]/track-button";

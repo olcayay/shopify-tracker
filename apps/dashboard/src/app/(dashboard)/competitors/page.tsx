@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
@@ -384,7 +384,7 @@ export default function CrossPlatformCompetitorsPage() {
             <Link
               key={app.id}
               href={`/${app.platform}/apps/${app.slug}`}
-              prefetch={false}
+             
               className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
               title={app.name}
             >
@@ -424,7 +424,7 @@ export default function CrossPlatformCompetitorsPage() {
       <TableRow key={comp.id}>
         <TableCell><PlatformBadgeCell platform={comp.platform} /></TableCell>
         <TableCell>
-          <Link href={`/${comp.platform}/apps/${comp.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+          <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
             <AppIcon src={comp.iconUrl} className="w-6 h-6 rounded" size={24} />
             {comp.name}
           </Link>
@@ -439,7 +439,7 @@ export default function CrossPlatformCompetitorsPage() {
     return (
       <TableRow key={comp.id}>
         <TableCell>
-          <Link href={`/${comp.platform}/apps/${comp.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+          <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
             <AppIcon src={comp.iconUrl} className="w-6 h-6 rounded" size={24} />
             {comp.name}
           </Link>
@@ -454,7 +454,7 @@ export default function CrossPlatformCompetitorsPage() {
     return (
       <TableRow key={comp.id}>
         <TableCell>
-          <Link href={`/${comp.platform}/apps/${comp.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+          <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
             <AppIcon src={comp.iconUrl} className="w-6 h-6 rounded" size={24} />
             {comp.name}
           </Link>

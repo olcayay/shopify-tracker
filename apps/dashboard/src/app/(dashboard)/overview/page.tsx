@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
@@ -518,6 +518,7 @@ function AvailablePlatformPill({ platformId }: { platformId: PlatformId }) {
   return (
     <Link
       href={`/${platformId}`}
+     
       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-background hover:bg-muted/50 hover:shadow-sm transition-all group"
     >
       <span

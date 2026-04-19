@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 import { CompareSection } from "./compare-section";

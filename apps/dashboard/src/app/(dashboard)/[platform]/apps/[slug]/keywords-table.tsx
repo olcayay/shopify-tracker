@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/format-utils";
 import { Button } from "@/components/ui/button";

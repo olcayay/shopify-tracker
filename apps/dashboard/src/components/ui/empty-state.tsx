@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { Button } from "@/components/ui/button";
 import type { LucideIcon } from "lucide-react";
 import { Inbox } from "lucide-react";

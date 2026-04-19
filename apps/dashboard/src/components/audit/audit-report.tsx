@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { AuditReport as AuditReportType, AuditSection, AuditCheck, AuditRecommendation, PlatformId } from "@appranks/shared";
 import { cn } from "@/lib/utils";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AppIcon } from "@/components/app-icon";
@@ -100,7 +100,7 @@ export function SidebarTrackedApps({
               <TooltipTrigger asChild>
                 <Link
                   href={`/${platform}/apps/${app.slug}`}
-                  prefetch={false}
+                 
                   onClick={onNavigate}
                   className="relative rounded-md transition-colors"
                   style={isActive ? { boxShadow: `0 0 0 2px ${accentColor}` } : undefined}
@@ -158,7 +158,7 @@ export function SidebarTrackedApps({
           <Link
             key={app.slug}
             href={`/${platform}/apps/${app.slug}`}
-            prefetch={false}
+           
             onClick={onNavigate}
             className={`flex items-center gap-2 rounded-md mx-2 px-2.5 py-1.5 text-sm transition-colors ${
               isActive
@@ -241,7 +241,7 @@ const OverflowPanel = forwardRef<HTMLDivElement, {
           <Link
             key={app.slug}
             href={`/${platform}/apps/${app.slug}`}
-            prefetch={false}
+           
             onClick={onNavigate}
             className={`flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
               isActive

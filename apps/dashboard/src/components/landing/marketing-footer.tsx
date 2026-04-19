@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { BarChart3 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 

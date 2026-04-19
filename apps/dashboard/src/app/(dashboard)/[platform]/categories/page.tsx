@@ -2,7 +2,7 @@
 
 import { Fragment, useState, useCallback, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { useApiQuery, useQueryClient } from "@/lib/use-api-query";

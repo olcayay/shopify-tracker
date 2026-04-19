@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Sparkles, Plus, Check, ChevronDown, ChevronUp, Brain, Loader2, RefreshCw } from "lucide-react";

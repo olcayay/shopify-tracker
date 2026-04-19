@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { useParams } from "next/navigation";
 import { Sparkles, ArrowRight } from "lucide-react";
 

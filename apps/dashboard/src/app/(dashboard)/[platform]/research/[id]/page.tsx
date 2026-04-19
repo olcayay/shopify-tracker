@@ -24,7 +24,7 @@ import {
   GitCompareArrows,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import type { ResearchData } from "./research-types";
 import { SectionWrapper } from "./section-wrapper";
 import { SummaryCards } from "./research-summary";

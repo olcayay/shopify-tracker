@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { usePathname } from "next/navigation";
 import { Shield, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -73,7 +73,7 @@ export function IconSidebar() {
           {expanded ? (
             <Link
               href="/system-admin"
-              prefetch={false}
+             
               className="flex items-center gap-2.5 px-3 py-1.5 text-sm font-medium text-amber-600 mb-1"
             >
               <Shield className="h-4 w-4 shrink-0" />
@@ -84,7 +84,7 @@ export function IconSidebar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/system-admin"
-                  prefetch={false}
+                 
                   className="h-9 w-9 mx-auto flex items-center justify-center rounded-md mb-1 text-amber-600"
                 >
                   <Shield className="h-4.5 w-4.5" />
@@ -118,7 +118,7 @@ export function IconSidebar() {
             <div key={item.href}>
               <Link
                 href={item.href}
-                prefetch={false}
+               
                 className={`flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
                   isActive
                     ? "font-medium text-primary-foreground"
@@ -154,7 +154,7 @@ export function IconSidebar() {
               <TooltipTrigger asChild>
                 <Link
                   href={item.href}
-                  prefetch={false}
+                 
                   className={`h-9 w-9 mx-auto flex items-center justify-center rounded-md text-sm transition-colors relative ${
                     isActive
                       ? "bg-primary text-primary-foreground"
@@ -197,7 +197,7 @@ export function IconSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  prefetch={false}
+                 
                   className={`flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
                     isActive
                       ? "font-medium bg-primary text-primary-foreground"
@@ -215,7 +215,7 @@ export function IconSidebar() {
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
-                    prefetch={false}
+                   
                     className={`h-9 w-9 mx-auto flex items-center justify-center rounded-md text-sm transition-colors ${
                       isActive
                         ? "bg-primary text-primary-foreground"
@@ -239,7 +239,7 @@ export function IconSidebar() {
           {expanded ? (
             <Link
               href="/system-admin"
-              prefetch={false}
+             
               className="flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-md text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
             >
               <Shield className="h-4 w-4 shrink-0" />
@@ -250,7 +250,7 @@ export function IconSidebar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/system-admin"
-                  prefetch={false}
+                 
                   className="h-9 w-9 mx-auto flex items-center justify-center rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
                 >
                   <Shield className="h-4.5 w-4.5" />

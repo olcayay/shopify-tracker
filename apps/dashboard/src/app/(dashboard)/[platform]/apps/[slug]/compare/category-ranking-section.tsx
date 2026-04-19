@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { useParams } from "next/navigation";
 import { CompareSection } from "./compare-section";
 import { LinkedAppIcon } from "./app-icon";

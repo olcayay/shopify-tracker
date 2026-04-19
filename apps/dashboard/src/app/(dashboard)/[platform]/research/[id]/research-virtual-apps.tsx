@@ -14,7 +14,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { timeAgo } from "@/lib/format-utils";
 import { ConfirmModal } from "@/components/confirm-modal";
 

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { getApp, getCategoriesBatch, getAppRankings } from "@/lib/api";
 import { hasAnySeoField, hasSeoTitle, hasSeoMetaDescription, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

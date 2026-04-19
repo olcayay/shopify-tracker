@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { formatNumber } from "@/lib/format-utils";
 import { useFeatureFlag } from "@/contexts/feature-flags-context";
 

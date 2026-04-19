@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AppData } from "./types";

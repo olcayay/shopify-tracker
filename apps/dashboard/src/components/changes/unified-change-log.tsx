@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, Plus, Minus, ChevronsDownUp, ChevronsUpDown, ChevronLeft, List, CalendarDays } from "lucide-react";
 import { ChangeHeatmap } from "@/components/changes/change-heatmap";

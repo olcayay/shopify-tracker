@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";

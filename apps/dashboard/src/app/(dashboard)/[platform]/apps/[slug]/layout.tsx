@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { formatDateOnly } from "@/lib/format-date";
 import { getApp, getAppMembership } from "@/lib/api";

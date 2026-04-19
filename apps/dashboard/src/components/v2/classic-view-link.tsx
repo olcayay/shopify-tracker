@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 export function ClassicViewLink({ platform, slug }: { platform: string; slug: string }) {
   return (

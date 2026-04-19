@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { toast } from "sonner";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
@@ -267,7 +267,7 @@ function PlatformDevelopersContent() {
               <TooltipTrigger asChild>
                 <Link
                   href={`/${app.platform}/apps/${app.slug}`}
-                  prefetch={false}
+                 
                   className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
                 >
                   <AppIcon src={app.iconUrl} alt={app.name} className="w-5 h-5 rounded" size={20} />

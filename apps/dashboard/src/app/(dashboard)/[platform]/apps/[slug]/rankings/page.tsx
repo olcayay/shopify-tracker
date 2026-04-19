@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { formatDateOnly } from "@/lib/format-date";
 import { getAppRankings } from "@/lib/api";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";

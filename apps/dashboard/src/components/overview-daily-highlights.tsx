@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { Trophy, MessageSquare, RefreshCw, Star, Eye, Megaphone, Calendar } from "lucide-react";
 import type { PlatformId } from "@appranks/shared";
 
@@ -191,6 +191,7 @@ export function DailyHighlights({ highlights, platformId }: DailyHighlightsProps
             <Link
               key={i}
               href={card.href}
+             
               className={`flex items-start gap-2.5 p-3 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors border-l-2 ${card.color}`}
             >
               <Icon className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />

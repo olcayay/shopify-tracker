@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Star } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { formatCategoryTitle } from "@/lib/platform-urls";
 import { type PlatformId } from "@appranks/shared";
 import { formatNumber } from "@/lib/format-utils";

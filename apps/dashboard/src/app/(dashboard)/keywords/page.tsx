@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
@@ -157,7 +157,7 @@ export default function CrossPlatformKeywordsPage() {
                     <TooltipTrigger asChild>
                       <Link
                         href={`/${app.platform}/apps/${app.slug}`}
-                        prefetch={false}
+                       
                         className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
                       >
                         <AppIcon src={app.iconUrl} alt={app.name} className="w-6 h-6 rounded" size={24} />

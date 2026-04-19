@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Check } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 export function FeatureCoverage({
   features, competitors, virtualApps,

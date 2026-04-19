@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Shield,
@@ -85,7 +85,7 @@ function SidebarContent({
     const content = (
       <Link
         href={href}
-        prefetch={false}
+       
         onClick={onNavigate}
         className={`flex items-center gap-3 rounded-md text-sm transition-colors min-h-[44px] ${collapsed ? "justify-center px-2 py-2" : "px-3 py-2"} ${className} ${
           isActive
@@ -140,7 +140,7 @@ function SidebarContent({
       {showCollapseToggle && (
         <div className={`flex items-center mb-4 ${collapsed ? "justify-center" : "justify-between px-1"}`}>
           {!collapsed && (
-            <Link href="/overview" prefetch={false} className="font-semibold text-lg px-2 hover:text-primary transition-colors">
+            <Link href="/overview" className="font-semibold text-lg px-2 hover:text-primary transition-colors">
               AppRanks
             </Link>
           )}
@@ -207,7 +207,7 @@ function SidebarContent({
               <div key={platformId}>
                 <Link
                   href={`/${platformId}`}
-                  prefetch={false}
+                 
                   onClick={(e) => {
                     if (expandedPlatform === platformId) {
                       // Already on this platform — just toggle expand/collapse

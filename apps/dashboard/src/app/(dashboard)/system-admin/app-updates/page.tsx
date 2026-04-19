@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { timeAgo } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 
 const PAGE_SIZE = 50;
 const APP_NAME_MAX_LENGTH = 30;

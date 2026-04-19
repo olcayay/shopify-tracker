@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Ghost, RotateCcw } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import Image from "next/image";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { useAuth } from "@/lib/auth-context";

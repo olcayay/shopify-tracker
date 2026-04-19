@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { usePolling } from "@/hooks/use-polling";
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import {

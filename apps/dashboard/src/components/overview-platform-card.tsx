@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Star, Search, Users } from "lucide-react";
@@ -81,6 +81,7 @@ export function OverviewPlatformCard({ platformId, data, stats, highlightsLoadin
               <div className="pt-2 text-center">
                 <Link
                   href={`/${platformId}/apps`}
+                 
                   className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
                 >
                   View all {apps.length} apps
@@ -126,6 +127,7 @@ function AppRow({ app, platformId }: { app: AppSummary; platformId: PlatformId }
   return (
     <Link
       href={`/${platformId}/apps/${app.slug}`}
+     
       className="flex items-center gap-3 py-2 hover:bg-muted/50 rounded-sm px-1 -mx-1 transition-colors group"
     >
       {app.iconUrl ? (
