@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Shield, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
-import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
+import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, utilityNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
 import { type PlatformId } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { SidebarTrackedApps } from "@/components/sidebar-tracked-apps";
@@ -179,6 +179,52 @@ export function IconSidebar() {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Utility items (Support, Organization, Settings) — shown on non-global pages where they're not in the main nav */}
+      {!isGlobalPage && !isSettingsPage && !isAdminSection && !showAdminFallback && (
+        <>
+          <div className={`${expanded ? "mx-3" : "mx-auto w-6"} border-t mb-1`} />
+          {utilityNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+
+            if (expanded) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
+                    isActive
+                      ? "font-medium bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            }
+
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={item.href}
+                    className={`h-9 w-9 mx-auto flex items-center justify-center rounded-md text-sm transition-colors ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </>
+      )}
 
       {/* Persistent System Admin link (visible on platform/global pages where admin nav isn't shown) */}
       {isSystemAdmin && !isAdminSection && !showAdminFallback && (

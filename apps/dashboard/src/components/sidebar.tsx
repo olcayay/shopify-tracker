@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Settings,
   Shield,
   LogOut,
   User,
@@ -17,7 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
-import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
+import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, utilityNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
 import { PLATFORMS, type PlatformId, platformFeatureFlagSlug } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -175,6 +174,18 @@ function SidebarContent({
                 />
               </>
             )}
+            {/* Utility items in collapsed mode on non-global pages */}
+            {!isGlobalPage && (
+              <>
+                <div className="border-t my-1 mx-2" />
+                {utilityNavItems.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
+                  );
+                })}
+              </>
+            )}
           </>
         ) : isGlobalPage && !isPlatformPage ? (
           /* Global page: show global nav items as flat list */
@@ -257,14 +268,18 @@ function SidebarContent({
           })
         )}
 
-        {/* Settings — always visible, below platforms */}
-        <div className="border-t my-2" />
-        <NavLink
-          href="/settings"
-          icon={Settings}
-          label="Settings"
-          isActive={pathname === "/settings" || pathname.startsWith("/settings/")}
-        />
+        {/* Utility items (Support, Organization, Settings) — on non-global pages where they're not in the main nav */}
+        {!isGlobalPage && (
+          <>
+            <div className="border-t my-2" />
+            {utilityNavItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
+              );
+            })}
+          </>
+        )}
 
         {/* System Admin */}
         {isSystemAdmin && (

@@ -101,6 +101,13 @@ export function getNavItems(platformId: PlatformId, isAdmin?: boolean, enabledFe
   return items;
 }
 
+/** Utility items always visible at the bottom of the sidebar (Support, Organization, Settings) */
+export const utilityNavItems: NavItem[] = [
+  { href: "/support", label: "Support", icon: LifeBuoy },
+  { href: "/organization", label: "Organization", icon: Building2 },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
 /** Global (cross-platform) navigation items for /overview, /apps, /keywords, etc. */
 export const globalNavItems: NavItem[] = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -109,9 +116,7 @@ export const globalNavItems: NavItem[] = [
   { href: "/competitors", label: "All Competitors", icon: Star },
   { href: "/developers", label: "Developers", icon: Code },
   { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/support", label: "Support", icon: LifeBuoy },
-  { href: "/organization", label: "Organization", icon: Building2 },
-  { href: "/settings", label: "Settings", icon: Settings },
+  ...utilityNavItems,
 ];
 
 /** Check if pathname is a global (non-platform) page like /overview, /apps, /keywords, etc. */
