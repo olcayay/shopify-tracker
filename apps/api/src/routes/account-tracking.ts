@@ -1428,17 +1428,15 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           const kwIds = kwRows.map((r) => r.keywordId);
           const kwIdList = sql.join(kwIds.map((id) => sql`${id}`), sql`,`);
           const appIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`,`);
+          // Simple count: how many tracked keywords each competitor ranks for (any position ever).
+          // Avoids the expensive DISTINCT ON + sort that was taking 11s on large tables.
           const rankedRows: any[] = await db.execute(sql`
-            SELECT a.slug AS app_slug, COUNT(DISTINCT latest.keyword_id)::int AS cnt
-            FROM (
-              SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id, position
-              FROM app_keyword_rankings
-              WHERE app_id IN (${appIdList})
-                AND keyword_id IN (${kwIdList})
-              ORDER BY app_id, keyword_id, scraped_at DESC
-            ) latest
-            INNER JOIN apps a ON a.id = latest.app_id
-            WHERE position IS NOT NULL
+            SELECT a.slug AS app_slug, COUNT(DISTINCT akr.keyword_id)::int AS cnt
+            FROM app_keyword_rankings akr
+            INNER JOIN apps a ON a.id = akr.app_id
+            WHERE akr.app_id IN (${appIdList})
+              AND akr.keyword_id IN (${kwIdList})
+              AND akr.position IS NOT NULL
             GROUP BY a.slug
           `).then((res: any) => (res as any).rows ?? res);
           for (const r of rankedRows) {
