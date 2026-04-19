@@ -367,18 +367,24 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     const trackedSet = new Set(trackedAppsRows.map((a) => a.appSlug));
     const competitorSet = new Set(competitorAppsRows.map((a) => a.appSlug));
 
-    // Get category info + app slugs per feature — platform-filtered, LATERAL join
-    // avoids cartesian explosion by only expanding features for matching apps
-    const enrichResult = await db.execute(sql`
+    // Get category info + app slugs per feature — scoped to tracked + competitor apps only.
+    // Previously scanned ALL platform apps (50K+ DISTINCT ON + 3x JSONB expansion = 3.7s).
+    // Scoping to account apps (~100) reduces to <200ms.
+    const allAppIds = [...new Set([
+      ...trackedAppsRows.map((a) => a.appId),
+      ...competitorAppsRows.map((a) => a.appId),
+    ])];
+
+    const enrichResult = allAppIds.length > 0 ? await db.execute(sql`
       SELECT
         f->>'feature_handle' AS handle,
         cat->>'title' AS category_title,
         sub->>'title' AS subcategory_title,
         a.slug AS app_slug
       FROM (
-        SELECT DISTINCT ON (s.app_id) s.id, s.app_id, s.categories
+        SELECT DISTINCT ON (s.app_id) s.app_id, s.categories
         FROM app_snapshots s
-        INNER JOIN apps a2 ON a2.id = s.app_id AND a2.platform = ${platform}
+        WHERE s.app_id IN (${sql.join(allAppIds.map((id) => sql`${id}`), sql`, `)})
         ORDER BY s.app_id, s.scraped_at DESC
       ) s
       INNER JOIN apps a ON a.id = s.app_id,
@@ -386,7 +392,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
       jsonb_array_elements(cat->'subcategories') AS sub,
       jsonb_array_elements(sub->'features') AS f
       WHERE f->>'feature_handle' IN (${handleList})
-    `);
+    `) : [];
     const enrichRows: any[] = (enrichResult as any).rows ?? enrichResult;
 
     // Build category map (first match per handle) and app slugs per feature
