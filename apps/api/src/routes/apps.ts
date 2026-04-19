@@ -1129,6 +1129,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       // Only look up competitors if the request is authenticated
       let competitorIdsPromise: Promise<{ id: number; slug: string; name: string }[]> = Promise.resolve([]);
       if (accountId) {
+        // accountCompetitorApps.trackedAppId references apps.id (integer), not accountTrackedApps.id (UUID)
         competitorIdsPromise = db
           .select({
             id: apps.id,
@@ -1137,12 +1138,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           })
           .from(accountCompetitorApps)
           .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
-          .innerJoin(accountTrackedApps, and(
-            eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appId, appRow.id),
-            eq(accountTrackedApps.id, accountCompetitorApps.trackedAppId)
-          ))
-          .where(eq(accountCompetitorApps.accountId, accountId))
+          .where(
+            and(
+              eq(accountCompetitorApps.accountId, accountId),
+              eq(accountCompetitorApps.trackedAppId, appRow.id)
+            )
+          )
           .limit(10)
           .then(rows => rows as { id: number; slug: string; name: string }[]);
       }
