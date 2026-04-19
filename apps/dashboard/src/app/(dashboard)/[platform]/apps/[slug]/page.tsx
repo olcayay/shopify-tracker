@@ -34,49 +34,60 @@ export default async function AppOverviewPage({
 }) {
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const showAds = await shouldShowAds(caps);
-  const [hasAppVisibility, hasAppPower, showDataFreshness] = await Promise.all([
+
+  // Single round: fetch app + feature flags + all data in parallel
+  // Previously 4 sequential stages; now everything launches at once.
+  const [
+    appResult,
+    showAds,
+    hasAppVisibility,
+    hasAppPower,
+    showDataFreshness,
+    reviewData,
+    rankings,
+    changes,
+    reviewMetrics,
+    featuredData,
+    similarData,
+    selfMinPaidPriceMap,
+    scoresData,
+  ] = await Promise.all([
+    getApp(slug, platform as PlatformId).catch(() => null),
+    shouldShowAds(caps),
     hasServerFeature("app-visibility"),
     hasServerFeature("app-power"),
     hasServerFeature("scrape-timestamps"),
+    caps.hasReviews
+      ? getAppReviews(slug, 3, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] }))
+      : Promise.resolve({ reviews: [], total: 0, distribution: [] }),
+    getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
+    getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
+    caps.hasReviews
+      ? getAppReviewMetrics(slug, platform as PlatformId).catch(() => null)
+      : Promise.resolve(null),
+    caps.hasFeaturedSections
+      ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
+      : Promise.resolve({ sightings: [] }),
+    caps.hasSimilarApps
+      ? getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] }))
+      : Promise.resolve({ direct: [], reverse: [], secondDegree: [] }),
+    caps.hasPricing
+      ? getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({}))
+      : Promise.resolve({}),
+    // Always fetch scores — filter client-side based on feature flags
+    getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
   ]);
-  const shouldShowAppScores = hasAppVisibility || hasAppPower;
 
-  // Round 1: parallel fetches (all apps)
-  // Critical: getApp must succeed; everything else degrades gracefully
-  let app: any;
-  try {
-    app = await getApp(slug, platform as PlatformId);
-  } catch {
+  if (!appResult) {
     return <p className="text-muted-foreground">App not found.</p>;
   }
-
-  const [reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap, scoresData] =
-    await Promise.all([
-      caps.hasReviews
-        ? getAppReviews(slug, 3, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] }))
-        : Promise.resolve({ reviews: [], total: 0, distribution: [] }),
-      getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
-      getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
-      caps.hasReviews
-        ? getAppReviewMetrics(slug, platform as PlatformId).catch(() => null)
-        : Promise.resolve(null),
-      caps.hasFeaturedSections
-        ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
-        : Promise.resolve({ sightings: [] }),
-      showAds
-        ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
-        : Promise.resolve({ sightings: [] }),
-      caps.hasSimilarApps
-        ? getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] }))
-        : Promise.resolve({ direct: [], reverse: [], secondDegree: [] }),
-      caps.hasPricing
-        ? getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({}))
-        : Promise.resolve({}),
-      shouldShowAppScores
-        ? getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 }))
-        : Promise.resolve({ visibility: [], power: [], weightedPowerScore: 0 }),
-    ]);
+  const app = appResult;
+  const shouldShowAppScores = hasAppVisibility || hasAppPower;
+  // Ads data was not fetched in parallel (depends on showAds flag).
+  // The endpoint is fast (~100ms) so this tiny sequential cost is acceptable.
+  const adData = showAds
+    ? await getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
+    : { sightings: [] };
 
   // Category ranking changes (computed early for category leader fetches)
   const catRankings = rankings?.categoryRankings || [];
