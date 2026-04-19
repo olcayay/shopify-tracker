@@ -1271,11 +1271,8 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       if (competitorAppIds.length > 0) {
         const compIdSql = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `);
 
-        // Build array of independent query promises
-        const queries: Promise<void>[] = [];
-
-        // Always-run queries (both basic and full)
-        queries.push(
+        // Wave 1: essential data (max 4 parallel queries — safe for pool size 10)
+        await Promise.all([
           // Latest snapshots
           db.execute(sql`
             SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count, pricing, pricing_plans, categories
@@ -1295,11 +1292,8 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             FROM app_review_metrics m INNER JOIN apps a ON a.id = m.app_id
             WHERE m.app_id IN (${compIdSql}) ORDER BY m.app_id, m.computed_at DESC
           `).then((res: any) => { for (const r of ((res as any).rows ?? res)) velocityMap2.set(r.app_slug, { v7d: r.v7d, v30d: r.v30d, v90d: r.v90d, momentum: r.momentum }); }).catch(() => {}),
-        );
-
-        // Include-changes query
-        if (includeChanges) {
-          queries.push(
+          // Include-changes (conditional, lightweight)
+          ...(includeChanges ? [
             db.execute(sql`
               SELECT c.*, a.slug AS app_slug FROM (
                 SELECT afc.*, ROW_NUMBER() OVER (PARTITION BY afc.app_id ORDER BY afc.detected_at DESC) AS rn
@@ -1307,25 +1301,24 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
                 AND NOT EXISTS (SELECT 1 FROM app_update_label_assignments ula JOIN app_update_labels aul ON aul.id = ula.label_id WHERE ula.change_id = afc.id AND aul.is_dismissal = TRUE)
               ) c INNER JOIN apps a ON a.id = c.app_id WHERE c.rn <= 3 ORDER BY c.detected_at DESC
             `).then((res: any) => { for (const r of ((res as any).rows ?? res)) { const list = changesMap.get(r.app_slug) ?? []; list.push({ id: r.id, appId: r.app_id, fieldName: r.field_name, oldValue: r.old_value, newValue: r.new_value, detectedAt: r.detected_at }); changesMap.set(r.app_slug, list); } }),
-          );
-        }
+          ] : []),
+        ]);
 
-        // Full-mode-only queries (skipped when fields=basic)
+        // Wave 2: heavy queries (full mode only, max 4 parallel)
         if (!isBasic) {
-          queries.push(
-            // Featured section counts
+          await Promise.all([
+            // Featured + ad counts (lightweight)
             db.select({ appSlug: apps.slug, sectionCount: sql<number>`count(distinct ${featuredAppSightings.surface} || ':' || ${featuredAppSightings.surfaceDetail} || ':' || ${featuredAppSightings.sectionHandle})` })
               .from(featuredAppSightings).innerJoin(apps, eq(apps.id, featuredAppSightings.appId))
               .where(and(inArray(featuredAppSightings.appId, competitorAppIds), sql`${featuredAppSightings.seenDate} >= ${featuredSinceStr}`))
               .groupBy(apps.slug)
               .then((rows) => { for (const r of rows) featuredCountMap.set(r.appSlug, r.sectionCount); }),
-            // Ad keyword counts
             db.select({ appSlug: apps.slug, keywordCount: sql<number>`count(distinct ${keywordAdSightings.keywordId})` })
               .from(keywordAdSightings).innerJoin(apps, eq(apps.id, keywordAdSightings.appId))
               .where(and(inArray(keywordAdSightings.appId, competitorAppIds), sql`${keywordAdSightings.seenDate} >= ${featuredSinceStr}`))
               .groupBy(apps.slug)
               .then((rows) => { for (const r of rows) adKeywordCountMap.set(r.appSlug, r.keywordCount); }),
-            // Category rankings (LAG + lateral join)
+            // Category rankings (heavy — LAG + lateral)
             db.execute(sql`
               SELECT a.slug AS app_slug, sub.category_slug, c.title AS category_title, sub.position, sub.prev_position, cs.app_count
               FROM (
@@ -1339,12 +1332,16 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
               LEFT JOIN LATERAL (SELECT s.app_count FROM category_snapshots s WHERE s.category_id = c.id ORDER BY s.scraped_at DESC LIMIT 1) cs ON true
               WHERE sub.rn = 1 AND c.is_listing_page = true AND sub.position > 0
             `).then((res: any) => { for (const r of ((res as any).rows ?? res)) { const arr = categoryRankingMap.get(r.app_slug) ?? []; arr.push({ categorySlug: r.category_slug, categoryTitle: r.category_title, position: r.position, prevPosition: r.prev_position ?? null, appCount: r.app_count ?? null }); categoryRankingMap.set(r.app_slug, arr); } }),
-            // Reverse similar counts
+            // Reverse similar + similarity scores
             db.select({ appSlug: apps.slug, count: sql<number>`count(distinct ${similarAppSightings.appId})::int` })
               .from(similarAppSightings).innerJoin(apps, eq(apps.id, similarAppSightings.similarAppId))
               .where(inArray(similarAppSightings.similarAppId, competitorAppIds))
               .groupBy(apps.slug)
               .then((rows) => { for (const r of rows) reverseSimilarMap.set(r.appSlug, r.count); }),
+          ]);
+
+          // Wave 3: remaining heavy queries (max 4 parallel)
+          await Promise.all([
             // Similarity scores
             (async () => { try {
               const trackedId = trackedAppRow.id;
@@ -1381,7 +1378,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
               `).then((res: any) => (res as any).rows ?? res);
               for (const r of visRows) visibilityMap2.set(r.app_slug, { visibilityScore: r.visibility_score, keywordCount: r.keyword_count, visibilityRaw: parseFloat(String(r.visibility_raw)) });
             } catch {} })(),
-            // Power scores
+            // Power scores (heaviest — 3 CTEs)
             (async () => { try {
               const powRows: any[] = await db.execute(sql`
                 WITH latest_power AS (
@@ -1409,10 +1406,8 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
               }
               for (const [appSlug, inputs] of appPowerInputs) weightedPowerMap2.set(appSlug, computeWeightedPowerScore(inputs));
             } catch {} })(),
-          );
+          ]);
         }
-
-        await Promise.all(queries);
       }
 
       const result = allRows.map((row) => {
