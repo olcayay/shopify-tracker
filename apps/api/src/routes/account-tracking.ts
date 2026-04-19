@@ -1169,13 +1169,16 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // --- Per-app nested routes ---
 
   // GET /api/account/tracked-apps/:slug/competitors
-  app.get<{ Params: { slug: string }; Querystring: { platform?: string; includeSelf?: string; includeChanges?: string } }>(
+  app.get<{ Params: { slug: string }; Querystring: { platform?: string; includeSelf?: string; includeChanges?: string; fields?: string } }>(
     "/tracked-apps/:slug/competitors",
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
       const includeChanges = request.query.includeChanges === "true";
+      // fields=basic skips expensive queries (power scores, category rankings, visibility, etc.)
+      // fields=full (default) runs all queries — only needed on the competitors page itself
+      const isBasic = request.query.fields === "basic";
 
       // Look up tracked app ID from slug
       const [trackedAppRow] = await db
@@ -1253,7 +1256,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       const featuredSinceStr = featuredSince.toISOString().slice(0, 10);
 
       const featuredCountMap = new Map<string, number>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         const featuredCounts = await db
           .select({
             appSlug: apps.slug,
@@ -1276,7 +1279,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch ad keyword counts (last 30 days)
       const adKeywordCountMap = new Map<string, number>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         const adKeywordCounts = await db
           .select({
             appSlug: apps.slug,
@@ -1299,7 +1302,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Latest category rankings for each competitor (with previous position + app count for percentile)
       const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number; prevPosition: number | null; appCount: number | null }[]>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         const catRankRows: any[] = await db.execute(sql`
           SELECT
             a.slug AS app_slug, sub.category_slug, c.title AS category_title,
@@ -1348,7 +1351,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch reverse similar counts (how many apps list each competitor as similar)
       const reverseSimilarMap = new Map<string, number>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         const rsCounts = await db
           .select({
             appSlug: apps.slug,
@@ -1383,7 +1386,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch similarity scores
       const similarityMap2 = new Map<string, { overall: string; category: string; feature: string; keyword: string; text: string }>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         try {
           const trackedId = trackedAppRow.id;
           const compIdList = sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `);
@@ -1411,7 +1414,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch ranked keyword counts per competitor
       const rankedKeywordMap = new Map<string, number>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         const kwRows = await db
           .select({ keywordId: accountTrackedKeywords.keywordId })
           .from(accountTrackedKeywords)
@@ -1446,7 +1449,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch visibility scores for this tracked-app context
       const visibilityMap2 = new Map<string, { visibilityScore: number; keywordCount: number; visibilityRaw: number }>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         try {
           // Look up tracked app ID from slug
           const [visTrackedAppRow] = await db
@@ -1482,7 +1485,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       // Batch-fetch weighted power scores per competitor
       const weightedPowerMap2 = new Map<string, number>();
       const powerCategoriesMap2 = new Map<string, { title: string; powerScore: number; appCount: number; position: number | null; ratingScore: number; reviewScore: number; categoryScore: number; momentumScore: number }[]>();
-      if (competitorAppIds.length > 0) {
+      if (competitorAppIds.length > 0 && !isBasic) {
         try {
           const powRows: any[] = await db.execute(sql`
             WITH latest_power AS (

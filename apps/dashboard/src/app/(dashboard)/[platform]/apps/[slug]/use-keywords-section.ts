@@ -274,7 +274,7 @@ export function useKeywordsSection(appSlug: string) {
     // Fetch main app + competitors + tags in parallel
     const [appRes, compRes, tagsRes] = await Promise.all([
       fetchWithAuth(`/api/apps/${encodeURIComponent(appSlug)}`),
-      fetchWithAuth(`/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors`),
+      fetchWithAuth(`/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors?fields=basic`),
       fetchWithAuth("/api/account/keyword-tags"),
     ]);
 

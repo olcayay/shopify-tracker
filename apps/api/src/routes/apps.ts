@@ -1214,45 +1214,47 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       since.setDate(since.getDate() - parseInt(days, 10));
       const sinceStr = since.toISOString().slice(0, 10);
 
-      // DIRECT: apps in this app's "More apps like this"
-      const direct = await db
-        .select({
-          slug: apps.slug,
-          name: apps.name,
-          iconUrl: apps.iconUrl,
-          seenDate: similarAppSightings.seenDate,
-          timesSeenInDay: similarAppSightings.timesSeenInDay,
-          position: similarAppSightings.position,
-        })
-        .from(similarAppSightings)
-        .innerJoin(apps, eq(apps.id, similarAppSightings.similarAppId))
-        .where(
-          and(
-            eq(similarAppSightings.appId, appRow.id),
-            sql`${similarAppSightings.seenDate} >= ${sinceStr}`
+      // DIRECT + REVERSE: fetch both in parallel
+      const [direct, reverse] = await Promise.all([
+        // DIRECT: apps in this app's "More apps like this"
+        db
+          .select({
+            slug: apps.slug,
+            name: apps.name,
+            iconUrl: apps.iconUrl,
+            seenDate: similarAppSightings.seenDate,
+            timesSeenInDay: similarAppSightings.timesSeenInDay,
+            position: similarAppSightings.position,
+          })
+          .from(similarAppSightings)
+          .innerJoin(apps, eq(apps.id, similarAppSightings.similarAppId))
+          .where(
+            and(
+              eq(similarAppSightings.appId, appRow.id),
+              sql`${similarAppSightings.seenDate} >= ${sinceStr}`
+            )
           )
-        )
-        .orderBy(desc(similarAppSightings.seenDate));
-
-      // REVERSE: apps that list THIS app as similar
-      const reverse = await db
-        .select({
-          slug: apps.slug,
-          name: apps.name,
-          iconUrl: apps.iconUrl,
-          seenDate: similarAppSightings.seenDate,
-          timesSeenInDay: similarAppSightings.timesSeenInDay,
-          position: similarAppSightings.position,
-        })
-        .from(similarAppSightings)
-        .innerJoin(apps, eq(apps.id, similarAppSightings.appId))
-        .where(
-          and(
-            eq(similarAppSightings.similarAppId, appRow.id),
-            sql`${similarAppSightings.seenDate} >= ${sinceStr}`
+          .orderBy(desc(similarAppSightings.seenDate)),
+        // REVERSE: apps that list THIS app as similar
+        db
+          .select({
+            slug: apps.slug,
+            name: apps.name,
+            iconUrl: apps.iconUrl,
+            seenDate: similarAppSightings.seenDate,
+            timesSeenInDay: similarAppSightings.timesSeenInDay,
+            position: similarAppSightings.position,
+          })
+          .from(similarAppSightings)
+          .innerJoin(apps, eq(apps.id, similarAppSightings.appId))
+          .where(
+            and(
+              eq(similarAppSightings.similarAppId, appRow.id),
+              sql`${similarAppSightings.seenDate} >= ${sinceStr}`
+            )
           )
-        )
-        .orderBy(desc(similarAppSightings.seenDate));
+          .orderBy(desc(similarAppSightings.seenDate)),
+      ]);
 
       // 2ND DEGREE: similar apps of direct similar apps (excluding self + directs)
       const directSlugs = [...new Set(direct.map((d) => d.slug))];

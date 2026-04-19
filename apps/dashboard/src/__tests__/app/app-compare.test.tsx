@@ -169,7 +169,7 @@ describe("ComparePage", () => {
         "/api/apps/test-app"
       );
       expect(mockFetchWithAuth).toHaveBeenCalledWith(
-        "/api/account/tracked-apps/test-app/competitors"
+        "/api/account/tracked-apps/test-app/competitors?fields=basic"
       );
     });
   });

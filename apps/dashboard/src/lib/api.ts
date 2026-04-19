@@ -393,9 +393,12 @@ export function getAccountCompetitors(platform?: PlatformId) {
   return fetchApi<any[]>(withPlatform(`/api/account/competitors`, platform), { cache: "no-store" });
 }
 
-export function getAppCompetitors(slug: string, platform?: PlatformId, includeChanges = false) {
-  const params = includeChanges ? `?includeChanges=true` : '';
-  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors${params}`, platform), { cache: "no-store" });
+export function getAppCompetitors(slug: string, platform?: PlatformId, includeChanges = false, fields?: "basic" | "full") {
+  const params = new URLSearchParams();
+  if (includeChanges) params.set("includeChanges", "true");
+  if (fields) params.set("fields", fields);
+  const qs = params.toString();
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors${qs ? `?${qs}` : ''}`, platform), { cache: "no-store" });
 }
 
 export function getAppKeywords(slug: string, platform?: PlatformId) {

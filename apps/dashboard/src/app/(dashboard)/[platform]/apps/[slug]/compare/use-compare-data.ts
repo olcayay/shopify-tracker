@@ -46,7 +46,7 @@ export function useCompareData(slug: string) {
     const [appRes, compRes] = await Promise.all([
       fetchWithAuth(`/api/apps/${encodeURIComponent(slug)}`),
       fetchWithAuth(
-        `/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors`
+        `/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors?fields=basic`
       ),
     ]);
 
