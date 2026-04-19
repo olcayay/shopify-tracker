@@ -174,18 +174,14 @@ function SidebarContent({
                 />
               </>
             )}
-            {/* Utility items in collapsed mode on non-global pages */}
-            {!isGlobalPage && (
-              <>
-                <div className="border-t my-1 mx-2" />
-                {utilityNavItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
-                    <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
-                  );
-                })}
-              </>
-            )}
+            {/* Utility items in collapsed mode — always at the bottom */}
+            <div className="border-t my-1 mx-2" />
+            {utilityNavItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
+              );
+            })}
           </>
         ) : isGlobalPage && !isPlatformPage ? (
           /* Global page: show global nav items as flat list */
@@ -269,17 +265,14 @@ function SidebarContent({
         )}
 
         {/* Utility items (Support, Organization, Settings) — on non-global pages where they're not in the main nav */}
-        {!isGlobalPage && (
-          <>
-            <div className="border-t my-2" />
-            {utilityNavItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
-              );
-            })}
-          </>
-        )}
+        {/* Utility items (Support, Organization, Settings) — always at the bottom */}
+        <div className="border-t my-2" />
+        {utilityNavItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
+          );
+        })}
 
         {/* System Admin */}
         {isSystemAdmin && (

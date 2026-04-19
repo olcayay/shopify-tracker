@@ -180,8 +180,8 @@ export function IconSidebar() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Utility items (Support, Organization, Settings) — shown on non-global pages where they're not in the main nav */}
-      {!isGlobalPage && !isSettingsPage && !isAdminSection && !showAdminFallback && (
+      {/* Utility items (Support, Organization, Settings) — always at the bottom */}
+      {!isAdminSection && !showAdminFallback && (
         <>
           <div className={`${expanded ? "mx-3" : "mx-auto w-6"} border-t mb-1`} />
           {utilityNavItems.map((item) => {

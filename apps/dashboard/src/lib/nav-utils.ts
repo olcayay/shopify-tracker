@@ -116,12 +116,14 @@ export const globalNavItems: NavItem[] = [
   { href: "/competitors", label: "All Competitors", icon: Star },
   { href: "/developers", label: "Developers", icon: Code },
   { href: "/notifications", label: "Notifications", icon: Bell },
-  ...utilityNavItems,
 ];
 
-/** Check if pathname is a global (non-platform) page like /overview, /apps, /keywords, etc. */
+/** All non-platform pages (global nav + utility items) — used for route detection */
+const allGlobalPages = [...globalNavItems, ...utilityNavItems];
+
+/** Check if pathname is a global (non-platform) page like /overview, /apps, /keywords, /settings, etc. */
 export function isOnGlobalPage(pathname: string): boolean {
-  return globalNavItems.some(
+  return allGlobalPages.some(
     (item) =>
       item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/")
   );
