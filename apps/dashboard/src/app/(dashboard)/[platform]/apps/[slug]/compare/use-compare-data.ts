@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import type { AppData, CategoryRanking } from "./compare-types";
 
@@ -23,8 +23,9 @@ export function useCompareData(slug: string) {
 
   // Track whether initial selection was loaded from localStorage
   const selectionInitialized = useRef(false);
-  // Prevent duplicate loadData calls (React Strict Mode, fast re-renders)
-  const loadingRef = useRef(false);
+  // Stable ref for fetchWithAuth to avoid re-triggering useEffect
+  const fetchRef = useRef(fetchWithAuth);
+  fetchRef.current = fetchWithAuth;
 
   // Persist selected slugs per app
   useEffect(() => {
@@ -36,21 +37,21 @@ export function useCompareData(slug: string) {
     }
   }, [selectedSlugs, slug, competitors.length]);
 
-  const loadData = useCallback(async () => {
-    // Guard against concurrent calls (React Strict Mode double-mount)
-    if (loadingRef.current) return;
-    loadingRef.current = true;
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     selectionInitialized.current = false;
 
-    try {
+    const fetch = fetchRef.current;
+
+    (async () => {
       // Fetch main app + competitor list in parallel
       const [appRes, compRes] = await Promise.all([
-        fetchWithAuth(`/api/apps/${encodeURIComponent(slug)}`),
-        fetchWithAuth(
-          `/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors?fields=basic`
-        ),
+        fetch(`/api/apps/${encodeURIComponent(slug)}`),
+        fetch(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors?fields=basic`),
       ]);
+
+      if (cancelled) return;
 
       let mainAppData: AppData | null = null;
       let compList: { slug: string; name: string; iconUrl: string | null }[] = [];
@@ -91,16 +92,15 @@ export function useCompareData(slug: string) {
         }
       }
 
+      if (cancelled) return;
+
       // Fetch competitor app data + all rankings in parallel (single wave)
       const allSlugs = [slug, ...compList.map((c) => c.slug)];
       const [compResults, ...rankingResults] = await Promise.all([
-        // Batch: fetch all competitor app data
         compList.length > 0
           ? Promise.all(
               compList.map(async (c) => {
-                const res = await fetchWithAuth(
-                  `/api/apps/${encodeURIComponent(c.slug)}`
-                );
+                const res = await fetch(`/api/apps/${encodeURIComponent(c.slug)}`);
                 if (res.ok) {
                   const data: AppData = await res.json();
                   return [c.slug, data] as [string, AppData];
@@ -109,11 +109,8 @@ export function useCompareData(slug: string) {
               })
             )
           : Promise.resolve([]),
-        // Batch: fetch all rankings in the same Promise.all
         ...allSlugs.map(async (s) => {
-          const res = await fetchWithAuth(
-            `/api/apps/${encodeURIComponent(s)}/rankings?days=7`
-          );
+          const res = await fetch(`/api/apps/${encodeURIComponent(s)}/rankings?days=7`);
           if (res.ok) {
             const data = await res.json();
             const latestPerCat = new Map<string, CategoryRanking>();
@@ -130,7 +127,8 @@ export function useCompareData(slug: string) {
         }),
       ]);
 
-      // Set competitor data
+      if (cancelled) return;
+
       if (compResults) {
         const map = new Map<string, AppData>();
         for (const r of compResults as ([string, AppData] | null)[]) {
@@ -139,7 +137,6 @@ export function useCompareData(slug: string) {
         setCompetitorData(map);
       }
 
-      // Set rankings data
       const rankMap = new Map<string, CategoryRanking[]>();
       for (const [s, rankings] of rankingResults as [string, CategoryRanking[]][]) {
         rankMap.set(s, rankings);
@@ -147,15 +144,12 @@ export function useCompareData(slug: string) {
       setRankingsData(rankMap);
 
       selectionInitialized.current = true;
-    } finally {
       setLoading(false);
-      loadingRef.current = false;
-    }
-  }, [slug, fetchWithAuth]);
+    })();
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   function toggleCompetitor(compSlug: string) {
     setSelectedSlugs((prev) => {
