@@ -32,6 +32,7 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.appranks.io}
+      API_INTERNAL_URL: http://api:3001
       NODE_ENV: production
     deploy:
       resources:

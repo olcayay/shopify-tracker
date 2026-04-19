@@ -2,7 +2,9 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import type { PlatformId } from "@appranks/shared";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// Server-side SSR fetches use internal Docker network URL to skip Cloudflare round-trip
+// (~15ms internal vs ~120ms external per request, saving ~1.4s on pages with 13+ API calls)
+const API_BASE = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 async function getAuthToken(): Promise<string | undefined> {
   try {
