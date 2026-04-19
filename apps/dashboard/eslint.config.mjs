@@ -7,6 +7,19 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
+      // Prevent direct next/link imports — use @/components/ui/link which defaults prefetch={false}
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "next/link",
+              message:
+                'Use import Link from "@/components/ui/link" instead. Direct next/link imports cause RSC prefetch storms (50+ duplicate requests per page).',
+            },
+          ],
+        },
+      ],
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
         "warn",
@@ -21,6 +34,13 @@ const eslintConfig = defineConfig([
       "react-hooks/purity": "warn",
       "react-hooks/preserve-manual-memoization": "warn",
       "react-hooks/set-state-in-effect": "warn",
+    },
+  },
+  // Allow next/link in the wrapper component itself
+  {
+    files: ["src/components/ui/link.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
   // Override default ignores of eslint-config-next.
