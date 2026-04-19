@@ -1,6 +1,6 @@
 import Link from "@/components/ui/link";
 import { formatDateTime } from "@/lib/format-date";
-import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getFeaturedApps, getCategoryAds, getCategoryScores } from "@/lib/api";
+import { getCategory, getCategoryHistory, getAccountCompetitorSlugs, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getFeaturedApps, getCategoryAds, getCategoryScores } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,7 +31,7 @@ export default async function CategoryDetailPage({
 
   let category: any;
   let history: any;
-  let competitors: any[] = [];
+  let competitorSlugsArr: string[] = [];
   let trackedApps: any[] = [];
   let starredCategories: any[] = [];
   let featuredData: any;
@@ -62,10 +62,10 @@ export default async function CategoryDetailPage({
 
   try {
     // Flatten waterfall: fetch slug-only dependencies in Phase 1
-    [category, history, competitors, trackedApps, starredCategories, featuredData, categoryAdData, categoryScoresData] = await Promise.all([
+    [category, history, competitorSlugsArr, trackedApps, starredCategories, featuredData, categoryAdData, categoryScoresData] = await Promise.all([
       timed("getCategory", getCategory(slug, platform as PlatformId)),
       timed("getCategoryHistory", getCategoryHistory(slug, 10, platform as PlatformId)).catch(() => ({ snapshots: [], total: 0 })),
-      timed("getAccountCompetitors", getAccountCompetitors(platform as PlatformId)).catch(() => []),
+      timed("getAccountCompetitorSlugs", getAccountCompetitorSlugs(platform as PlatformId)).catch(() => []),
       timed("getAccountTrackedApps", getAccountTrackedApps(platform as PlatformId)).catch(() => []),
       timed("getAccountStarredCategories", getAccountStarredCategories(platform as PlatformId)).catch(() => []),
       timed("getFeaturedApps", getFeaturedApps(30, "category", slug, undefined, platform as PlatformId)).catch(() => ({ sightings: [], trackedSlugs: [], competitorSlugs: [] })),
@@ -128,7 +128,7 @@ export default async function CategoryDetailPage({
     );
   }
 
-  const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
+  const competitorSlugs = new Set(competitorSlugsArr);
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
   const isStarred = starredCategories.some((sc: any) => sc.categorySlug === slug);
 

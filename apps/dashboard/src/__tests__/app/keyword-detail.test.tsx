@@ -38,6 +38,7 @@ vi.mock("@/lib/api", () => ({
   getKeywordSuggestions: (...args: any[]) => mockGetKeywordSuggestions(...args),
   getKeywordMembership: (...args: any[]) => mockGetKeywordMembership(...args),
   getAccountCompetitors: (...args: any[]) => mockGetAccountCompetitors(...args),
+  getAccountCompetitorSlugs: (...args: any[]) => mockGetAccountCompetitors(...args),
   getAccountTrackedApps: (...args: any[]) => mockGetAccountTrackedApps(...args),
   getAppsLastChanges: (...args: any[]) => mockGetAppsLastChanges(...args),
   getAppsMinPaidPrices: (...args: any[]) => mockGetAppsMinPaidPrices(...args),

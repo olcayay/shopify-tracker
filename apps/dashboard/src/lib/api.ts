@@ -393,6 +393,11 @@ export function getAccountCompetitors(platform?: PlatformId) {
   return fetchApi<any[]>(withPlatform(`/api/account/competitors`, platform), { cache: "no-store" });
 }
 
+/** Lightweight slug-only competitor list — no heavy queries, just slugs for badge display */
+export const getAccountCompetitorSlugs = cache((platform?: PlatformId) => {
+  return fetchApi<string[]>(withPlatform(`/api/account/competitor-slugs`, platform), { cache: "no-store" });
+});
+
 export function getAppCompetitors(slug: string, platform?: PlatformId, includeChanges = false, fields?: "basic" | "full") {
   const params = new URLSearchParams();
   if (includeChanges) params.set("includeChanges", "true");

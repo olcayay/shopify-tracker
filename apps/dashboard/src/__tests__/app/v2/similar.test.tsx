@@ -10,6 +10,7 @@ vi.mock("@/lib/api", () => ({
   getAppSimilarApps: (...args: any[]) => mockGetAppSimilarApps(...args),
   getAccountTrackedApps: (...args: any[]) => mockGetAccountTrackedApps(...args),
   getAccountCompetitors: (...args: any[]) => mockGetAccountCompetitors(...args),
+  getAccountCompetitorSlugs: (...args: any[]) => mockGetAccountCompetitors(...args),
 }));
 
 vi.mock("@/components/ad-heatmap", () => ({

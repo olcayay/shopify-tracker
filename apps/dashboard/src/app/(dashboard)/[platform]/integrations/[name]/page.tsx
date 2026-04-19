@@ -1,6 +1,6 @@
 import {
   getIntegration,
-  getAccountCompetitors,
+  getAccountCompetitorSlugs,
   getAccountTrackedApps,
   getAppsLastChanges,
   getAppsMinPaidPrices,
@@ -23,12 +23,12 @@ export default async function IntegrationDetailPage({
   const decodedName = decodeURIComponent(name);
 
   let integration: any;
-  let competitors: any[] = [];
+  let competitorSlugs: string[] = [];
   let trackedApps: any[] = [];
   try {
-    [integration, competitors, trackedApps] = await Promise.all([
+    [integration, competitorSlugs, trackedApps] = await Promise.all([
       getIntegration(decodedName, platform as PlatformId),
-      getAccountCompetitors(platform as PlatformId).catch(() => []),
+      getAccountCompetitorSlugs(platform as PlatformId).catch(() => []),
       getAccountTrackedApps(platform as PlatformId).catch(() => []),
     ]);
   } catch {
@@ -55,7 +55,7 @@ export default async function IntegrationDetailPage({
         title="Apps with this Integration"
         apps={integration.apps || []}
         trackedSlugs={trackedApps.map((a: any) => a.appSlug)}
-        competitorSlugs={competitors.map((c: any) => c.appSlug)}
+        competitorSlugs={competitorSlugs}
         lastChanges={lastChanges}
         minPaidPrices={minPaidPrices}
         launchedDates={launchedDates}

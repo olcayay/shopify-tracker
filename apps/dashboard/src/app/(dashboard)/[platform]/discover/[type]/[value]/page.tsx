@@ -1,6 +1,6 @@
 import {
   getPlatformAttribute,
-  getAccountCompetitors,
+  getAccountCompetitorSlugs,
   getAccountTrackedApps,
   getAppsLastChanges,
   getAppsMinPaidPrices,
@@ -48,12 +48,12 @@ export default async function DiscoverPage({
   const typeLabel = TYPE_LABELS[type] || type;
 
   let result: any;
-  let competitors: any[] = [];
+  let competitorSlugs: string[] = [];
   let trackedApps: any[] = [];
   try {
-    [result, competitors, trackedApps] = await Promise.all([
+    [result, competitorSlugs, trackedApps] = await Promise.all([
       getPlatformAttribute(type, decodedValue, platform as PlatformId),
-      getAccountCompetitors(platform as PlatformId).catch(() => []),
+      getAccountCompetitorSlugs(platform as PlatformId).catch(() => []),
       getAccountTrackedApps(platform as PlatformId).catch(() => []),
     ]);
   } catch {
@@ -83,7 +83,7 @@ export default async function DiscoverPage({
         title={`Apps (${result.apps?.length || 0})`}
         apps={result.apps || []}
         trackedSlugs={trackedApps.map((a: any) => a.appSlug)}
-        competitorSlugs={competitors.map((c: any) => c.appSlug)}
+        competitorSlugs={competitorSlugs}
         lastChanges={lastChanges}
         minPaidPrices={minPaidPrices}
         launchedDates={launchedDates}

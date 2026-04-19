@@ -34,6 +34,7 @@ vi.mock("@/lib/api", () => ({
   getCategory: (...args: any[]) => mockGetCategory(...args),
   getCategoryHistory: (...args: any[]) => mockGetCategoryHistory(...args),
   getAccountCompetitors: (...args: any[]) => mockGetAccountCompetitors(...args),
+  getAccountCompetitorSlugs: (...args: any[]) => mockGetAccountCompetitors(...args),
   getAccountTrackedApps: (...args: any[]) => mockGetAccountTrackedApps(...args),
   getAccountStarredCategories: (...args: any[]) => mockGetAccountStarredCategories(...args),
   getAppsLastChanges: (...args: any[]) => mockGetAppsLastChanges(...args),

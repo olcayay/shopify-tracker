@@ -633,6 +633,21 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
   // --- Competitor Apps ---
 
+  // GET /api/account/competitor-slugs — lightweight slug-only list for badge display
+  // Returns just { appSlug }[] — no heavy queries, no rankings, no scores
+  app.get("/competitor-slugs", async (request) => {
+    const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+    const rows = await db
+      .select({ appSlug: apps.slug })
+      .from(accountCompetitorApps)
+      .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
+      .where(and(eq(accountCompetitorApps.accountId, accountId), eq(apps.platform, platform)));
+
+    return [...new Set(rows.map(r => r.appSlug))];
+  });
+
   // GET /api/account/competitors — aggregate view (all competitors with trackedAppSlug)
   app.get("/competitors", async (request) => {
     const { accountId } = request.user;
@@ -1340,73 +1355,76 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
               .then((rows) => { for (const r of rows) reverseSimilarMap.set(r.appSlug, r.count); }),
           ]);
 
-          // Wave 3: remaining heavy queries (max 4 parallel)
-          await Promise.all([
-            // Similarity scores
-            (async () => { try {
-              const trackedId = trackedAppRow.id;
-              const simRows: any[] = await db.execute(sql`
-                SELECT a1.slug AS app_slug_a, a2.slug AS app_slug_b, s.overall_score, s.category_score, s.feature_score, s.keyword_score, s.text_score
-                FROM app_similarity_scores s INNER JOIN apps a1 ON a1.id = s.app_id_a INNER JOIN apps a2 ON a2.id = s.app_id_b
-                WHERE (s.app_id_a = ${trackedId} AND s.app_id_b IN (${compIdSql})) OR (s.app_id_b = ${trackedId} AND s.app_id_a IN (${compIdSql}))
+          // Wave 3: sequential to avoid DB pool contention on db-f1-micro
+          // (benchmarked: 450ms sequential vs 13s parallel due to connection starvation)
+
+          // Similarity scores
+          try {
+            const trackedId = trackedAppRow.id;
+            const simRows: any[] = await db.execute(sql`
+              SELECT a1.slug AS app_slug_a, a2.slug AS app_slug_b, s.overall_score, s.category_score, s.feature_score, s.keyword_score, s.text_score
+              FROM app_similarity_scores s INNER JOIN apps a1 ON a1.id = s.app_id_a INNER JOIN apps a2 ON a2.id = s.app_id_b
+              WHERE (s.app_id_a = ${trackedId} AND s.app_id_b IN (${compIdSql})) OR (s.app_id_b = ${trackedId} AND s.app_id_a IN (${compIdSql}))
+            `).then((res: any) => (res as any).rows ?? res);
+            for (const r of simRows) { const compSlug = r.app_slug_a === slug ? r.app_slug_b : r.app_slug_a; similarityMap2.set(compSlug, { overall: r.overall_score, category: r.category_score, feature: r.feature_score, keyword: r.keyword_score, text: r.text_score }); }
+          } catch {}
+
+          // Ranked keyword counts
+          {
+            const kwRows = await db.select({ keywordId: accountTrackedKeywords.keywordId }).from(accountTrackedKeywords)
+              .where(and(eq(accountTrackedKeywords.accountId, accountId), eq(accountTrackedKeywords.trackedAppId, trackedAppRow.id)));
+            if (kwRows.length > 0) {
+              const kwIdList = sql.join(kwRows.map((r) => sql`${r.keywordId}`), sql`,`);
+              const rankedRows: any[] = await db.execute(sql`
+                SELECT a.slug AS app_slug, COUNT(DISTINCT akr.keyword_id)::int AS cnt
+                FROM app_keyword_rankings akr INNER JOIN apps a ON a.id = akr.app_id
+                WHERE akr.app_id IN (${compIdSql}) AND akr.keyword_id IN (${kwIdList}) AND akr.position IS NOT NULL
+                GROUP BY a.slug
               `).then((res: any) => (res as any).rows ?? res);
-              for (const r of simRows) { const compSlug = r.app_slug_a === slug ? r.app_slug_b : r.app_slug_a; similarityMap2.set(compSlug, { overall: r.overall_score, category: r.category_score, feature: r.feature_score, keyword: r.keyword_score, text: r.text_score }); }
-            } catch {} })(),
-            // Ranked keyword counts
-            (async () => {
-              const kwRows = await db.select({ keywordId: accountTrackedKeywords.keywordId }).from(accountTrackedKeywords)
-                .where(and(eq(accountTrackedKeywords.accountId, accountId), eq(accountTrackedKeywords.trackedAppId, trackedAppRow.id)));
-              if (kwRows.length > 0) {
-                const kwIdList = sql.join(kwRows.map((r) => sql`${r.keywordId}`), sql`,`);
-                const rankedRows: any[] = await db.execute(sql`
-                  SELECT a.slug AS app_slug, COUNT(DISTINCT akr.keyword_id)::int AS cnt
-                  FROM app_keyword_rankings akr INNER JOIN apps a ON a.id = akr.app_id
-                  WHERE akr.app_id IN (${compIdSql}) AND akr.keyword_id IN (${kwIdList}) AND akr.position IS NOT NULL
-                  GROUP BY a.slug
-                `).then((res: any) => (res as any).rows ?? res);
-                for (const r of rankedRows) rankedKeywordMap.set(r.app_slug, r.cnt);
-              }
-            })(),
-            // Visibility scores
-            (async () => { try {
-              const visRows: any[] = await db.execute(sql`
-                SELECT ca.slug AS app_slug, v.visibility_score, v.keyword_count, v.visibility_raw
-                FROM (SELECT DISTINCT ON (account_id, tracked_app_id, app_id) account_id, tracked_app_id, app_id, visibility_score, keyword_count, visibility_raw
-                  FROM app_visibility_scores WHERE account_id = ${accountId} AND tracked_app_id = ${trackedAppRow.id} AND app_id IN (${compIdSql})
-                  ORDER BY account_id, tracked_app_id, app_id, computed_at DESC) v
-                INNER JOIN apps ca ON ca.id = v.app_id
-              `).then((res: any) => (res as any).rows ?? res);
-              for (const r of visRows) visibilityMap2.set(r.app_slug, { visibilityScore: r.visibility_score, keywordCount: r.keyword_count, visibilityRaw: parseFloat(String(r.visibility_raw)) });
-            } catch {} })(),
-            // Power scores (heaviest — 3 CTEs)
-            (async () => { try {
-              const powRows: any[] = await db.execute(sql`
-                WITH latest_power AS (
-                  SELECT DISTINCT ON (app_id, category_slug) app_id, category_slug, power_score, rating_score, review_score, category_score, momentum_score
-                  FROM app_power_scores WHERE app_id IN (${compIdSql}) ORDER BY app_id, category_slug, computed_at DESC
-                ), latest_cat_snapshots AS (
-                  SELECT DISTINCT ON (category_id) category_id, app_count FROM category_snapshots ORDER BY category_id, scraped_at DESC
-                ), latest_cat_rankings AS (
-                  SELECT DISTINCT ON (app_id, category_slug) app_id, category_slug, position
-                  FROM app_category_rankings WHERE app_id IN (${compIdSql}) AND position IS NOT NULL ORDER BY app_id, category_slug, scraped_at DESC
-                )
-                SELECT a.slug AS app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
-                       cs.app_count, rk.position AS rank_position, p.category_slug, c.title AS category_title
-                FROM latest_power p INNER JOIN apps a ON a.id = p.app_id
-                INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
-                LEFT JOIN latest_cat_snapshots cs ON cs.category_id = c.id
-                LEFT JOIN latest_cat_rankings rk ON rk.app_id = p.app_id AND rk.category_slug = p.category_slug
-              `).then((res: any) => (res as any).rows ?? res);
-              const appPowerInputs = new Map<string, { powerScore: number; appCount: number }[]>();
-              for (const r of powRows) {
-                if (!appPowerInputs.has(r.app_slug)) appPowerInputs.set(r.app_slug, []);
-                appPowerInputs.get(r.app_slug)!.push({ powerScore: r.power_score, appCount: r.app_count ?? 1 });
-                if (!powerCategoriesMap2.has(r.app_slug)) powerCategoriesMap2.set(r.app_slug, []);
-                powerCategoriesMap2.get(r.app_slug)!.push({ title: r.category_title || r.category_slug, powerScore: r.power_score, appCount: r.app_count ?? 1, position: r.rank_position ?? null, ratingScore: parseFloat(r.rating_score) || 0, reviewScore: parseFloat(r.review_score) || 0, categoryScore: parseFloat(r.category_score) || 0, momentumScore: parseFloat(r.momentum_score) || 0 });
-              }
-              for (const [appSlug, inputs] of appPowerInputs) weightedPowerMap2.set(appSlug, computeWeightedPowerScore(inputs));
-            } catch {} })(),
-          ]);
+              for (const r of rankedRows) rankedKeywordMap.set(r.app_slug, r.cnt);
+            }
+          }
+
+          // Visibility scores
+          try {
+            const visRows: any[] = await db.execute(sql`
+              SELECT ca.slug AS app_slug, v.visibility_score, v.keyword_count, v.visibility_raw
+              FROM (SELECT DISTINCT ON (account_id, tracked_app_id, app_id) account_id, tracked_app_id, app_id, visibility_score, keyword_count, visibility_raw
+                FROM app_visibility_scores WHERE account_id = ${accountId} AND tracked_app_id = ${trackedAppRow.id} AND app_id IN (${compIdSql})
+                ORDER BY account_id, tracked_app_id, app_id, computed_at DESC) v
+              INNER JOIN apps ca ON ca.id = v.app_id
+            `).then((res: any) => (res as any).rows ?? res);
+            for (const r of visRows) visibilityMap2.set(r.app_slug, { visibilityScore: r.visibility_score, keywordCount: r.keyword_count, visibilityRaw: parseFloat(String(r.visibility_raw)) });
+          } catch {}
+
+          // Power scores
+          try {
+            const powRows: any[] = await db.execute(sql`
+              WITH latest_power AS (
+                SELECT DISTINCT ON (app_id, category_slug) app_id, category_slug, power_score, rating_score, review_score, category_score, momentum_score
+                FROM app_power_scores WHERE app_id IN (${compIdSql}) ORDER BY app_id, category_slug, computed_at DESC
+              ), latest_cat_snapshots AS (
+                SELECT DISTINCT ON (category_id) category_id, app_count FROM category_snapshots ORDER BY category_id, scraped_at DESC
+              ), latest_cat_rankings AS (
+                SELECT DISTINCT ON (app_id, category_slug) app_id, category_slug, position
+                FROM app_category_rankings WHERE app_id IN (${compIdSql}) AND position IS NOT NULL ORDER BY app_id, category_slug, scraped_at DESC
+              )
+              SELECT a.slug AS app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
+                     cs.app_count, rk.position AS rank_position, p.category_slug, c.title AS category_title
+              FROM latest_power p INNER JOIN apps a ON a.id = p.app_id
+              INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
+              LEFT JOIN latest_cat_snapshots cs ON cs.category_id = c.id
+              LEFT JOIN latest_cat_rankings rk ON rk.app_id = p.app_id AND rk.category_slug = p.category_slug
+            `).then((res: any) => (res as any).rows ?? res);
+            const appPowerInputs = new Map<string, { powerScore: number; appCount: number }[]>();
+            for (const r of powRows) {
+              if (!appPowerInputs.has(r.app_slug)) appPowerInputs.set(r.app_slug, []);
+              appPowerInputs.get(r.app_slug)!.push({ powerScore: r.power_score, appCount: r.app_count ?? 1 });
+              if (!powerCategoriesMap2.has(r.app_slug)) powerCategoriesMap2.set(r.app_slug, []);
+              powerCategoriesMap2.get(r.app_slug)!.push({ title: r.category_title || r.category_slug, powerScore: r.power_score, appCount: r.app_count ?? 1, position: r.rank_position ?? null, ratingScore: parseFloat(r.rating_score) || 0, reviewScore: parseFloat(r.review_score) || 0, categoryScore: parseFloat(r.category_score) || 0, momentumScore: parseFloat(r.momentum_score) || 0 });
+            }
+            for (const [appSlug, inputs] of appPowerInputs) weightedPowerMap2.set(appSlug, computeWeightedPowerScore(inputs));
+          } catch {}
         }
       }
 

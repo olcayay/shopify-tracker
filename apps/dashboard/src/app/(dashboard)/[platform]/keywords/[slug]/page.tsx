@@ -2,7 +2,7 @@ import Link from "@/components/ui/link";
 import { AppIcon } from "@/components/app-icon";
 import { formatDateOnly } from "@/lib/format-date";
 import { formatNumber } from "@/lib/format-utils";
-import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getKeywordMembership, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getAppsLaunchedDates, getAppsCategories } from "@/lib/api";
+import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getKeywordMembership, getAccountCompetitorSlugs, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getAppsLaunchedDates, getAppsCategories } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -37,16 +37,16 @@ export default async function KeywordDetailPage({
   let keyword: any;
   let rankings: any;
   let adData: any;
-  let competitors: any[] = [];
+  let competitorSlugsArr: string[] = [];
   let trackedApps: any[] = [];
   let suggestions: { suggestions: string[]; scrapedAt: string | null } = { suggestions: [], scrapedAt: null };
   let kwMembership: any = {};
   try {
-    [keyword, rankings, adData, competitors, trackedApps, suggestions, kwMembership] = await Promise.all([
+    [keyword, rankings, adData, competitorSlugsArr, trackedApps, suggestions, kwMembership] = await Promise.all([
       getKeyword(slug, platform as PlatformId),
       getKeywordRankings(slug, 30, "account", platform as PlatformId),
       getKeywordAds(slug, 30, platform as PlatformId),
-      getAccountCompetitors(platform as PlatformId).catch(() => []),
+      getAccountCompetitorSlugs(platform as PlatformId).catch(() => []),
       getAccountTrackedApps(platform as PlatformId).catch(() => []),
       getKeywordSuggestions(slug, platform as PlatformId).catch(() => ({ suggestions: [], scrapedAt: null })),
       getKeywordMembership(slug, platform as PlatformId).catch(() => ({})),
@@ -58,7 +58,7 @@ export default async function KeywordDetailPage({
   const kwMemberApps = kwMembership.trackedAppNames || [];
   const kwMemberProjects = kwMembership.researchProjects || [];
 
-  const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
+  const competitorSlugs = new Set(competitorSlugsArr);
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
 
   const snapshot = keyword.latestSnapshot;

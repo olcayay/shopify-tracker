@@ -1,4 +1,4 @@
-import { getAppSimilarApps, getAccountTrackedApps, getAccountCompetitors } from "@/lib/api";
+import { getAppSimilarApps, getAccountTrackedApps, getAccountCompetitorSlugs } from "@/lib/api";
 import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdHeatmap } from "@/components/ad-heatmap";
@@ -20,9 +20,7 @@ export default async function SimilarAppsPage({
       getAccountTrackedApps(platform as PlatformId)
         .then((rows: any[]) => rows.map((r) => r.appSlug))
         .catch(() => []),
-      getAccountCompetitors(platform as PlatformId)
-        .then((rows: any[]) => rows.map((r) => r.appSlug))
-        .catch(() => []),
+      getAccountCompetitorSlugs(platform as PlatformId).catch(() => []),
     ]);
   } catch {
     // fallback
