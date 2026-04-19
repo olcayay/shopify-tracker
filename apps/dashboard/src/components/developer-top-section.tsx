@@ -261,6 +261,7 @@ export function DeveloperTopSection({
                             <Link
                               key={`${app.platform}-${app.slug}`}
                               href={`/${app.platform}/apps/${app.slug}`}
+                              prefetch={false}
                               className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
                               title={app.name}
                             >

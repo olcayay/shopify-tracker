@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,7 @@ export default function CrossPlatformAppsPage() {
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const { viewMode, changeViewMode } = useViewMode("apps-view-mode", () => setPage(1));
-  const limit = viewMode === "grouped" ? 200 : 25;
+  const limit = viewMode === "grouped" ? 50 : 25;
 
   useEffect(() => {
     if (enabledPlatforms.length > 0 && activePlatforms.length === 0) {
@@ -146,8 +147,8 @@ export default function CrossPlatformAppsPage() {
             onTrackChange={(tracked) => updateAppState(app.id, { isTracked: tracked })}
             onCompetitorChange={(competitor) => updateAppState(app.id, { isCompetitor: competitor })}
           >
-            <Link href={`/${app.platform}/apps/${app.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-              {app.iconUrl && <img src={app.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
+            <Link href={`/${app.platform}/apps/${app.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+              <AppIcon src={app.iconUrl} className="w-6 h-6 rounded" size={24} />
               {app.name}
             </Link>
           </AppQuickActions>

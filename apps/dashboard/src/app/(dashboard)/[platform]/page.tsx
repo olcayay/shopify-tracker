@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import { useFormatDate } from "@/lib/format-date";
@@ -434,11 +435,10 @@ export default function OverviewPage() {
                       <TableRow key={app.slug}>
                         <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
-                            {app.iconUrl && (
-                              <img src={app.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
-                            )}
+                            <AppIcon src={app.iconUrl} className="h-5 w-5 rounded shrink-0" size={20} />
                             <Link
                               href={`/${platform}/apps/${app.slug}`}
+                              prefetch={false}
                               className="text-primary hover:underline font-medium truncate"
                             >
                               {app.name}
@@ -454,7 +454,7 @@ export default function OverviewPage() {
                         {caps.hasReviews && (
                           <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums`}>
                             {app.latestSnapshot?.ratingCount != null ? (
-                              <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
+                              <Link href={`/${platform}/apps/${app.slug}/reviews`} prefetch={false} className="text-primary hover:underline">
                                 {app.latestSnapshot.ratingCount}
                               </Link>
                             ) : "\u2014"}
@@ -462,21 +462,21 @@ export default function OverviewPage() {
                         )}
                         <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {app.competitorCount ? (
-                            <Link href={`/${platform}/apps/${app.slug}/competitors`} className="text-primary hover:underline">
+                            <Link href={`/${platform}/apps/${app.slug}/competitors`} prefetch={false} className="text-primary hover:underline">
                               {app.competitorCount}
                             </Link>
                           ) : "\u2014"}
                         </TableCell>
                         <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {app.keywordCount ? (
-                            <Link href={`/${platform}/apps/${app.slug}/keywords`} className="text-primary hover:underline">
+                            <Link href={`/${platform}/apps/${app.slug}/keywords`} prefetch={false} className="text-primary hover:underline">
                               {app.keywordCount}
                             </Link>
                           ) : "\u2014"}
                         </TableCell>
                         <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {app.keywordCount > 0 ? (
-                            <Link href={`/${platform}/apps/${app.slug}/keywords`} className="text-primary hover:underline">
+                            <Link href={`/${platform}/apps/${app.slug}/keywords`} prefetch={false} className="text-primary hover:underline">
                               {app.rankedKeywordCount}/{app.keywordCount}
                             </Link>
                           ) : "\u2014"}
@@ -499,7 +499,7 @@ export default function OverviewPage() {
                         </TableCell>
                         <TableCell className={`${COL_WIDTH.text} text-sm`}>
                           {app.lastChangeAt ? (
-                            <Link href={`/${platform}/apps/${app.slug}/changes`} className="text-primary hover:underline">
+                            <Link href={`/${platform}/apps/${app.slug}/changes`} prefetch={false} className="text-primary hover:underline">
                               {formatDateOnly(app.lastChangeAt)}
                             </Link>
                           ) : "\u2014"}
@@ -652,11 +652,10 @@ export default function OverviewPage() {
                       <TableRow key={c.appSlug}>
                         <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
-                            {c.iconUrl && (
-                              <img src={c.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
-                            )}
+                            <AppIcon src={c.iconUrl} className="h-5 w-5 rounded shrink-0" size={20} />
                             <Link
                               href={`/${platform}/apps/${c.appSlug}`}
+                              prefetch={false}
                               className="text-primary hover:underline font-medium truncate"
                             >
                               {c.appName || c.appSlug}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,7 @@ export default function CrossPlatformKeywordsPage() {
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
   const [activeWordFilters, setActiveWordFilters] = useState<Set<string>>(new Set());
   const { viewMode, changeViewMode } = useViewMode("keywords-view-mode", () => setPage(1));
-  const limit = viewMode === "grouped" ? 200 : 25;
+  const limit = viewMode === "grouped" ? 50 : 25;
 
   useEffect(() => {
     if (enabledPlatforms.length > 0 && activePlatforms.length === 0) {
@@ -156,15 +157,10 @@ export default function CrossPlatformKeywordsPage() {
                     <TooltipTrigger asChild>
                       <Link
                         href={`/${app.platform}/apps/${app.slug}`}
+                        prefetch={false}
                         className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
                       >
-                        {app.iconUrl ? (
-                          <img src={app.iconUrl} alt={app.name} className="w-6 h-6 rounded" />
-                        ) : (
-                          <span className="w-6 h-6 rounded bg-muted flex items-center justify-center text-[10px] font-medium">
-                            {app.name.charAt(0)}
-                          </span>
-                        )}
+                        <AppIcon src={app.iconUrl} alt={app.name} className="w-6 h-6 rounded" size={24} />
                       </Link>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">{app.name}</TooltipContent>

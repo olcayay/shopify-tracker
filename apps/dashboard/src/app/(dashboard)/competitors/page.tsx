@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
 import { Input } from "@/components/ui/input";
@@ -273,7 +274,7 @@ function AppGroupRows({
           <div className="flex items-center gap-2">
             <ChevronIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             {group.appIconUrl ? (
-              <img src={group.appIconUrl} alt="" aria-hidden="true" className="w-5 h-5 rounded shrink-0" />
+              <AppIcon src={group.appIconUrl} className="w-5 h-5 rounded shrink-0" size={20} />
             ) : (
               <AppWindow className="h-5 w-5 text-muted-foreground shrink-0" />
             )}
@@ -383,12 +384,11 @@ export default function CrossPlatformCompetitorsPage() {
             <Link
               key={app.id}
               href={`/${app.platform}/apps/${app.slug}`}
+              prefetch={false}
               className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
               title={app.name}
             >
-              {app.iconUrl && (
-                <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
-              )}
+              <AppIcon src={app.iconUrl} className="w-4 h-4 rounded shrink-0" size={16} />
               <span className="truncate max-w-[120px]">{app.name}</span>
             </Link>
           ))}
@@ -424,8 +424,8 @@ export default function CrossPlatformCompetitorsPage() {
       <TableRow key={comp.id}>
         <TableCell><PlatformBadgeCell platform={comp.platform} /></TableCell>
         <TableCell>
-          <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {comp.iconUrl && <img src={comp.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
+          <Link href={`/${comp.platform}/apps/${comp.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+            <AppIcon src={comp.iconUrl} className="w-6 h-6 rounded" size={24} />
             {comp.name}
           </Link>
         </TableCell>
@@ -439,8 +439,8 @@ export default function CrossPlatformCompetitorsPage() {
     return (
       <TableRow key={comp.id}>
         <TableCell>
-          <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {comp.iconUrl && <img src={comp.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
+          <Link href={`/${comp.platform}/apps/${comp.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+            <AppIcon src={comp.iconUrl} className="w-6 h-6 rounded" size={24} />
             {comp.name}
           </Link>
         </TableCell>
@@ -454,8 +454,8 @@ export default function CrossPlatformCompetitorsPage() {
     return (
       <TableRow key={comp.id}>
         <TableCell>
-          <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {comp.iconUrl && <img src={comp.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
+          <Link href={`/${comp.platform}/apps/${comp.slug}`} prefetch={false} className="flex items-center gap-2 font-medium hover:underline">
+            <AppIcon src={comp.iconUrl} className="w-6 h-6 rounded" size={24} />
             {comp.name}
           </Link>
         </TableCell>

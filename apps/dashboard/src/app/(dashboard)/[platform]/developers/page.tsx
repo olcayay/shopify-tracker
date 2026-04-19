@@ -267,6 +267,7 @@ function PlatformDevelopersContent() {
               <TooltipTrigger asChild>
                 <Link
                   href={`/${app.platform}/apps/${app.slug}`}
+                  prefetch={false}
                   className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
                 >
                   <AppIcon src={app.iconUrl} alt={app.name} className="w-5 h-5 rounded" size={20} />
