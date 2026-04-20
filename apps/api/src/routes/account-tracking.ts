@@ -1373,7 +1373,11 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             const simRows: any[] = await db.execute(sql`
               SELECT a1.slug AS app_slug_a, a2.slug AS app_slug_b, s.overall_score, s.category_score, s.feature_score, s.keyword_score, s.text_score
               FROM app_similarity_scores s INNER JOIN apps a1 ON a1.id = s.app_id_a INNER JOIN apps a2 ON a2.id = s.app_id_b
-              WHERE (s.app_id_a = ${trackedId} AND s.app_id_b IN (${compIdSql})) OR (s.app_id_b = ${trackedId} AND s.app_id_a IN (${compIdSql}))
+              WHERE s.app_id_a = ${trackedId} AND s.app_id_b IN (${compIdSql})
+              UNION ALL
+              SELECT a1.slug AS app_slug_a, a2.slug AS app_slug_b, s.overall_score, s.category_score, s.feature_score, s.keyword_score, s.text_score
+              FROM app_similarity_scores s INNER JOIN apps a1 ON a1.id = s.app_id_a INNER JOIN apps a2 ON a2.id = s.app_id_b
+              WHERE s.app_id_b = ${trackedId} AND s.app_id_a IN (${compIdSql})
             `).then((res: any) => (res as any).rows ?? res);
             for (const r of simRows) { const compSlug = r.app_slug_a === slug ? r.app_slug_b : r.app_slug_a; similarityMap2.set(compSlug, { overall: r.overall_score, category: r.category_score, feature: r.feature_score, keyword: r.keyword_score, text: r.text_score }); }
           } catch {}

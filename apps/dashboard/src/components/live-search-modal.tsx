@@ -73,7 +73,7 @@ export function LiveSearchModal({
     try {
       const [searchRes, compRes, trackedRes] = await Promise.all([
         fetchWithAuth(`/api/live-search?q=${encodeURIComponent(keyword)}&platform=${platform}`),
-        fetchWithAuth(`/api/account/competitors?platform=${platform}`).catch(() => null),
+        fetchWithAuth(`/api/account/competitor-slugs?platform=${platform}`).catch(() => null),
         fetchWithAuth(`/api/account/tracked-apps?platform=${platform}`).catch(() => null),
       ]);
 
@@ -86,7 +86,7 @@ export function LiveSearchModal({
 
       if (compRes?.ok) {
         const compData = await compRes.json();
-        setCompetitors(new Set(compData.map((c: any) => c.appSlug)));
+        setCompetitors(new Set(compData as string[]));
       }
       if (trackedRes?.ok) {
         const trackedData = await trackedRes.json();
