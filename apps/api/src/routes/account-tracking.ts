@@ -1848,23 +1848,19 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         if (rankAppIds.length > 0) {
         const appIdSql = sql.join(rankAppIds.map((id) => sql`${id}`), sql`, `);
         const idSql = sql.join(keywordIds.map((id) => sql`${id}`), sql`, `);
-        // Correlated subquery: fetch latest position per (app, keyword) pair.
-        // DISTINCT ON on app_keyword_rankings (2.4M rows) with 15 apps × 62 keywords
-        // caused 14s+ due to massive sort + disk spill. Correlated approach does
-        // per-(app,keyword) index lookups via idx_app_keyword_rankings_app_kw_scraped.
+        // Use LATERAL join per app to get latest keyword positions.
+        // Each app does a single index scan on idx_app_keyword_rankings_app_kw_scraped.
+        // Much faster than DISTINCT ON which sorts all 69K+ rows.
         const rawResult = await db.execute(sql`
-            SELECT a.slug AS app_slug, atk.keyword_id, (
-              SELECT r.position
-              FROM app_keyword_rankings r
-              WHERE r.app_id = a.id AND r.keyword_id = atk.keyword_id
-              ORDER BY r.scraped_at DESC
-              LIMIT 1
-            ) AS position
+            SELECT a.slug AS app_slug, lat.keyword_id, lat.position
             FROM apps a
-            CROSS JOIN account_tracked_keywords atk
+            CROSS JOIN LATERAL (
+              SELECT DISTINCT ON (r.keyword_id) r.keyword_id, r.position
+              FROM app_keyword_rankings r
+              WHERE r.app_id = a.id AND r.keyword_id IN (${idSql})
+              ORDER BY r.keyword_id, r.scraped_at DESC
+            ) lat
             WHERE a.id IN (${appIdSql})
-              AND atk.account_id = ${accountId}
-              AND atk.tracked_app_id = ${kwAppRow.id}
           `);
         const rankingRows: any[] = (rawResult as any).rows ?? rawResult;
 
