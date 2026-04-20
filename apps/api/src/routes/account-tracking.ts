@@ -1853,16 +1853,18 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         // caused 14s+ due to massive sort + disk spill. Correlated approach does
         // per-(app,keyword) index lookups via idx_app_keyword_rankings_app_kw_scraped.
         const rawResult = await db.execute(sql`
-            SELECT a.slug AS app_slug, kw.id AS keyword_id, (
+            SELECT a.slug AS app_slug, atk.keyword_id, (
               SELECT r.position
               FROM app_keyword_rankings r
-              WHERE r.app_id = a.id AND r.keyword_id = kw.id
+              WHERE r.app_id = a.id AND r.keyword_id = atk.keyword_id
               ORDER BY r.scraped_at DESC
               LIMIT 1
             ) AS position
             FROM apps a
-            CROSS JOIN (SELECT UNNEST(ARRAY[${idSql}]) AS id) kw
+            CROSS JOIN account_tracked_keywords atk
             WHERE a.id IN (${appIdSql})
+              AND atk.account_id = ${accountId}
+              AND atk.tracked_app_id = ${kwAppRow.id}
           `);
         const rankingRows: any[] = (rawResult as any).rows ?? rawResult;
 
