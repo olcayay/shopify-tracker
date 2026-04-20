@@ -19,7 +19,7 @@ import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL, PAGINATION_DEFAUL
 import { getVisiblePlatformsForAccount } from "../utils/platform-visibility.js";
 import { cacheGet } from "../utils/cache.js";
 
-const DEVELOPERS_LIST_TTL_S = 60;
+const DEVELOPERS_LIST_TTL_S = 300;
 
 export async function developerRoutes(app: FastifyInstance) {
   const db = app.writeDb;

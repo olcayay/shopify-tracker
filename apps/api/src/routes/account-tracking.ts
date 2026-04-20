@@ -654,6 +654,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const isBasicAggregate = request.query.fields === "basic";
 
+    return cacheGet(`competitors:${accountId}:${platform}`, async () => {
     // Per-phase timing instrumentation for Phase 1 measurement (PLA-1105).
     // Each request issues ~12 DB round-trips grouped into 4 parallel waves; the
     // slowest query in each wave bounds the wall time. Enabling DEBUG_SLOW_QUERIES
@@ -717,7 +718,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       const t_wave1 = Date.now();
       const [rankedData, adCounts, featuredCounts] = await Promise.all([
         // Ranked keyword counts — correlated subquery (427ms vs 15s for flat COUNT DISTINCT JOIN)
-        (trackedKeywordIds.length > 0
+        (trackedKeywordIds.length > 0 && !isBasicAggregate
           ? db.execute(sql`
               SELECT a.slug AS app_slug, (
                 SELECT COUNT(DISTINCT akr.keyword_id)::int
@@ -996,6 +997,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return result;
+    }, 30);
   });
 
   // POST /api/account/competitors — add competitor (requires trackedAppSlug)
@@ -1335,9 +1337,14 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
               .where(and(inArray(keywordAdSightings.appId, competitorAppIds), sql`${keywordAdSightings.seenDate} >= ${featuredSinceStr}`))
               .groupBy(apps.slug)
               .then((rows) => { for (const r of rows) adKeywordCountMap.set(r.appSlug, r.keywordCount); }),
-            // Category rankings (heavy — LAG + lateral)
+            // Category rankings (heavy — LAG + CTE for latest snapshots)
             db.execute(sql`
-              SELECT a.slug AS app_slug, sub.category_slug, c.title AS category_title, sub.position, sub.prev_position, cs.app_count
+              WITH latest_cat_snaps AS (
+                SELECT DISTINCT ON (category_id) category_id, app_count
+                FROM category_snapshots
+                ORDER BY category_id, scraped_at DESC
+              )
+              SELECT a.slug AS app_slug, sub.category_slug, c.title AS category_title, sub.position, sub.prev_position, lcs.app_count
               FROM (
                 SELECT r.app_id, r.category_slug, r.position,
                   LAG(r.position) OVER (PARTITION BY r.app_id, r.category_slug ORDER BY r.scraped_at DESC) AS prev_position,
@@ -1346,7 +1353,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
               ) sub
               INNER JOIN apps a ON a.id = sub.app_id
               JOIN categories c ON c.slug = sub.category_slug AND c.platform = ${platform}
-              LEFT JOIN LATERAL (SELECT s.app_count FROM category_snapshots s WHERE s.category_id = c.id ORDER BY s.scraped_at DESC LIMIT 1) cs ON true
+              LEFT JOIN latest_cat_snaps lcs ON lcs.category_id = c.id
               WHERE sub.rn = 1 AND c.is_listing_page = true AND sub.position > 0
             `).then((res: any) => { for (const r of ((res as any).rows ?? res)) { const arr = categoryRankingMap.get(r.app_slug) ?? []; arr.push({ categorySlug: r.category_slug, categoryTitle: r.category_title, position: r.position, prevPosition: r.prev_position ?? null, appCount: r.app_count ?? null }); categoryRankingMap.set(r.app_slug, arr); } }),
             // Reverse similar + similarity scores

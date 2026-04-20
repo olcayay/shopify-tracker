@@ -170,7 +170,7 @@ export default async function V2DashboardPage({
       showAds
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-      getAppCompetitors(slug, platform as PlatformId).catch(() => []),
+      getAppCompetitors(slug, platform as PlatformId, true, "basic").catch(() => []),
       getAppKeywords(slug, platform as PlatformId).catch(() => []),
     ]);
   } catch {

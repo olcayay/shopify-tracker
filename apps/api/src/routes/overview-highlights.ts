@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { sql } from "drizzle-orm";
 import { sqlArray } from "@appranks/db";
+import { cacheGet } from "../utils/cache.js";
 
 export async function overviewHighlightsRoutes(app: FastifyInstance) {
   const db = app.db;
@@ -18,6 +19,7 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
 
       const platformFilter = request.query.platform?.trim() || "";
 
+      return cacheGet(`overview-highlights:${accountId}:${platformFilter}`, async () => {
       // 1. Get tracked apps with basic info (CTE for keyword counts to avoid N+1)
       const trackedApps: any[] = await db.execute(sql`
         WITH kw_counts AS (
@@ -289,6 +291,7 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
       }
 
       return { platforms: result };
+      }, 60);
     }
   );
 }

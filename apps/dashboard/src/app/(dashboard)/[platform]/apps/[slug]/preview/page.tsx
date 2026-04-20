@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ export default function PreviewPage() {
   const router = useRouter();
   const version = useLayoutVersion();
   const { fetchWithAuth } = useAuth();
+  const fetchRef = useRef(fetchWithAuth);
+  useEffect(() => { fetchRef.current = fetchWithAuth; }, [fetchWithAuth]);
 
   const [appData, setAppData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export default function PreviewPage() {
     // Load data for all platforms (custom + generic preview support)
     async function loadData() {
       setLoading(true);
-      const res = await fetchWithAuth(
+      const res = await fetchRef.current(
         `/api/apps/${encodeURIComponent(slug)}`
       );
       if (res.ok) {
@@ -42,7 +44,7 @@ export default function PreviewPage() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [slug, platform]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slug, platform]);
 
   if (loading) {
     return (

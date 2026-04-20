@@ -25,7 +25,7 @@ export function useCompareData(slug: string) {
   const selectionInitialized = useRef(false);
   // Stable ref for fetchWithAuth to avoid re-triggering useEffect
   const fetchRef = useRef(fetchWithAuth);
-  fetchRef.current = fetchWithAuth;
+  useEffect(() => { fetchRef.current = fetchWithAuth; }, [fetchWithAuth]);
 
   // Persist selected slugs per app
   useEffect(() => {
@@ -96,7 +96,7 @@ export function useCompareData(slug: string) {
 
       // Fetch competitor app data + all rankings in parallel (single wave)
       const allSlugs = [slug, ...compList.map((c) => c.slug)];
-      const [compResults, ...rankingResults] = await Promise.all([
+      const [compResults, batchRankingsRes] = await Promise.all([
         compList.length > 0
           ? Promise.all(
               compList.map(async (c) => {
@@ -109,21 +109,10 @@ export function useCompareData(slug: string) {
               })
             )
           : Promise.resolve([]),
-        ...allSlugs.map(async (s) => {
-          const res = await fetch(`/api/apps/${encodeURIComponent(s)}/rankings?days=7`);
-          if (res.ok) {
-            const data = await res.json();
-            const latestPerCat = new Map<string, CategoryRanking>();
-            for (const r of data.categoryRankings || []) {
-              latestPerCat.set(r.categorySlug, {
-                categorySlug: r.categorySlug,
-                categoryTitle: r.categoryTitle,
-                position: r.position,
-              });
-            }
-            return [s, [...latestPerCat.values()]] as [string, CategoryRanking[]];
-          }
-          return [s, []] as [string, CategoryRanking[]];
+        fetch(`/api/apps/batch-rankings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slugs: allSlugs, days: 7 }),
         }),
       ]);
 
@@ -138,8 +127,23 @@ export function useCompareData(slug: string) {
       }
 
       const rankMap = new Map<string, CategoryRanking[]>();
-      for (const [s, rankings] of rankingResults as [string, CategoryRanking[]][]) {
-        rankMap.set(s, rankings);
+      if (batchRankingsRes.ok) {
+        const batchData = await batchRankingsRes.json() as Record<string, { categoryRankings: any[] }>;
+        for (const s of allSlugs) {
+          const appRankings = batchData[s]?.categoryRankings || [];
+          const latestPerCat = new Map<string, CategoryRanking>();
+          for (const r of appRankings) {
+            // First entry per category is latest (ordered by scrapedAt desc)
+            if (!latestPerCat.has(r.categorySlug)) {
+              latestPerCat.set(r.categorySlug, {
+                categorySlug: r.categorySlug,
+                categoryTitle: r.categorySlug,
+                position: r.position,
+              });
+            }
+          }
+          rankMap.set(s, [...latestPerCat.values()]);
+        }
       }
       setRankingsData(rankMap);
 

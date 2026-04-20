@@ -29,7 +29,7 @@ import { cacheGet, cacheDel } from "../utils/cache.js";
 // over app_category_rankings for all tracked+competitor app IDs) and then
 // joins the latest category snapshots. Hot on the platform overview page.
 // Brief staleness on star/unstar is acceptable.
-const STARRED_CATEGORIES_TTL_S = 30;
+const STARRED_CATEGORIES_TTL_S = 120;
 import {
   addStarredCategorySchema,
   addStarredFeatureSchema,

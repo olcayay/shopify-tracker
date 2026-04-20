@@ -1121,6 +1121,13 @@
       "when": 1809331200000,
       "tag": "0159_purge_position_zero_non_wordpress",
       "breakpoints": true
+    },
+    {
+      "idx": 160,
+      "version": "7",
+      "when": 1809417600000,
+      "tag": "0160_performance_indexes",
+      "breakpoints": true
     }
   ]
 }

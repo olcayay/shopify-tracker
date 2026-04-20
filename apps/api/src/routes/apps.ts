@@ -475,23 +475,26 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     if (q.length < 1) return [];
 
-    // Use DISTINCT ON in subquery instead of correlated subquery for latest snapshot
-    const rows: any[] = await db.execute(sql`
-      SELECT a.slug, a.name, a.icon_url AS "iconUrl", a.is_built_for_shopify AS "isBuiltForShopify",
-             s.average_rating AS "averageRating", s.rating_count AS "ratingCount"
-      FROM apps a
-      LEFT JOIN (
-        SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count
-        FROM app_snapshots
-        ORDER BY app_id, scraped_at DESC
-      ) s ON s.app_id = a.id
-      WHERE a.name ILIKE ${`%${q}%`}
-        AND a.platform = ${platform}
-      ORDER BY a.name
-      LIMIT 20
-    `);
+    const search = q.trim().toLowerCase();
+    return cacheGet(`app-search:${platform}:${search}:20`, async () => {
+      // Use DISTINCT ON in subquery instead of correlated subquery for latest snapshot
+      const rows: any[] = await db.execute(sql`
+        SELECT a.slug, a.name, a.icon_url AS "iconUrl", a.is_built_for_shopify AS "isBuiltForShopify",
+               s.average_rating AS "averageRating", s.rating_count AS "ratingCount"
+        FROM apps a
+        LEFT JOIN (
+          SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count
+          FROM app_snapshots
+          ORDER BY app_id, scraped_at DESC
+        ) s ON s.app_id = a.id
+        WHERE a.name ILIKE ${`%${search}%`}
+          AND a.platform = ${platform}
+        ORDER BY a.name
+        LIMIT 20
+      `);
 
-    return (rows as any).rows ?? rows;
+      return (rows as any).rows ?? rows;
+    }, 30);
   });
 
   // GET /api/apps/developers — list all developers with app counts and contact info (system admin only)
@@ -1050,6 +1053,79 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return { app: appRow, categoryRankings, keywordRankings, keywordAds };
+    }
+  );
+
+  // POST /api/apps/batch-rankings — batch fetch category rankings for multiple apps
+  app.post<{ Body: { slugs: string[]; days?: number } }>(
+    "/batch-rankings",
+    async (request) => {
+      const { slugs, days = 7 } = request.body || {};
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+      if (!slugs || slugs.length === 0) return {};
+
+      // Limit to 25 slugs max
+      const limitedSlugs = slugs.slice(0, 25);
+
+      // Look up app IDs
+      const appRows = await db
+        .select({ id: apps.id, slug: apps.slug })
+        .from(apps)
+        .where(and(inArray(apps.slug, limitedSlugs), eq(apps.platform, platform)));
+
+      if (appRows.length === 0) return {};
+
+      const appIds = appRows.map((r) => r.id);
+      const idToSlug = new Map(appRows.map((r) => [r.id, r.slug]));
+
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      // Single query for all apps' category rankings
+      const rankings = await db
+        .select({
+          appId: appCategoryRankings.appId,
+          categorySlug: appCategoryRankings.categorySlug,
+          position: appCategoryRankings.position,
+          scrapedAt: appCategoryRankings.scrapedAt,
+        })
+        .from(appCategoryRankings)
+        .innerJoin(
+          categories,
+          and(
+            eq(categories.slug, appCategoryRankings.categorySlug),
+            eq(categories.platform, platform),
+            eq(categories.isListingPage, true),
+          )
+        )
+        .where(
+          and(
+            inArray(appCategoryRankings.appId, appIds),
+            sql`${appCategoryRankings.scrapedAt} >= ${sinceStr}`,
+          )
+        )
+        .orderBy(desc(appCategoryRankings.scrapedAt));
+
+      // Group by slug
+      const result: Record<string, { categoryRankings: any[] }> = {};
+      for (const r of rankings) {
+        const slug = idToSlug.get(r.appId);
+        if (!slug) continue;
+        if (!result[slug]) result[slug] = { categoryRankings: [] };
+        result[slug].categoryRankings.push({
+          categorySlug: r.categorySlug,
+          position: r.position,
+          scrapedAt: r.scrapedAt,
+        });
+      }
+
+      // Include empty results for requested slugs
+      for (const s of limitedSlugs) {
+        if (!result[s]) result[s] = { categoryRankings: [] };
+      }
+
+      return result;
     }
   );
 
